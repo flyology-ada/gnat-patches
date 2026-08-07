@@ -103,7 +103,10 @@ creating `patchset-<version>-gcc-<major>`, the workflow proves that the
 aggregate lists every accepted applicable bundle, checks the source baseline,
 applies the aggregate with zero fuzz, and packages the series, manifests,
 patches, and tests with a SHA-256 inventory. Existing releases are never
-replaced.
+replaced. A `publish=false` dispatch performs the same release-candidate checks
+and retains the archive without creating a release. A publishing dispatch also
+requires a successful full validation workflow for the exact commit being
+released.
 
 ## Licensing and provenance
 

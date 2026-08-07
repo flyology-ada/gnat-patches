@@ -20,6 +20,7 @@ on:
         default: false
 
 permissions:
+  actions: read
   contents: write
 
 concurrency:
@@ -29,7 +30,6 @@ concurrency:
 jobs:
   release:
     name: Patchset ${{ inputs.patchset_version }} for GCC ${{ inputs.gcc_major }}
-    if: inputs.publish
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     env:
@@ -43,6 +43,18 @@ jobs:
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: '3.12'
+
+      - name: Require a successful source-build matrix for publication
+        if: inputs.publish
+        run: |
+          run_id=$(gh run list --workflow validate.yml --commit "$GITHUB_SHA" \
+            --status success --limit 1 --json databaseId \
+            --jq '.[0].databaseId // empty')
+          if [[ -z "$run_id" ]]; then
+            echo "error: no successful validation run exists for $GITHUB_SHA" >&2
+            exit 1
+          fi
+          echo "publication gate: validation run $run_id"
 
       - name: Prove aggregate completeness
         run: ./scripts/manifest.py validate --patchset "${{ inputs.patchset_version }}" --gcc "${{ inputs.gcc_major }}"
@@ -75,6 +87,7 @@ jobs:
           if-no-files-found: error
 
       - name: Publish without replacing an existing release
+        if: inputs.publish
         run: |
           tag="patchset-${{ inputs.patchset_version }}-gcc-${{ inputs.gcc_major }}"
           if gh release view "$tag" >/dev/null 2>&1; then
