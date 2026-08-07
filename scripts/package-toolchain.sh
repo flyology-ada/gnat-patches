@@ -99,7 +99,8 @@ bundle_macos_libraries() {
         fi
       done
     done < <(otool -L "$candidate" | awk 'NR > 1 { print $1 }')
-  done < <(find "$toolchain/bin" "$toolchain/libexec" -type f -perm -111 -print0)
+  done < <(find "$toolchain/bin" "$toolchain/libexec" -type f \
+    ! -path '*.dSYM/*' -perm -111 -print0)
 
   # Follow the small numerical-library dependency chain (MPC -> MPFR -> GMP).
   for _ in 1 2 3; do
@@ -124,7 +125,8 @@ bundle_macos_libraries() {
     for dependency in "${dependencies[@]}"; do
       install_name_tool -change "$dependency" "$(basename "$dependency")" "$candidate"
     done
-  done < <(find "$toolchain/bin" "$toolchain/libexec" "$toolchain/lib" -type f -print0)
+  done < <(find "$toolchain/bin" "$toolchain/libexec" "$toolchain/lib" \
+    -type f ! -path '*.dSYM/*' -print0)
   for copied in "$toolchain/lib/"*.dylib; do
     [[ -e "$copied" ]] || continue
     install_name_tool -id "$(basename "$copied")" "$copied"
@@ -144,7 +146,7 @@ strip_toolchain_binaries() {
       [[ "$description" != *Mach-O* ]] || strip -S "$candidate"
     fi
   done < <(find "$toolchain/bin" "$toolchain/libexec" "$toolchain/lib" \
-    "$toolchain/lib64" -type f -perm -111 -print0 2>/dev/null)
+    "$toolchain/lib64" -type f ! -path '*.dSYM/*' -perm -111 -print0 2>/dev/null)
 }
 
 case "$platform" in
