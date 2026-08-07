@@ -161,7 +161,6 @@ jobs:
       contents: read
     env:
       GH_TOKEN: ${{ github.token }}
-      ALIRE_SETTINGS: ${{ runner.temp }}/alire-settings
     steps:
       - name: Check out patchsets
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -185,13 +184,14 @@ jobs:
           patchset="${{ inputs.patchset_version }}"
           major="${{ inputs.gcc_major }}"
           source_version=$(./scripts/manifest.py patchset "$patchset" "$major" source_version)
-          alr -s "$ALIRE_SETTINGS" -n -q init --bin consumer
+          alire_settings="$RUNNER_TEMP/alire-settings"
+          alr -s "$alire_settings" -n -q init --bin consumer
           cd consumer
-          alr -s "$ALIRE_SETTINGS" -n index \
+          alr -s "$alire_settings" -n index \
             --add="$GITHUB_WORKSPACE/work/index" --name=release-candidate
-          alr -s "$ALIRE_SETTINGS" -n toolchain --select --local \
+          alr -s "$alire_settings" -n toolchain --select --local \
             "gnat_flyology_native=$source_version-patchset.$patchset"
-          gnatmake=$(alr -s "$ALIRE_SETTINGS" -q exec -- which gnatmake)
+          gnatmake=$(alr -s "$alire_settings" -q exec -- which gnatmake)
           toolchain=$(cd "$(dirname "$gnatmake")/.." && pwd)
           expected=patched
           [[ "$major" != 13 ]] || expected=control
