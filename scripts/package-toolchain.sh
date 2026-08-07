@@ -149,11 +149,26 @@ strip_toolchain_binaries() {
     "$toolchain/lib64" -type f ! -path '*.dSYM/*' -perm -111 -print0 2>/dev/null)
 }
 
+sign_macos_binaries() {
+  local candidate description
+  while IFS= read -r -d '' candidate; do
+    description=$(file -b "$candidate")
+    case "$description" in
+      *Mach-O*executable*|*Mach-O*dynamically\ linked\ shared\ library*|*Mach-O*bundle*)
+        codesign --force --sign - "$candidate"
+        codesign --verify --strict "$candidate"
+        ;;
+    esac
+  done < <(find "$toolchain/bin" "$toolchain/libexec" "$toolchain/lib" \
+    "$toolchain/lib64" -type f ! -path '*.dSYM/*' -print0 2>/dev/null)
+}
+
 case "$platform" in
   linux-*) bundle_linux_libraries ;;
   macos-aarch64) bundle_macos_libraries ;;
 esac
 strip_toolchain_binaries
+[[ "$platform" != macos-aarch64 ]] || sign_macos_binaries
 
 if [[ "$platform" == linux-* ]]; then
   for library in gmp mpfr mpc; do
