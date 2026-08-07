@@ -1,0 +1,280 @@
+--  { dg-do run }
+--  { dg-options "-gnatX0 -gnata" }
+
+with Ada.Text_IO;             use Ada.Text_IO;
+with Interfaces;              use Interfaces;
+with Interfaces.C;
+with System;
+with System.Storage_Elements; use System.Storage_Elements;
+
+procedure Storage_Model_Actuals is
+   type Shared_Address is mod 2 ** 64;
+   Null_Shared_Address : constant Shared_Address := 0;
+
+   type Byte_Array is array (Storage_Offset range 0 .. 8_191)
+     of aliased Unsigned_8;
+
+   type Shared_Model is limited record
+      Bytes       : Byte_Array := (others => 0);
+      Next        : Storage_Offset := 8;
+      Reads       : Natural := 0;
+      Writes      : Natural := 0;
+      Read_Bytes  : Storage_Count := 0;
+      Write_Bytes : Storage_Count := 0;
+   end record
+     with Storage_Model_Type =>
+       (Address_Type => Shared_Address,
+        Allocate     => Allocate,
+        Deallocate   => Deallocate,
+        Copy_To      => Copy_To,
+        Copy_From    => Copy_From,
+        Storage_Size => Storage_Size,
+        Null_Address => Null_Shared_Address);
+
+   procedure Allocate
+     (Model           : in out Shared_Model;
+      Storage_Address : out Shared_Address;
+      Size            : Storage_Count;
+      Alignment       : Storage_Count);
+
+   procedure Deallocate
+     (Model           : in out Shared_Model;
+      Storage_Address : Shared_Address;
+      Size            : Storage_Count;
+      Alignment       : Storage_Count);
+
+   procedure Copy_To
+     (Model  : in out Shared_Model;
+      Target : Shared_Address;
+      Source : System.Address;
+      Size   : Storage_Count);
+
+   procedure Copy_From
+     (Model  : in out Shared_Model;
+      Target : System.Address;
+      Source : Shared_Address;
+      Size   : Storage_Count);
+
+   function Storage_Size (Model : Shared_Model) return Storage_Count;
+
+   function C_Memcpy
+     (Destination : System.Address;
+      Source      : System.Address;
+      Size        : Interfaces.C.size_t) return System.Address
+     with Import, Convention => C, External_Name => "memcpy";
+
+   procedure Allocate
+     (Model           : in out Shared_Model;
+      Storage_Address : out Shared_Address;
+      Size            : Storage_Count;
+      Alignment       : Storage_Count)
+   is
+      Aligned : constant Storage_Offset :=
+        ((Model.Next + Storage_Offset (Alignment) - 1)
+         / Storage_Offset (Alignment)) * Storage_Offset (Alignment);
+   begin
+      Storage_Address := Shared_Address (Aligned);
+      Model.Next := Aligned + Storage_Offset (Size);
+   end Allocate;
+
+   procedure Deallocate
+     (Model           : in out Shared_Model;
+      Storage_Address : Shared_Address;
+      Size            : Storage_Count;
+      Alignment       : Storage_Count)
+   is
+      pragma Unreferenced (Model, Storage_Address, Size, Alignment);
+   begin
+      null;
+   end Deallocate;
+
+   procedure Copy_To
+     (Model  : in out Shared_Model;
+      Target : Shared_Address;
+      Source : System.Address;
+      Size   : Storage_Count)
+   is
+      Ignored : System.Address;
+   begin
+      Model.Writes := Model.Writes + 1;
+      Model.Write_Bytes := Model.Write_Bytes + Size;
+      Ignored := C_Memcpy
+        (Model.Bytes (0)'Address + Storage_Offset (Target),
+         Source,
+         Interfaces.C.size_t (Size));
+   end Copy_To;
+
+   procedure Copy_From
+     (Model  : in out Shared_Model;
+      Target : System.Address;
+      Source : Shared_Address;
+      Size   : Storage_Count)
+   is
+      Ignored : System.Address;
+   begin
+      Model.Reads := Model.Reads + 1;
+      Model.Read_Bytes := Model.Read_Bytes + Size;
+      Put_Line
+        ("Copy_From source=" & Shared_Address'Image (Source)
+         & " size=" & Storage_Count'Image (Size));
+      Flush;
+      Ignored := C_Memcpy
+        (Target,
+         Model.Bytes (0)'Address + Storage_Offset (Source),
+         Interfaces.C.size_t (Size));
+   end Copy_From;
+
+   function Storage_Size (Model : Shared_Model) return Storage_Count is
+   begin
+      return Storage_Count (Model.Bytes'Length) - Storage_Count (Model.Next);
+   end Storage_Size;
+
+   Arena : Shared_Model;
+
+   type Node;
+   type Node_Pointer is access Node
+     with Designated_Storage_Model => Arena;
+   type Node is record
+      Value : Integer;
+      Next  : Node_Pointer;
+   end record;
+
+   type Integer_Array is array (Positive range <>) of Integer;
+   subtype Three_Integers is Integer_Array (1 .. 3);
+   type Array_Pointer is access Three_Integers
+     with Designated_Storage_Model => Arena;
+
+   P : Node_Pointer := new Node'(Value => 10, Next => null);
+   Q : Node_Pointer := new Node'(Value => 20, Next => null);
+   A : Array_Pointer := new Three_Integers'(1, 2, 3);
+
+   procedure Consume_Integer (Item, Expected : Integer) is
+   begin
+      pragma Assert (Item = Expected);
+   end Consume_Integer;
+
+   procedure Increment_Integer (Item : in out Integer) is
+   begin
+      Item := Item + 1;
+   end Increment_Integer;
+
+   procedure Consume_Node (Item : Node; Expected : Integer) is
+   begin
+      pragma Assert (Item.Value = Expected);
+   end Consume_Node;
+
+   procedure Increment_Node (Item : in out Node) is
+   begin
+      Item.Value := Item.Value + 1;
+   end Increment_Node;
+
+   procedure Assert_Read (Before : Natural) is
+   begin
+      pragma Assert (Arena.Reads > Before);
+   end Assert_Read;
+
+   procedure Assert_Write (Before : Natural) is
+   begin
+      pragma Assert (Arena.Writes > Before);
+   end Assert_Write;
+
+   Before_Reads  : Natural;
+   Before_Writes : Natural;
+   Got           : Integer;
+begin
+   --  Whole designated object as an IN actual.
+   Put_Line ("STEP whole-in");
+   Flush;
+   Before_Reads := Arena.Reads;
+   Consume_Node (P.all, 10);
+   Assert_Read (Before_Reads);
+
+   --  Explicit and implicit selected-component IN actuals.
+   Put_Line ("STEP selected-in");
+   Flush;
+   Before_Reads := Arena.Reads;
+   Consume_Integer (P.all.Value, 10);
+   Assert_Read (Before_Reads);
+
+   Put_Line ("STEP implicit-selected-in");
+   Flush;
+
+   Before_Reads := Arena.Reads;
+   Consume_Integer (P.Value, 10);
+   Assert_Read (Before_Reads);
+
+   --  Nested selected component, rooted at two model access values.
+   Put_Line ("STEP nested-in");
+   Flush;
+   P.Next := Q;
+   Before_Reads := Arena.Reads;
+   Consume_Integer (P.Next.Value, 20);
+   Assert_Read (Before_Reads);
+
+   --  Indexed component rooted at a model access value.
+   Put_Line ("STEP indexed-in");
+   Flush;
+   Before_Reads := Arena.Reads;
+   Consume_Integer (A.all (2), 2);
+   Assert_Read (Before_Reads);
+
+   Before_Reads := Arena.Reads;
+   Consume_Integer (A (3), 3);
+   Assert_Read (Before_Reads);
+
+   --  Scalar IN OUT host copy and copyback.
+   Put_Line ("STEP scalar-in-out");
+   Flush;
+   Before_Reads := Arena.Reads;
+   Before_Writes := Arena.Writes;
+   Increment_Integer (P.Value);
+   Assert_Read (Before_Reads);
+   Assert_Write (Before_Writes);
+   Got := P.Value;
+   pragma Assert (Got = 11);
+
+   --  Whole-record IN OUT host copy and copyback.
+   Put_Line ("STEP whole-in-out");
+   Flush;
+   Before_Reads := Arena.Reads;
+   Before_Writes := Arena.Writes;
+   Increment_Node (P.all);
+   Assert_Read (Before_Reads);
+   Assert_Write (Before_Writes);
+   Got := P.Value;
+   pragma Assert (Got = 12);
+
+   --  Assignment reads and writes retain normal source syntax.
+   Put_Line ("STEP assignments");
+   Flush;
+   Before_Reads := Arena.Reads;
+   Got := P.Value;
+   Assert_Read (Before_Reads);
+   pragma Assert (Got = 12);
+
+   Before_Writes := Arena.Writes;
+   P.Value := 30;
+   Assert_Write (Before_Writes);
+   Got := P.Value;
+   pragma Assert (Got = 30);
+
+   Before_Writes := Arena.Writes;
+   A (2) := 40;
+   Assert_Write (Before_Writes);
+   Got := A (2);
+   pragma Assert (Got = 40);
+
+   --  Access-value null and equality do not dereference the offset.
+   Put_Line ("STEP access-values");
+   Flush;
+   pragma Assert (P /= null);
+   pragma Assert (Q /= null);
+   pragma Assert (P = P);
+   pragma Assert (P /= Q);
+
+   Put_Line
+     ("PASS reads=" & Natural'Image (Arena.Reads)
+      & " writes=" & Natural'Image (Arena.Writes)
+      & " read_bytes=" & Storage_Count'Image (Arena.Read_Bytes)
+      & " write_bytes=" & Storage_Count'Image (Arena.Write_Bytes));
+end Storage_Model_Actuals;

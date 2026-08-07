@@ -1,0 +1,95 @@
+name: Publish patchset release
+
+on:
+  workflow_dispatch:
+    inputs:
+      patchset_version:
+        description: Exact patchset version to publish
+        required: true
+        type: string
+        default: 1.0.0
+      gcc_major:
+        description: GCC major targeted by the aggregate
+        required: true
+        type: choice
+        options: ['13', '14', '15', '16']
+      publish:
+        description: Confirm creation of a new public GitHub release
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ inputs.patchset_version }}-gcc-${{ inputs.gcc_major }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Patchset ${{ inputs.patchset_version }} for GCC ${{ inputs.gcc_major }}
+    if: inputs.publish
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      GNAT_PATCHES_CACHE: ${{ github.workspace }}/.cache
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Check out patchsets
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+
+      - name: Prove aggregate completeness
+        run: ./scripts/manifest.py validate --patchset "${{ inputs.patchset_version }}" --gcc "${{ inputs.gcc_major }}"
+
+      - name: Restore verified source download
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          path: .cache
+          key: release-source-${{ inputs.patchset_version }}-gcc-${{ inputs.gcc_major }}-${{ hashFiles('sources/*.toml', 'patchsets/**/*.toml', 'bundles/**/manifest.toml') }}
+
+      - name: Resolve source version
+        run: |
+          source_version=$(./scripts/manifest.py patchset "${{ inputs.patchset_version }}" "${{ inputs.gcc_major }}" source_version)
+          echo "SOURCE_VERSION=$source_version" >> "$GITHUB_ENV"
+
+      - name: Check aggregate against pinned source
+        run: |
+          ./scripts/fetch-source.sh "$SOURCE_VERSION" work/source
+          ./scripts/apply-patchset.sh "${{ inputs.patchset_version }}" "${{ inputs.gcc_major }}" work/source
+
+      - name: Package complete aggregate
+        run: ./scripts/package-patchset.sh "${{ inputs.patchset_version }}" "${{ inputs.gcc_major }}" dist/release
+
+      - name: Retain release candidate
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: patchset-${{ inputs.patchset_version }}-gcc-${{ inputs.gcc_major }}
+          path: dist/release/*.tar.gz*
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Publish without replacing an existing release
+        run: |
+          tag="patchset-${{ inputs.patchset_version }}-gcc-${{ inputs.gcc_major }}"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "error: release already exists: $tag" >&2
+            exit 1
+          fi
+          printf '%s\n' \
+            "Complete accepted patch aggregate for GCC ${{ inputs.gcc_major }}." \
+            "Patchset version: ${{ inputs.patchset_version }}" \
+            "Pinned source version: $SOURCE_VERSION" \
+            "The archive contains the ordered series, manifests, patches, tests, and SHA-256 inventory." \
+            > dist/release/RELEASE_NOTES.md
+          gh release create "$tag" \
+            dist/release/*.tar.gz \
+            dist/release/*.tar.gz.sha256 \
+            --target "$GITHUB_SHA" \
+            --title "GNAT patchset ${{ inputs.patchset_version }} for GCC ${{ inputs.gcc_major }}" \
+            --notes-file dist/release/RELEASE_NOTES.md

@@ -1,0 +1,9 @@
+.cache/
+build/
+dist/
+work/
+*.log
+*.rej
+*.orig
+__pycache__/
+*.pyc

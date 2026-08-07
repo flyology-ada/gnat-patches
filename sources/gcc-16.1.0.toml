@@ -1,0 +1,18 @@
+schema = 1
+version = "16.1.0"
+major = 16
+release_tag = "releases/gcc-16.1.0"
+release_commit = "6afcc4f6da931eb93f3ab001a0dd9650ea71d1ea"
+release_tree = "6375ff1974d25046624a86b92c7333009403e66b"
+expected_unpatched = "fail"
+
+[linux]
+url = "https://gcc.gnu.org/pub/gcc/releases/gcc-16.1.0/gcc-16.1.0.tar.xz"
+archive = "gcc-16.1.0.tar.xz"
+sha512 = "b3454958891ab47e1e5b6cb9396c0ad3b04f32fe2a7bf1153a143f21013fdb6b295ca94c98964698a688e4c1d7555ffd8ffbc20187507cce6b1c32cbcc09897a"
+
+[darwin_arm64]
+repository = "https://github.com/iains/gcc-16-branch.git"
+tag = "gcc-16.1-darwin-r0"
+commit = "d172afd6656630c80e2a1d5e8239ed4b4ec7f996"
+tree = "73253da30072e29b84f6034e4a2cc32358e1898a"

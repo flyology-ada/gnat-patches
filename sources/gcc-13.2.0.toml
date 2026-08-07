@@ -1,0 +1,18 @@
+schema = 1
+version = "13.2.0"
+major = 13
+release_tag = "releases/gcc-13.2.0"
+release_commit = "c891d8dc23e1a46ad9f3e757d09e57b500d40044"
+release_tree = "e0036ea6a50a6a9e2b4ffe6e1a7c5276452f1023"
+expected_unpatched = "pass"
+
+[linux]
+url = "https://gcc.gnu.org/pub/gcc/releases/gcc-13.2.0/gcc-13.2.0.tar.xz"
+archive = "gcc-13.2.0.tar.xz"
+sha512 = "d99e4826a70db04504467e349e9fbaedaa5870766cda7c5cab50cdebedc4be755ebca5b789e1232a34a20be1a0b60097de9280efe47bdb71c73251e30b0862a2"
+
+[darwin_arm64]
+repository = "https://github.com/iains/gcc-13-branch.git"
+tag = "gcc-13.2-darwin-r0"
+commit = "46003d70a6411362e9de99ced8242f52129d5f9a"
+tree = "608a198adec22ab00cff48d887e30de4dadf2434"

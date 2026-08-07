@@ -1,0 +1,18 @@
+schema = 1
+version = "15.3.0"
+major = 15
+release_tag = "releases/gcc-15.3.0"
+release_commit = "4db0e8df15bef836558857c291c323add11d035c"
+release_tree = "0c76aca021168cf1d823c7d3ddc03a3d589d1cff"
+expected_unpatched = "fail"
+
+[linux]
+url = "https://gcc.gnu.org/pub/gcc/releases/gcc-15.3.0/gcc-15.3.0.tar.xz"
+archive = "gcc-15.3.0.tar.xz"
+sha512 = "0de9e296153b52c021b1c7e63c9c62151d7a0ac03f23ce6e9f772c1b0eb783f6acdd81cc4567bfe4128a6f64968c2cfc8eff40b36229cba7425349f7d637c654"
+
+[darwin_arm64]
+repository = "https://github.com/iains/gcc-15-branch.git"
+tag = "gcc-15.3-darwin-r0"
+commit = "cde9e41a33772840ae9b02011f16ffe131613d07"
+tree = "6fb2564c5e0e0570bb3fee246e49eb231c1fa205"

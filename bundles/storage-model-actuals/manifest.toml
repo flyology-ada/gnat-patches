@@ -1,0 +1,26 @@
+schema = 1
+id = "storage-model-actuals"
+status = "accepted"
+problem = "Selected and indexed actuals rooted at Designated_Storage_Model dereferences bypass Copy_From and Copy_To."
+upstream_issue = "https://github.com/flyology-ada/flyology/issues/27"
+affected_versions = ["14.2.0", "15.3.0", "16.1.0"]
+known_good_versions = ["13.2.0"]
+source_provenance = "Proposed GCC patch and executable gnat.dg test recorded in the upstream issue; source contexts verified against the pinned FSF and Darwin release identities."
+files_modified = ["gcc/ada/exp_ch6.adb", "gcc/testsuite/gnat.dg/storage_model_actuals.adb"]
+regression_tests = ["gcc/testsuite/gnat.dg/storage_model_actuals.adb"]
+repository_fixture = "bundles/storage-model-actuals/tests/storage_model_actuals.adb"
+fixture_sha256 = "83ebec06b0326610c2b239faa5a488e9dc07eafe699d211b0f162dceb5c5f79f"
+application_command = "patch --fuzz=0 -p1 -i bundles/storage-model-actuals/patches/gcc-14-16.patch"
+build_command = "PATH=/path/to/bootstrap/bin:$PATH ./scripts/build-gnat.sh SOURCE BUILD INSTALL"
+test_command = "./scripts/run-regressions.sh INSTALL patched"
+expected_failure_before_patch = "GCC 14 through 16 raise CONSTRAINT_ERROR (erroneous memory access) at the first selected-component actual."
+expected_success_after_patch = "The executable test prints PASS reads= 16 writes= 8 read_bytes= 100 write_bytes= 80 at -O0 and -O2."
+upstream_submission_state = "Tracked for GCC Bugzilla filing and gcc-patches submission; no GCC PR or mailing-list archive is recorded yet."
+licensing = "GCC-derived compiler hunks remain GPL-3.0-or-later. The new test is proposed for the GCC testsuite under GCC project terms."
+
+[[variants]]
+id = "gcc-14-16"
+versions = ["14.2.0", "15.3.0", "16.1.0"]
+source_flavors = ["linux", "darwin_arm64"]
+patch = "bundles/storage-model-actuals/patches/gcc-14-16.patch"
+sha256 = "58bac1ca3a1c21ca3d097867e1246f6deef98cc048a76fec3d30f3c7b4482a9e"
