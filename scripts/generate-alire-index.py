@@ -95,6 +95,7 @@ def main() -> int:
         '',
         '[environment."case(os)".macos]',
         'PATH.prepend = "${CRATE_ROOT}/bin"',
+        'DYLD_LIBRARY_PATH.prepend = "${CRATE_ROOT}/lib"',
         'LD_LIBRARY_PATH.prepend = "${CRATE_ROOT}/lib"',
         'LD_RUN_PATH.prepend = "${CRATE_ROOT}/lib"',
     ]

@@ -113,7 +113,10 @@ archives are never republished as patched toolchains. The archives include the
 non-system GMP, MPFR, and MPC-family libraries used by the compiler build; the
 macOS packager rewrites their Homebrew install names to loader-relative paths,
 then ad-hoc signs and strictly verifies every loadable Mach-O image after
-relocation and stripping.
+relocation and stripping. The generated Alire entry supplies the package's
+`lib` directory through `DYLD_LIBRARY_PATH` as well as the conventional
+GNAT-native environment variables, so GCC's bare Darwin `libgcc_s` install
+name also resolves for linked programs run through Alire.
 Linux archives include GNU Binutils 2.46.1 built in CI from the checksum-pinned
 Sourceware release, matching the helper version in the GNAT-FSF build spec.
 The corresponding Binutils source archive and checksum accompany every

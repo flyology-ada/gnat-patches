@@ -22,6 +22,7 @@ gnatmake="$toolchain/bin/gnatmake"
 [[ -x "$gnatmake" ]] || { echo "error: no gnatmake in $toolchain" >&2; exit 1; }
 runtime_env=(env)
 if [[ $(uname -s) == Darwin && -d "$toolchain/lib" ]]; then
+  runtime_env+=("DYLD_LIBRARY_PATH=$toolchain/lib${DYLD_LIBRARY_PATH:+:$DYLD_LIBRARY_PATH}")
   runtime_env+=("LD_LIBRARY_PATH=$toolchain/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}")
   runtime_env+=("LD_RUN_PATH=$toolchain/lib${LD_RUN_PATH:+:$LD_RUN_PATH}")
 elif [[ -d "$toolchain/lib64" ]]; then
