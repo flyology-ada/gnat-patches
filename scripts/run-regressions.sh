@@ -7,6 +7,9 @@ if [[ $# -ne 2 ]]; then
 fi
 
 toolchain=$1
+if [[ -d "$toolchain" ]]; then
+  toolchain=$(cd "$toolchain" && pwd)
+fi
 expected=$2
 [[ "$expected" == control || "$expected" == fail || "$expected" == patched ]] || {
   echo "error: expected result must be control, fail, or patched" >&2

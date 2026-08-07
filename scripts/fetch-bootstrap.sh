@@ -51,4 +51,5 @@ mkdir -p "$destination"
 tar -xzf "$path" -C "$destination"
 gnatmake=$(find "$destination" -maxdepth 4 -type f -path '*/bin/gnatmake' -print -quit)
 [[ -n "$gnatmake" ]] || { echo "error: bootstrap archive has no gnatmake" >&2; exit 1; }
-dirname "$(dirname "$gnatmake")"
+bootstrap_root=$(dirname "$(dirname "$gnatmake")")
+(cd "$bootstrap_root" && pwd)
