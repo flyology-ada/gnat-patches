@@ -55,8 +55,14 @@ tarball would create a lane that cannot build GNAT for Apple Silicon. The
 Darwin tags are public source, so the macOS arm64 lane is real and
 redistributable. CI intentionally has no macOS x86_64 matrix.
 
-GitHub's [documented public-runner labels](https://docs.github.com/en/actions/how-tos/write-workflows/choose-where-workflows-run/choose-the-runner-for-a-job) used here are `ubuntu-24.04`,
-`ubuntu-24.04-arm`, and `macos-15`. The last two are native arm64 runners.
+GitHub's [documented public-runner labels](https://github.com/actions/runner-images#available-images) used here are `ubuntu-24.04`,
+`ubuntu-24.04-arm`, `macos-14`, and `macos-15`; both macOS labels and the
+Ubuntu arm label are native arm64 runners. GCC 14 through 16 use the pinned
+`macos-15`/Xcode 16.4 baseline. GCC 13 uses the pinned
+`macos-14`/Xcode 15.4 baseline from the public GNAT-FSF 13.2.0-2 Apple-Silicon
+build workflow. This is required because Xcode 16.4's assembler rejects the
+older GCC 13 Darwin `libgcc` LSE CFI layout. The workflow fails if its exact
+Xcode application is absent; it does not fall forward to a newer assembler.
 
 ## Local validation
 
