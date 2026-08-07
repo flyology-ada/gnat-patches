@@ -7,7 +7,7 @@ on:
         description: Exact patchset version to publish
         required: true
         type: string
-        default: 1.0.0
+        default: 1.0.1
       gcc_major:
         description: GCC major targeted by the aggregate
         required: true
@@ -115,7 +115,7 @@ jobs:
           retention-days: 30
           if-no-files-found: error
 
-      - name: Publish without replacing an existing release
+      - name: Publish immutable prerelease candidate
         if: inputs.publish
         run: |
           tag="patchset-${{ inputs.patchset_version }}-gcc-${{ inputs.gcc_major }}"
@@ -140,5 +140,78 @@ jobs:
             dist/toolchains/*/*.tar.gz.sha256 \
             dist/alire-index/index/gn/gnat_flyology_native/*.toml \
             --target "$GITHUB_SHA" \
+            --prerelease \
             --title "GNAT patchset ${{ inputs.patchset_version }} for GCC ${{ inputs.gcc_major }}" \
             --notes-file dist/release/RELEASE_NOTES.md
+
+  consumer:
+    name: Alire consumer · ${{ matrix.platform }}
+    if: inputs.publish
+    needs: release
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {platform: linux-x86_64, runner: ubuntu-24.04}
+          - {platform: linux-aarch64, runner: ubuntu-24.04-arm}
+          - {platform: macos-aarch64, runner: macos-15}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      ALIRE_SETTINGS: ${{ runner.temp }}/alire-settings
+    steps:
+      - name: Check out patchsets
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - name: Set up Alire
+        uses: alire-project/setup-alire@fc4c8ce471aa30b3af0d39ce15add1ee9eaf28f2 # v6.0.0
+        with:
+          version: 2.1.1
+      - name: Build candidate index
+        run: |
+          patchset="${{ inputs.patchset_version }}"
+          major="${{ inputs.gcc_major }}"
+          source_version=$(./scripts/manifest.py patchset "$patchset" "$major" source_version)
+          tag="patchset-$patchset-gcc-$major"
+          mkdir -p work/index/index/gn/gnat_flyology_native
+          printf 'version = "1.4.0"\n' >work/index/index/index.toml
+          gh release download "$tag" \
+            --pattern "gnat_flyology_native-$source_version-patchset.$patchset.toml" \
+            --dir work/index/index/gn/gnat_flyology_native
+      - name: Select locally and run the regression
+        run: |
+          patchset="${{ inputs.patchset_version }}"
+          major="${{ inputs.gcc_major }}"
+          source_version=$(./scripts/manifest.py patchset "$patchset" "$major" source_version)
+          alr -s "$ALIRE_SETTINGS" -n -q init --bin consumer
+          cd consumer
+          alr -s "$ALIRE_SETTINGS" -n index \
+            --add="$GITHUB_WORKSPACE/work/index" --name=release-candidate
+          alr -s "$ALIRE_SETTINGS" -n toolchain --select --local \
+            "gnat_flyology_native=$source_version-patchset.$patchset"
+          gnatmake=$(alr -s "$ALIRE_SETTINGS" -q exec -- which gnatmake)
+          toolchain=$(cd "$(dirname "$gnatmake")/.." && pwd)
+          expected=patched
+          [[ "$major" != 13 ]] || expected=control
+          "$GITHUB_WORKSPACE/scripts/run-regressions.sh" "$toolchain" "$expected"
+
+  publish:
+    name: Promote validated release
+    if: inputs.publish
+    needs: [release, consumer]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Promote without changing assets
+        run: |
+          tag="patchset-${{ inputs.patchset_version }}-gcc-${{ inputs.gcc_major }}"
+          latest=false
+          [[ "${{ inputs.gcc_major }}" != 16 ]] || latest=true
+          gh release edit "$tag" --repo "$GITHUB_REPOSITORY" \
+            --prerelease=false --latest="$latest"

@@ -24,4 +24,20 @@ for script in scripts/*.sh scripts/*.py ci/*.sh; do
   fi
 done
 
+archive_test=$(mktemp -d "${TMPDIR:-/tmp}/gnat-patches-archive-test.XXXXXX")
+trap 'rm -rf "$archive_test"' EXIT
+mkdir -p "$archive_test/source/bin" "$archive_test/source/lib"
+printf '#!/bin/sh\n' >"$archive_test/source/bin/gnatmake"
+printf 'fixture\n' >"$archive_test/source/lib/libgnat.a"
+scripts/deterministic-archive.py "$archive_test/source" \
+  "$archive_test/toolchain.tar.gz" gnat_flyology_native-test
+[[ $(scripts/verify-alire-archive.py "$archive_test/toolchain.tar.gz") == \
+  gnat_flyology_native-test ]]
+scripts/deterministic-archive.py "$archive_test/source" \
+  "$archive_test/flat.tar.gz"
+if scripts/verify-alire-archive.py "$archive_test/flat.tar.gz" >/dev/null 2>&1; then
+  echo "error: flat Alire archive was accepted" >&2
+  exit 1
+fi
+
 echo "repository verification: PASS"

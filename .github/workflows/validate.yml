@@ -169,7 +169,7 @@ jobs:
         run: ./scripts/fetch-source.sh "${{ matrix.version }}" work/source
 
       - name: Apply complete patchset
-        run: ./scripts/apply-patchset.sh 1.0.0 "${{ matrix.major }}" work/source
+        run: ./scripts/apply-patchset.sh 1.0.1 "${{ matrix.major }}" work/source
 
       - name: Build GCC and GNAT from source
         run: ./scripts/build-gnat.sh work/source build/gcc install/gcc
@@ -195,16 +195,17 @@ jobs:
           binutils=-
           [[ "${{ runner.os }}" != Linux ]] || binutils=work/binutils
           archive=$(./scripts/package-toolchain.sh install/gcc work/source "$binutils" \
-            1.0.0 "${{ matrix.major }}" "${{ matrix.alire_platform }}" \
+            1.0.1 "${{ matrix.major }}" "${{ matrix.alire_platform }}" \
             dist/toolchain)
+          archive_root=$(./scripts/verify-alire-archive.py "$archive")
           mkdir -p work/relocated
           tar -xzf "$archive" -C work/relocated
-          ./scripts/run-regressions.sh work/relocated "${{ matrix.after }}"
+          ./scripts/run-regressions.sh "work/relocated/$archive_root" "${{ matrix.after }}"
 
       - name: Retain validated Alire toolchain
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: toolchain-patchset-1.0.0-gcc-${{ matrix.major }}-${{ matrix.alire_platform }}
+          name: toolchain-patchset-1.0.1-gcc-${{ matrix.major }}-${{ matrix.alire_platform }}
           path: dist/toolchain/*.tar.gz*
           retention-days: 30
           if-no-files-found: error

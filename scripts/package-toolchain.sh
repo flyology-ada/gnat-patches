@@ -227,11 +227,12 @@ printf '%s\n' \
 mkdir -p "$output"
 archive_name="gnat-flyology-native-gcc-$source_version-patchset-$patchset-$platform.tar.gz"
 archive="$output/$archive_name"
+archive_root="gnat_flyology_native-$source_version-patchset.$patchset"
 [[ ! -e "$archive" && ! -e "$archive.sha256" ]] || {
   echo "error: toolchain archive already exists: $archive" >&2
   exit 1
 }
-python3 "$root/scripts/deterministic-archive.py" "$toolchain" "$archive"
+python3 "$root/scripts/deterministic-archive.py" "$toolchain" "$archive" "$archive_root"
 (
   cd "$output"
   shasum -a 256 "$archive_name" >"$archive_name.sha256"

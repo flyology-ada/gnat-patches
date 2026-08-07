@@ -22,7 +22,8 @@ artifacts.
   publish from a tag alone and do not overwrite an existing release.
 - Alire toolchain assets are outputs of successful source-build lanes, not
   repackaged bootstrap compilers. Re-run the regression after relocating each
-  archive, publish only the three supported native hosts, and keep the
+  archive, require exactly one top-level directory for Alire deployment,
+  publish only the three supported native hosts, and keep the
   `gnat_flyology_native` index checksums identical to release assets.
 - Publish generated compiler manifests to the existing
   `flyology-ada/alire-index` main branch through that repository's fail-closed

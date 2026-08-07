@@ -12,9 +12,9 @@ or depend on an existing bundle.
 
 ## Current patchset
 
-Patchset `1.0.0` contains the `storage-model-actuals` correction:
+Patchset `1.0.1` contains the `storage-model-actuals` correction:
 
-| GCC source | Baseline | Unpatched | Patchset 1.0.0 |
+| GCC source | Baseline | Unpatched | Patchset 1.0.1 |
 | --- | --- | --- | --- |
 | 13.2.0 | known-good control | test passes | no code patch; test passes |
 | 14.2.0 | affected | test raises `CONSTRAINT_ERROR` | test passes at `-O0` and `-O2` |
@@ -82,7 +82,7 @@ diagnostics; it is not searched by GCC.
 ```sh
 ./scripts/verify-repository.sh
 ./scripts/fetch-source.sh 16.1.0 work/gcc-16.1.0
-./scripts/apply-patchset.sh 1.0.0 16 work/gcc-16.1.0
+./scripts/apply-patchset.sh 1.0.1 16 work/gcc-16.1.0
 PATH=/path/to/bootstrap/bin:$PATH \
   ./scripts/build-gnat.sh work/gcc-16.1.0 build/gcc-16 install/gcc-16
 ./scripts/run-regressions.sh install/gcc-16 patched
@@ -143,15 +143,21 @@ x86-64, Linux AArch64, and macOS AArch64. CI generates an Alire index entry
 whose version is `<gcc-version>-patchset.<patchset-version>` and whose
 `provides` field exposes the underlying GNAT version.
 
-After a release is published, add the Flyology index once and select the
-desired patched compiler:
+A publishing dispatch first creates an immutable prerelease candidate. Alire
+2.1.1 must install it with a workspace-local selection and run the bundle's
+regression at `-O0` and `-O2` on all three supported hosts. Only then does CI
+promote the same assets to a stable release. Toolchain archives contain exactly
+one top-level directory, as required by Alire's binary-origin deployment.
+
+After a release is published, add the Flyology index once and, from an Alire
+workspace, select the desired patched compiler locally:
 
 ```sh
 alr index --add \
   git+https://github.com/flyology-ada/alire-index.git \
   --name flyology --before community
-alr -n toolchain --select \
-  gnat_flyology_native=16.1.0-patchset.1.0.0
+alr -n toolchain --select --local \
+  gnat_flyology_native=16.1.0-patchset.1.0.1
 ```
 
 The Alire crate configures `PATH` and the platform library paths. A project may
