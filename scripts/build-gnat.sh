@@ -50,6 +50,7 @@ fi
 jobs=${GNAT_PATCHES_JOBS:-2}
 (cd "$build_dir" && "${configure[@]}")
 make -C "$build_dir" -j "$jobs" all-gcc all-target-libgcc all-target-libada
+make -C "$build_dir" -j "$jobs" all-gnattools
 make -C "$build_dir" -j 1 install-gcc install-target-libgcc install-target-libada
 "$install_dir/bin/gcc" -v
 "$install_dir/bin/gnatmake" --version
