@@ -31,6 +31,13 @@ def source_path(version: str) -> pathlib.Path:
     return path
 
 
+def helper_path(version: str) -> pathlib.Path:
+    path = ROOT / "sources" / f"binutils-{version}.toml"
+    if not path.is_file():
+        raise ManifestError(f"unsupported Binutils source version: {version}")
+    return path
+
+
 def patchset_path(version: str, major: int) -> pathlib.Path:
     path = ROOT / "patchsets" / version / f"gcc-{major}.toml"
     if not path.is_file():
@@ -181,6 +188,13 @@ def validate_patchset(version: str, major: int, bundles: dict[str, dict]) -> dic
 
 
 def validate_all(version: str | None = None, major: int | None = None) -> None:
+    helper = load(helper_path("2.46.1"))
+    if (
+        helper.get("version") != "2.46.1"
+        or len(helper.get("sha512", "")) != 128
+        or not helper.get("url", "").endswith(helper.get("archive", "missing"))
+    ):
+        raise ManifestError("invalid Binutils helper source manifest")
     bundles = accepted_bundles()
     for bundle in bundles.values():
         validate_bundle(bundle)
@@ -198,6 +212,9 @@ def main() -> int:
     get_source = sub.add_parser("source")
     get_source.add_argument("version")
     get_source.add_argument("field")
+    get_helper = sub.add_parser("helper")
+    get_helper.add_argument("version")
+    get_helper.add_argument("field")
     get_patchset = sub.add_parser("patchset")
     get_patchset.add_argument("version")
     get_patchset.add_argument("major", type=int)
@@ -213,6 +230,8 @@ def main() -> int:
     try:
         if args.command == "source":
             emit(nested(load(source_path(args.version)), args.field))
+        elif args.command == "helper":
+            emit(nested(load(helper_path(args.version)), args.field))
         elif args.command == "patchset":
             emit(nested(load(patchset_path(args.version, args.major)), args.field))
         elif args.command == "bundle":

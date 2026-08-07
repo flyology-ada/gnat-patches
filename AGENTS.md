@@ -20,6 +20,20 @@ artifacts.
   GCC major. `scripts/manifest.py validate-patchset` is authoritative.
 - Patchset publication is gated by both patchset version and GCC major. Do not
   publish from a tag alone and do not overwrite an existing release.
+- Alire toolchain assets are outputs of successful source-build lanes, not
+  repackaged bootstrap compilers. Re-run the regression after relocating each
+  archive, publish only the three supported native hosts, and keep the
+  `gnat_flyology_native` index checksums identical to release assets.
+- Publish generated compiler manifests to the existing
+  `flyology-ada/alire-index` main branch through that repository's fail-closed
+  release importer. Do not add or store a cross-repository write credential in
+  this repository.
+- Bundle the compiler's non-system numerical runtime libraries. On macOS,
+  replace Homebrew-specific dylib paths before archiving; an archive that only
+  works on the build runner is invalid.
+- Linux packages use CI-built, checksum-pinned GNU Binutils 2.46.1 helpers.
+  Never copy binutils or compiler executables from the bootstrap archive, and
+  attach the corresponding Binutils source archive to each release.
 
 ## Changes and verification
 

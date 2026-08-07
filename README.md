@@ -37,6 +37,9 @@ deliberately tested without a code patch.
 - `patchsets/<version>/gcc-<major>.toml`: ordered aggregate for one GCC major.
 - `scripts/`: fetch, verification, application, build, test, and packaging
   entry points.
+- [`flyology-ada/alire-index`](https://github.com/flyology-ada/alire-index):
+  release-generated `gnat_flyology_native` compiler entries; compiler binaries
+  remain immutable release assets in this repository.
 
 ## Source baselines
 
@@ -97,6 +100,24 @@ at `-O0` and `-O2`. Source and bootstrap downloads are checksum-verified even
 when restored from cache. Failed jobs retain compact test and configuration
 logs.
 
+Each successful source-build lane also creates a relocatable native compiler
+archive and reruns the same executable regression from a fresh extraction.
+These are the only compiler binaries eligible for a release; bootstrap
+archives are never republished as patched toolchains. The archives include the
+non-system GMP, MPFR, and MPC-family libraries used by the compiler build; the
+macOS packager also rewrites their Homebrew install names before relocation.
+Linux archives include GNU Binutils 2.46.1 built in CI from the checksum-pinned
+Sourceware release, matching the helper version in the GNAT-FSF build spec.
+The corresponding Binutils source archive and checksum accompany every
+release. Its linker is configured with the host's native multiarch library
+directories plus the conventional Linux library directories, so relocation
+does not retain a CI installation prefix.
+
+Linux consumers still need their distribution's normal C development files
+(startup objects, libc headers, and linker scripts), just as they do for the
+community `gnat_native` toolchain. The package does not embed or replace the
+host libc.
+
 Release publication is a separate manual workflow. The operator supplies both
 `patchset_version` and `gcc_major` and explicitly confirms publication. Before
 creating `patchset-<version>-gcc-<major>`, the workflow proves that the
@@ -106,7 +127,30 @@ patches, and tests with a SHA-256 inventory. Existing releases are never
 replaced. A `publish=false` dispatch performs the same release-candidate checks
 and retains the archive without creating a release. A publishing dispatch also
 requires a successful full validation workflow for the exact commit being
-released.
+released. The release also contains native toolchain archives for Linux
+x86-64, Linux AArch64, and macOS AArch64. CI generates an Alire index entry
+whose version is `<gcc-version>-patchset.<patchset-version>` and whose
+`provides` field exposes the underlying GNAT version.
+
+After a release is published, add the Flyology index once and select the
+desired patched compiler:
+
+```sh
+alr index --add \
+  git+https://github.com/flyology-ada/alire-index.git \
+  --name flyology --before community
+alr -n toolchain --select \
+  gnat_flyology_native=16.1.0-patchset.1.0.0
+```
+
+The Alire crate configures `PATH` and the platform library paths. A project may
+select `gprbuild` separately through its usual Alire toolchain configuration.
+There is intentionally no macOS x86-64 origin.
+
+The release attaches the generated manifest. A fail-closed importer owned by
+`flyology-ada/alire-index` verifies its release tag, platform set, asset URLs,
+and checksum sidecars before committing it with that repository's scoped
+`GITHUB_TOKEN`; no cross-repository credential is stored here.
 
 ## Licensing and provenance
 

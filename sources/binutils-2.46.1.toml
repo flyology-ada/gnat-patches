@@ -1,0 +1,8 @@
+schema = 1
+version = "2.46.1"
+upstream = "GNU Binutils"
+provenance = "Exact native helper version used by alire-project/GNAT-FSF-builds for GCC 16.1.0"
+build_spec = "https://github.com/alire-project/GNAT-FSF-builds/blob/main/specs/binutils.anod"
+url = "https://sourceware.org/pub/binutils/releases/binutils-2.46.1.tar.xz"
+archive = "binutils-2.46.1.tar.xz"
+sha512 = "a5c65e56e400ed3fb8906a995dbb93eb5bea54b16344244653d7f44ef29ceb60270da263b19d25302c37759784e14fcb4b9421b29e0e2c7f450bd99f6bb4595c"

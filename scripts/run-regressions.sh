@@ -20,6 +20,19 @@ fixture="$root/bundles/storage-model-actuals/tests/storage_model_actuals.adb"
 gnatmake="$toolchain/bin/gnatmake"
 [[ -x "$gnatmake" ]] || gnatmake=$(command -v gnatmake-13 || true)
 [[ -x "$gnatmake" ]] || { echo "error: no gnatmake in $toolchain" >&2; exit 1; }
+runtime_env=(env)
+if [[ $(uname -s) == Darwin && -d "$toolchain/lib" ]]; then
+  runtime_env+=("LD_LIBRARY_PATH=$toolchain/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}")
+  runtime_env+=("LD_RUN_PATH=$toolchain/lib${LD_RUN_PATH:+:$LD_RUN_PATH}")
+elif [[ -d "$toolchain/lib64" ]]; then
+  runtime_env+=("LIBRARY_PATH=$toolchain/lib64${LIBRARY_PATH:+:$LIBRARY_PATH}")
+  runtime_env+=("LD_LIBRARY_PATH=$toolchain/lib64${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}")
+  runtime_env+=("LD_RUN_PATH=$toolchain/lib64${LD_RUN_PATH:+:$LD_RUN_PATH}")
+elif [[ -d "$toolchain/lib" ]]; then
+  runtime_env+=("LIBRARY_PATH=$toolchain/lib${LIBRARY_PATH:+:$LIBRARY_PATH}")
+  runtime_env+=("LD_LIBRARY_PATH=$toolchain/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}")
+  runtime_env+=("LD_RUN_PATH=$toolchain/lib${LD_RUN_PATH:+:$LD_RUN_PATH}")
+fi
 work=$(mktemp -d "${TMPDIR:-/tmp}/gnat-patches-test.XXXXXX")
 trap 'rm -rf "$work"' EXIT
 
@@ -29,10 +42,10 @@ for optimization in 0 2; do
   cp "$fixture" "$case_dir/storage_model_actuals.adb"
   (
     cd "$case_dir"
-    "$gnatmake" -q -gnatX0 -gnata "-O$optimization" storage_model_actuals.adb
+    "${runtime_env[@]}" "$gnatmake" -q -gnatX0 -gnata "-O$optimization" storage_model_actuals.adb
   )
   set +e
-  "$case_dir/storage_model_actuals" >"$case_dir/output.log" 2>&1
+  "${runtime_env[@]}" "$case_dir/storage_model_actuals" >"$case_dir/output.log" 2>&1
   status=$?
   set -e
   if [[ "$expected" == control || "$expected" == patched ]]; then
