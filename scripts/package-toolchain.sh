@@ -78,7 +78,7 @@ bundle_linux_libraries() {
 
 bundle_macos_libraries() {
   local prefixes=()
-  local formula prefix candidate dependency name copied
+  local formula prefix candidate dependency name copied loader_lib replacement
   for formula in gmp mpfr libmpc; do
     prefix=$(brew --prefix "$formula")
     prefixes+=("$prefix")
@@ -122,8 +122,17 @@ bundle_macos_libraries() {
 
   while IFS= read -r -d '' candidate; do
     file -b "$candidate" | grep -q 'Mach-O' || continue
+    loader_lib=$(python3 -c \
+      'import os, sys; print(os.path.relpath(sys.argv[2], sys.argv[1]))' \
+      "$(dirname "$candidate")" "$toolchain/lib")
     for dependency in "${dependencies[@]}"; do
-      install_name_tool -change "$dependency" "$(basename "$dependency")" "$candidate"
+      name=$(basename "$dependency")
+      if [[ "$loader_lib" == . ]]; then
+        replacement="@loader_path/$name"
+      else
+        replacement="@loader_path/$loader_lib/$name"
+      fi
+      install_name_tool -change "$dependency" "$replacement" "$candidate"
     done
   done < <(find "$toolchain/bin" "$toolchain/libexec" "$toolchain/lib" \
     -type f ! -path '*.dSYM/*' -print0)

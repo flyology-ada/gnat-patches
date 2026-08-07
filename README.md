@@ -111,7 +111,9 @@ archive and reruns the same executable regression from a fresh extraction.
 These are the only compiler binaries eligible for a release; bootstrap
 archives are never republished as patched toolchains. The archives include the
 non-system GMP, MPFR, and MPC-family libraries used by the compiler build; the
-macOS packager also rewrites their Homebrew install names before relocation.
+macOS packager rewrites their Homebrew install names to loader-relative paths,
+then ad-hoc signs and strictly verifies every loadable Mach-O image after
+relocation and stripping.
 Linux archives include GNU Binutils 2.46.1 built in CI from the checksum-pinned
 Sourceware release, matching the helper version in the GNAT-FSF build spec.
 The corresponding Binutils source archive and checksum accompany every
