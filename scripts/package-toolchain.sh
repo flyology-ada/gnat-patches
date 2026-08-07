@@ -78,7 +78,7 @@ bundle_linux_libraries() {
 
 bundle_macos_libraries() {
   local prefixes=()
-  local formula prefix candidate dependency name copied loader_lib replacement
+  local formula prefix candidate dependency name copied loader_lib replacement description
   for formula in gmp mpfr libmpc; do
     prefix=$(brew --prefix "$formula")
     prefixes+=("$prefix")
@@ -121,7 +121,11 @@ bundle_macos_libraries() {
   done
 
   while IFS= read -r -d '' candidate; do
-    file -b "$candidate" | grep -q 'Mach-O' || continue
+    description=$(file -b "$candidate")
+    case "$description" in
+      *Mach-O*executable*|*Mach-O*dynamically\ linked\ shared\ library*|*Mach-O*bundle*) ;;
+      *) continue ;;
+    esac
     loader_lib=$(python3 -c \
       'import os, sys; print(os.path.relpath(sys.argv[2], sys.argv[1]))' \
       "$(dirname "$candidate")" "$toolchain/lib")
