@@ -62,6 +62,14 @@ working GNAT bootstrap compiler. Linux compiler builds also need the usual GCC
 development packages; macOS builds need Xcode command-line tools plus GMP,
 MPFR, and MPC from Homebrew.
 
+`fetch-bootstrap.sh` checksum-verifies the GNAT-FSF archive before extraction.
+On Darwin it then quarantines the archive's `include-fixed` directory: those
+headers are generated from the Xcode SDK used to build the bootstrap and are
+not valid inputs for a later runner SDK. The compiler build consequently reads
+the current pinned runner's SDK headers and generates its own fixed headers.
+The original directory remains beside it as `include-fixed.bootstrap-sdk` for
+diagnostics; it is not searched by GCC.
+
 ```sh
 ./scripts/verify-repository.sh
 ./scripts/fetch-source.sh 16.1.0 work/gcc-16.1.0
