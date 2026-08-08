@@ -185,6 +185,7 @@ jobs:
           major="${{ inputs.gcc_major }}"
           source_version=$(./scripts/manifest.py patchset "$patchset" "$major" source_version)
           alire_settings="$RUNNER_TEMP/alire-settings"
+          mkdir -p "$alire_settings"
           alr -s "$alire_settings" -n -q init --bin consumer
           cd consumer
           alr -s "$alire_settings" -n index \
