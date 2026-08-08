@@ -21,6 +21,15 @@ fixture="$root/bundles/protected-duration-validity/tests/protected_duration_vali
 work=$(mktemp -d "${TMPDIR:-/tmp}/gnat-protected-duration-test.XXXXXX")
 trap 'rm -rf "$work"' EXIT
 
+# The stale check is in the tree on every target, but it only becomes
+# observable where the automatic lock-free implementation is selected for this
+# protected type. Linux x86-64 is the target where that is demonstrable: the
+# optimized build aborts in the front end and the unoptimized build rejects a
+# valid negative Duration at run time. Other targets execute the round trip
+# unchanged before the patch and are unpatched target controls.
+demonstrable=no
+[[ "$target" != x86_64*-linux* ]] || demonstrable=yes
+
 for optimization in 0 2; do
   case_dir="$work/O$optimization"
   mkdir -p "$case_dir"
@@ -34,17 +43,36 @@ for optimization in 0 2; do
   build_status=$?
   set -e
 
-  if [[ "$state" == unpatched && "$optimization" == 2 && \
-        "$target" == x86_64*-linux* ]]; then
-    [[ $build_status -ne 0 ]] || {
-      echo "error: unpatched protected-Duration regression unexpectedly compiled at -O2"
+  if [[ "$state" == unpatched && "$demonstrable" == yes ]]; then
+    if [[ "$optimization" == 2 ]]; then
+      [[ $build_status -ne 0 ]] || {
+        echo "error: unpatched protected-Duration regression unexpectedly compiled at -O2" >&2
+        exit 1
+      }
+      grep -Eiq 'GNAT BUG DETECTED|fold_convert_loc' "$case_dir/build.log" || {
+        cat "$case_dir/build.log"
+        exit 1
+      }
+      echo "protected-duration-validity -O2: expected compiler abort ($target, GCC $version)"
+      continue
+    fi
+
+    [[ $build_status -eq 0 ]] || { cat "$case_dir/build.log"; exit 1; }
+    set +e
+    "${REGRESSION_ENV[@]}" "$case_dir/protected_duration_validity" \
+      >"$case_dir/output.log" 2>&1
+    run_status=$?
+    set -e
+    [[ $run_status -ne 0 ]] || {
+      echo "error: unpatched protected-Duration regression unexpectedly passed at -O0" >&2
       exit 1
     }
-    grep -Eiq 'GNAT BUG DETECTED|fold_convert_loc' "$case_dir/build.log" || {
-      cat "$case_dir/build.log"
+    if ! grep -Eiq 'CONSTRAINT_ERROR' "$case_dir/output.log" ||
+       ! grep -Eiq 'invalid data' "$case_dir/output.log"; then
+      cat "$case_dir/output.log"
       exit 1
-    }
-    echo "protected-duration-validity -O2: expected compiler failure ($target)"
+    fi
+    echo "protected-duration-validity -O0: expected invalid-data rejection ($target, GCC $version)"
     continue
   fi
 

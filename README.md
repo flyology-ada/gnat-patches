@@ -43,21 +43,24 @@ land at a line offset where a release moved surrounding code.
 ### Target-dependent protected `Duration` failure
 
 The protected `Duration` defect is a front-end defect, but it does not surface
-identically on every target. Before the patch, with `-gnatVa` and optimization
-enabled:
+identically on every target. Before the patch, with `-gnatVa`:
 
-- On Linux x86-64 the setter regression ends in an internal compiler error in
-  `fold_convert_loc`; a getter-only variant instead raises `CONSTRAINT_ERROR`
-  for a valid negative `Duration`.
-- On Linux and macOS AArch64 the same executable round trip succeeds.
+- On Linux x86-64 at `-O0` the regression builds but raises
+  `CONSTRAINT_ERROR ... invalid data` when a valid negative `Duration` is
+  assigned.
+- On Linux x86-64 at `-O2` the front end aborts in `fold_convert_loc` and no
+  executable is produced. The exact `fold-const.cc` line differs per release.
+- On Linux and macOS AArch64 the same executable round trip succeeds at both
+  optimization levels.
 
 The AArch64 lanes are therefore unpatched *target controls*, not evidence that
 the source defect is absent: the stale check is present in the tree on every
-target. `-O0` succeeds everywhere, and an explicitly `Lock_Free` protected
-object compiles correctly, which is what identifies automatic lock-free
-selection as the cause. The regression runner encodes exactly this. It requires
-the compilation failure only for an unpatched `x86_64-*-linux*` compiler at
-`-O2`, and requires success at both `-O0` and `-O2` everywhere once patched.
+target. An explicitly `Lock_Free` protected object compiles correctly, which is
+what identifies automatic lock-free selection as the cause. The regression
+runner encodes exactly this. For an unpatched `x86_64-*-linux*` compiler it
+requires the run-time rejection at `-O0` and the compiler abort at `-O2`; on
+every other target it requires the unpatched round trip to succeed; and once
+patched it requires success at both `-O0` and `-O2` everywhere.
 
 ## Layout
 
