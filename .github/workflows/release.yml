@@ -189,10 +189,14 @@ jobs:
           alr -s "$alire_settings" -n -q init --bin consumer
           cd consumer
           alr -s "$alire_settings" -n index \
-            --add="$GITHUB_WORKSPACE/work/index" --name=release-candidate
+            --add="$GITHUB_WORKSPACE/work/index" --name=release_candidate
+          alr -s "$alire_settings" -n index \
+            --add=git+https://github.com/alire-project/alire-index.git \
+            --name=community
           alr -s "$alire_settings" -n toolchain --select --local \
-            "gnat_flyology_native=$source_version-patchset.$patchset"
-          gnatmake=$(alr -s "$alire_settings" -q exec -- which gnatmake)
+            "gnat_flyology_native=$source_version-patchset.$patchset" \
+            gprbuild
+          gnatmake=$(alr -s "$alire_settings" exec -- which gnatmake)
           toolchain=$(cd "$(dirname "$gnatmake")/.." && pwd)
           expected=patched
           [[ "$major" != 13 ]] || expected=control

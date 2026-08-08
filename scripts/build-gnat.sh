@@ -38,7 +38,7 @@ if [[ $(uname -s) == Darwin ]]; then
   sdk=$(xcrun --sdk macosx --show-sdk-path)
   configure+=(
     "--with-build-sysroot=$sdk"
-    "--with-specs=%{!-sysroot=*:-isysroot $sdk}"
+    "--with-specs=%{!-sysroot=*:--sysroot=%:if-exists-else(/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk)}"
     "--with-gmp=$(brew --prefix gmp)"
     "--with-mpfr=$(brew --prefix mpfr)"
     "--with-mpc=$(brew --prefix libmpc)"

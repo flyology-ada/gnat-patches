@@ -32,6 +32,9 @@ artifacts.
 - Bundle the compiler's non-system numerical runtime libraries. On macOS,
   replace Homebrew-specific dylib paths before archiving; an archive that only
   works on the build runner is invalid.
+- A macOS compiler must not retain a versioned GitHub runner SDK path in its
+  built-in specs. Use the GNAT-FSF portable Command Line Tools/Xcode.app SDK
+  selection and prove it by linking the regression after an Alire install.
 - Linux packages use CI-built, checksum-pinned GNU Binutils 2.46.1 helpers.
   Never copy binutils or compiler executables from the bootstrap archive, and
   attach the corresponding Binutils source archive to each release.

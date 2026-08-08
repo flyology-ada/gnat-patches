@@ -63,6 +63,11 @@ Ubuntu arm label are native arm64 runners. GCC 14 through 16 use the pinned
 build workflow. This is required because Xcode 16.4's assembler rejects the
 older GCC 13 Darwin `libgcc` LSE CFI layout. The workflow fails if its exact
 Xcode application is absent; it does not fall forward to a newer assembler.
+The installed compiler does not retain that versioned runner SDK path. Its
+built-in Darwin spec follows the public GNAT-FSF distribution baseline and
+selects the Command Line Tools SDK when present, otherwise the SDK below the
+standard `/Applications/Xcode.app` path. This is validated again after Alire
+installs the release on a fresh consumer runner.
 
 ## Local validation
 
