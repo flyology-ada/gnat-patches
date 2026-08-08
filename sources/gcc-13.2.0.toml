@@ -4,7 +4,6 @@ major = 13
 release_tag = "releases/gcc-13.2.0"
 release_commit = "c891d8dc23e1a46ad9f3e757d09e57b500d40044"
 release_tree = "e0036ea6a50a6a9e2b4ffe6e1a7c5276452f1023"
-expected_unpatched = "pass"
 
 [linux]
 url = "https://gcc.gnu.org/pub/gcc/releases/gcc-13.2.0/gcc-13.2.0.tar.xz"

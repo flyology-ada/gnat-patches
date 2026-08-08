@@ -4,7 +4,6 @@ major = 14
 release_tag = "releases/gcc-14.2.0"
 release_commit = "04696df09633baf97cdbbdd6e9929b9d472161d3"
 release_tree = "1357078fcfcdd78685d385d705c2fa137251cb01"
-expected_unpatched = "fail"
 
 [linux]
 url = "https://gcc.gnu.org/pub/gcc/releases/gcc-14.2.0/gcc-14.2.0.tar.xz"

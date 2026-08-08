@@ -7,7 +7,7 @@ on:
         description: Exact patchset version to publish
         required: true
         type: string
-        default: 1.0.1
+        default: 1.1.0
       gcc_major:
         description: GCC major targeted by the aggregate
         required: true
@@ -198,9 +198,8 @@ jobs:
             gprbuild
           gnatmake=$(alr -s "$alire_settings" exec -- which gnatmake)
           toolchain=$(cd "$(dirname "$gnatmake")/.." && pwd)
-          expected=patched
-          [[ "$major" != 13 ]] || expected=control
-          "$GITHUB_WORKSPACE/scripts/run-regressions.sh" "$toolchain" "$expected"
+          "$GITHUB_WORKSPACE/scripts/run-regressions.sh" "$toolchain" \
+            "$patchset" "$major" patched
 
   publish:
     name: Promote validated release

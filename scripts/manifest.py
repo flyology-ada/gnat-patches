@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import os
 import pathlib
 import sys
 import tomllib
@@ -79,6 +80,16 @@ def sha256(path: pathlib.Path) -> str:
     return digest.hexdigest()
 
 
+def patchset_key(version: str) -> tuple[int, int, int]:
+    try:
+        parts = tuple(int(part) for part in version.split("."))
+    except (AttributeError, ValueError) as exc:
+        raise ManifestError(f"invalid patchset version: {version}") from exc
+    if len(parts) != 3 or any(part < 0 for part in parts):
+        raise ManifestError(f"invalid patchset version: {version}")
+    return parts
+
+
 def selected_variant(bundle: dict, version: str) -> dict:
     matches = [item for item in bundle.get("variants", []) if version in item.get("versions", [])]
     if len(matches) != 1:
@@ -127,12 +138,16 @@ def accepted_bundles() -> dict[str, dict]:
 
 def validate_bundle(bundle: dict) -> None:
     bundle_id = bundle["id"]
+    patchset_key(bundle.get("introduced_in_patchset"))
     tests = bundle.get("regression_tests", [])
     if not tests:
         raise ManifestError(f"accepted bundle {bundle_id} has no regression tests")
     fixture = ROOT / bundle["repository_fixture"]
     if not fixture.is_file() or sha256(fixture) != bundle["fixture_sha256"]:
         raise ManifestError(f"fixture checksum mismatch for {bundle_id}")
+    runner = ROOT / bundle.get("repository_test_runner", "")
+    if not runner.is_file() or not os.access(runner, os.X_OK):
+        raise ManifestError(f"missing or nonexecutable regression runner for {bundle_id}")
     affected = set(bundle.get("affected_versions", []))
     known_good = set(bundle.get("known_good_versions", []))
     if not affected or affected & known_good:
@@ -157,6 +172,7 @@ def validate_bundle(bundle: dict) -> None:
 
 def validate_patchset(version: str, major: int, bundles: dict[str, dict]) -> dict:
     patchset = load(patchset_path(version, major))
+    release_key = patchset_key(version)
     if patchset.get("patchset_version") != version or patchset.get("gcc_major") != major:
         raise ManifestError(f"patchset identity mismatch for {version}/gcc-{major}")
     source = load(source_path(patchset["source_version"]))
@@ -165,7 +181,8 @@ def validate_patchset(version: str, major: int, bundles: dict[str, dict]) -> dic
     expected = sorted(
         bundle_id
         for bundle_id, bundle in bundles.items()
-        if patchset["source_version"] in bundle.get("affected_versions", [])
+        if patchset_key(bundle["introduced_in_patchset"]) <= release_key
+        and patchset["source_version"] in bundle.get("affected_versions", [])
     )
     declared = patchset.get("bundles", [])
     if len(declared) != len(set(declared)) or sorted(declared) != expected:
@@ -176,7 +193,8 @@ def validate_patchset(version: str, major: int, bundles: dict[str, dict]) -> dic
     expected_controls = sorted(
         bundle_id
         for bundle_id, bundle in bundles.items()
-        if patchset["source_version"] in bundle.get("known_good_versions", [])
+        if patchset_key(bundle["introduced_in_patchset"]) <= release_key
+        and patchset["source_version"] in bundle.get("known_good_versions", [])
     )
     if sorted(controls) != expected_controls:
         raise ManifestError(
@@ -222,7 +240,7 @@ def main() -> int:
     get_bundle = sub.add_parser("bundle")
     get_bundle.add_argument("bundle_id")
     get_bundle.add_argument("version")
-    get_bundle.add_argument("field", choices=("patch", "sha256", "variant"))
+    get_bundle.add_argument("field", choices=("patch", "sha256", "variant", "runner"))
     validate = sub.add_parser("validate")
     validate.add_argument("--patchset")
     validate.add_argument("--gcc", type=int)
@@ -236,9 +254,12 @@ def main() -> int:
             emit(nested(load(patchset_path(args.version, args.major)), args.field))
         elif args.command == "bundle":
             bundle = load(bundle_path(args.bundle_id))
-            variant = selected_variant(bundle, args.version)
-            key = "id" if args.field == "variant" else args.field
-            emit(variant[key])
+            if args.field == "runner":
+                emit(bundle["repository_test_runner"])
+            else:
+                variant = selected_variant(bundle, args.version)
+                key = "id" if args.field == "variant" else args.field
+                emit(variant[key])
         elif args.command == "validate":
             if (args.patchset is None) != (args.gcc is None):
                 raise ManifestError("--patchset and --gcc must be supplied together")

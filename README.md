@@ -10,20 +10,54 @@ A code-only change is not an accepted bundle. Independent compiler problems
 live in independent `bundles/<id>/` directories; a new problem does not modify
 or depend on an existing bundle.
 
+This repository is not a GCC fork. It curates patches against unmodified,
+checksum-pinned upstream sources and proves them with source builds.
+
 ## Current patchset
 
-Patchset `1.0.1` contains the `storage-model-actuals` correction:
+Patchset `1.1.0` is published for GCC 13, 14, 15, and 16. It contains two
+independent corrections, each with its own executable regression:
 
-| GCC source | Baseline | Unpatched | Patchset 1.0.1 |
+- `storage-model-actuals`: selected and indexed actuals rooted at a
+  `Designated_Storage_Model` dereference bypass `Copy_From` and `Copy_To`.
+  GCC 13 does not have this defect and remains its known-good control.
+- `protected-duration-validity`: an automatically selected lock-free protected
+  body retains validity checks inserted before the protected type was marked
+  lock-free. GCC 13 through 16 are affected.
+
+| GCC source | `storage-model-actuals` | `protected-duration-validity` | Patchset 1.1.0 |
 | --- | --- | --- | --- |
-| 13.2.0 | known-good control | test passes | no code patch; test passes |
-| 14.2.0 | affected | test raises `CONSTRAINT_ERROR` | test passes at `-O0` and `-O2` |
-| 15.3.0 | affected | test raises `CONSTRAINT_ERROR` | test passes at `-O0` and `-O2` |
-| 16.1.0 | affected | test raises `CONSTRAINT_ERROR` | test passes at `-O0` and `-O2` |
+| 13.2.0 | known-good control | affected | patched toolchain |
+| 14.2.0 | affected | affected | patched toolchain |
+| 15.3.0 | affected | affected | patched toolchain |
+| 16.1.0 | affected | affected | patched toolchain |
 
-The canonical patch applies with zero fuzz to the pinned FSF release sources
-and the pinned Darwin-maintainer sources for GCC 14, 15, and 16. GCC 13 is
-deliberately tested without a code patch.
+GCC 13 was an unpatched control in patchset `1.0.1` because the only bundle at
+that time did not affect it. It carries a real code patch in `1.1.0`.
+
+Each canonical patch applies with `patch --fuzz=0` to the pinned FSF release
+sources and to the pinned Darwin-maintainer sources of every GCC major it
+declares. Exact context is required, so no hunk may apply with fuzz; a hunk may
+land at a line offset where a release moved surrounding code.
+
+### Target-dependent protected `Duration` failure
+
+The protected `Duration` defect is a front-end defect, but it does not surface
+identically on every target. Before the patch, with `-gnatVa` and optimization
+enabled:
+
+- On Linux x86-64 the setter regression ends in an internal compiler error in
+  `fold_convert_loc`; a getter-only variant instead raises `CONSTRAINT_ERROR`
+  for a valid negative `Duration`.
+- On Linux and macOS AArch64 the same executable round trip succeeds.
+
+The AArch64 lanes are therefore unpatched *target controls*, not evidence that
+the source defect is absent: the stale check is present in the tree on every
+target. `-O0` succeeds everywhere, and an explicitly `Lock_Free` protected
+object compiles correctly, which is what identifies automatic lock-free
+selection as the cause. The regression runner encodes exactly this. It requires
+the compilation failure only for an unpatched `x86_64-*-linux*` compiler at
+`-O2`, and requires success at both `-O0` and `-O2` everywhere once patched.
 
 ## Layout
 
@@ -87,16 +121,26 @@ diagnostics; it is not searched by GCC.
 ```sh
 ./scripts/verify-repository.sh
 ./scripts/fetch-source.sh 16.1.0 work/gcc-16.1.0
-./scripts/apply-patchset.sh 1.0.1 16 work/gcc-16.1.0
+./scripts/apply-patchset.sh 1.1.0 16 work/gcc-16.1.0
 PATH=/path/to/bootstrap/bin:$PATH \
   ./scripts/build-gnat.sh work/gcc-16.1.0 build/gcc-16 install/gcc-16
-./scripts/run-regressions.sh install/gcc-16 patched
+./scripts/run-regressions.sh install/gcc-16 1.1.0 16 patched
+```
+
+`run-regressions.sh` takes a toolchain root, a patchset version, a GCC major,
+and whether that toolchain is `unpatched` or `patched`. It resolves the
+applicable bundles and known-good controls from the selected patchset and runs
+each bundle's own executable regression, so the same command covers a bootstrap
+compiler, a freshly built compiler, and a relocated release archive:
+
+```sh
+./scripts/run-regressions.sh "$BOOTSTRAP_ROOT" 1.1.0 16 unpatched
 ```
 
 To apply exactly one bundle instead of an aggregate:
 
 ```sh
-./scripts/apply-bundle.sh storage-model-actuals 16.1.0 work/gcc-16.1.0
+./scripts/apply-bundle.sh protected-duration-validity 16.1.0 work/gcc-16.1.0
 ```
 
 All application paths use `patch --fuzz=0` and verify the recorded SHA-256
@@ -105,11 +149,12 @@ before touching a source tree.
 ## CI and releases
 
 Validation builds GCC/GNAT from source on Linux x86_64, Linux arm64, and macOS
-arm64 for GCC 13 through 16. It runs the unpatched control with the bootstrap
-compiler, builds the declared source baseline, and runs the executable fixture
-at `-O0` and `-O2`. Source and bootstrap downloads are checksum-verified even
-when restored from cache. Failed jobs retain compact test and configuration
-logs.
+arm64 for GCC 13 through 16, which is twelve independent source-build lanes.
+Each lane runs the unpatched controls with the bootstrap compiler, applies the
+complete `1.1.0` aggregate to the declared source baseline, builds the
+compiler, and runs every applicable bundle's executable regression at `-O0` and
+`-O2`. Source and bootstrap downloads are checksum-verified even when restored
+from cache. Failed jobs retain compact test and configuration logs.
 
 Each successful source-build lane also creates a relocatable native compiler
 archive and reruns the same executable regression from a fresh extraction.
@@ -149,10 +194,11 @@ whose version is `<gcc-version>-patchset.<patchset-version>` and whose
 `provides` field exposes the underlying GNAT version.
 
 A publishing dispatch first creates an immutable prerelease candidate. Alire
-2.1.1 must install it with a workspace-local selection and run the bundle's
-regression at `-O0` and `-O2` on all three supported hosts. Only then does CI
-promote the same assets to a stable release. Toolchain archives contain exactly
-one top-level directory, as required by Alire's binary-origin deployment.
+2.1.1 must install it with a workspace-local selection and run every applicable
+bundle's regression at `-O0` and `-O2` on all three supported hosts. Only then
+does CI promote the same assets to a stable release. Toolchain archives contain
+exactly one top-level directory, as required by Alire's binary-origin
+deployment.
 
 After a release is published, add the Flyology index once and, from an Alire
 workspace, select the desired patched compiler locally:
@@ -162,7 +208,16 @@ alr index --add \
   git+https://github.com/flyology-ada/alire-index.git \
   --name flyology --before community
 alr -n toolchain --select --local \
-  gnat_flyology_native=16.1.0-patchset.1.0.1
+  gnat_flyology_native=16.1.0-patchset.1.1.0
+```
+
+Patchset `1.1.0` publishes four compiler versions:
+
+```text
+gnat_flyology_native=13.2.0-patchset.1.1.0
+gnat_flyology_native=14.2.0-patchset.1.1.0
+gnat_flyology_native=15.3.0-patchset.1.1.0
+gnat_flyology_native=16.1.0-patchset.1.1.0
 ```
 
 The Alire crate configures `PATH` and the platform library paths. A project may
@@ -177,7 +232,7 @@ and checksum sidecars before committing it with that repository's scoped
 ## Licensing and provenance
 
 Repository-authored scripts and documentation are MIT licensed. Patch hunks
-derived from GCC retain GCC's upstream licensing; the first compiler patch is
-GPL-3.0-or-later, and its regression test is intended for contribution to the
-GCC testsuite under GCC project terms. Each bundle manifest records its
+derived from GCC retain GCC's upstream licensing; both compiler patches are
+GPL-3.0-or-later, and their regression tests are intended for contribution to
+the GCC testsuite under GCC project terms. Each bundle manifest records its
 specific provenance and license. Packaging does not relicense patch content.

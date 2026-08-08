@@ -1,0 +1,6 @@
+schema = 1
+patchset_version = "1.1.0"
+gcc_major = 15
+source_version = "15.3.0"
+bundles = ["storage-model-actuals", "protected-duration-validity"]
+control_tests = []

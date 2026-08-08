@@ -4,7 +4,6 @@ major = 15
 release_tag = "releases/gcc-15.3.0"
 release_commit = "4db0e8df15bef836558857c291c323add11d035c"
 release_tree = "0c76aca021168cf1d823c7d3ddc03a3d589d1cff"
-expected_unpatched = "fail"
 
 [linux]
 url = "https://gcc.gnu.org/pub/gcc/releases/gcc-15.3.0/gcc-15.3.0.tar.xz"
