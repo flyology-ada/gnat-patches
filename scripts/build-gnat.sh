@@ -61,17 +61,11 @@ if [[ $(uname -s) == Darwin ]]; then
   }
   sdk=$(xcrun --sdk macosx --show-sdk-path)
   real_gnatmake=$(command -v gnatmake)
-  bootstrap_libgcc=$(gcc -print-file-name=libgcc_s.1.1.dylib)
-  [[ -f "$bootstrap_libgcc" ]] || {
-    echo "error: Darwin bootstrap cannot resolve libgcc_s.1.1.dylib" >&2
-    exit 1
-  }
   bootstrap_wrapper_dir=$build_dir/bootstrap-wrappers
   mkdir -p "$bootstrap_wrapper_dir"
   ln -s "$root/scripts/bootstrap-gnatmake.sh" \
     "$bootstrap_wrapper_dir/gnatmake"
   export GNAT_PATCHES_REAL_GNATMAKE=$real_gnatmake
-  export GNAT_PATCHES_BOOTSTRAP_LIBGCC=$bootstrap_libgcc
   export PATH="$bootstrap_wrapper_dir:$PATH"
   configure+=(
     "--with-build-sysroot=$sdk"
