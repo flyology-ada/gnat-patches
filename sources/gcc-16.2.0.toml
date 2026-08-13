@@ -1,0 +1,19 @@
+schema = 1
+version = "16.2.0"
+major = 16
+release_tag = "releases/gcc-16.2.0"
+release_commit = "78d4ac73dd391005b895a6148cd9831e28e1208b"
+release_tree = "050dfd1626105b34fbf3215cb23d4e8a472c2329"
+
+[linux]
+url = "https://gcc.gnu.org/pub/gcc/releases/gcc-16.2.0/gcc-16.2.0.tar.xz"
+archive = "gcc-16.2.0.tar.xz"
+sha512 = "c51c30ca7422d0cbecf504b2e0f33c3aca31e0f90a76b65217f465163fa6fa17b3f5de39e145c47e5bab90ac0ce7fff3b03c8d553ae36e01faaea5a50f8648d1"
+
+[darwin_arm64]
+repository = "https://github.com/flyology-ada/gcc-16-branch.git"
+tag = "gcc-16.2-darwin-rc0"
+commit = "ff47b205083811f1cea6675250699d0c383d4a81"
+tree = "b4e53f180a97e01e0a0d00c3d71f047603e67741"
+runner = "macos-15"
+xcode = "16.4"

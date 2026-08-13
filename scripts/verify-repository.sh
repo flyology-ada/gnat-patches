@@ -5,6 +5,8 @@ root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 cd "$root"
 
 python3 scripts/manifest.py validate
+ci/test-bootstrap-gnatmake.sh
+ci/test-homebrew-gxx.sh
 
 if rg --hidden -n 'uses: [^#[:space:]]+@(v[0-9]+|main|master)([[:space:]]|$)' .github/workflows; then
   echo "error: GitHub Actions must use immutable commit SHAs" >&2

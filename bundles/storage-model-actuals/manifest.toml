@@ -4,7 +4,7 @@ status = "accepted"
 introduced_in_patchset = "1.0.0"
 problem = "Selected and indexed actuals rooted at Designated_Storage_Model dereferences bypass Copy_From and Copy_To."
 upstream_issue = "https://github.com/flyology-ada/flyology/issues/27"
-affected_versions = ["14.2.0", "15.3.0", "16.1.0"]
+affected_versions = ["14.2.0", "15.3.0", "16.1.0", "16.2.0"]
 known_good_versions = ["13.2.0"]
 source_provenance = "Proposed GCC patch and executable gnat.dg test recorded in the upstream issue; source contexts verified against the pinned FSF and Darwin release identities."
 files_modified = ["gcc/ada/exp_ch6.adb", "gcc/testsuite/gnat.dg/storage_model_actuals.adb"]
@@ -22,7 +22,7 @@ licensing = "GCC-derived compiler hunks remain GPL-3.0-or-later. The new test is
 
 [[variants]]
 id = "gcc-14-16"
-versions = ["14.2.0", "15.3.0", "16.1.0"]
+versions = ["14.2.0", "15.3.0", "16.1.0", "16.2.0"]
 source_flavors = ["linux", "darwin_arm64"]
 patch = "bundles/storage-model-actuals/patches/gcc-14-16.patch"
 sha256 = "58bac1ca3a1c21ca3d097867e1246f6deef98cc048a76fec3d30f3c7b4482a9e"
