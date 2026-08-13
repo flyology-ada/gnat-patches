@@ -31,6 +31,17 @@ configure=(
   --disable-libssp
 )
 
+case $(uname -s) in
+  Darwin) default_host_cxx=/usr/bin/clang++ ;;
+  Linux) default_host_cxx=/usr/bin/g++ ;;
+  *) echo "error: unsupported build host" >&2; exit 1 ;;
+esac
+host_cxx=${GNAT_PATCHES_HOST_CXX:-$default_host_cxx}
+[[ -x "$host_cxx" ]] || {
+  echo "error: host C++ compiler is not executable: $host_cxx" >&2
+  exit 1
+}
+
 if [[ $(uname -s) == Darwin ]]; then
   [[ $(uname -m) == arm64 || $(uname -m) == aarch64 ]] || {
     echo "error: only macOS arm64 is supported" >&2; exit 1;
@@ -48,7 +59,7 @@ else
 fi
 
 jobs=${GNAT_PATCHES_JOBS:-2}
-(cd "$build_dir" && "${configure[@]}")
+(cd "$build_dir" && CXX="$host_cxx" "${configure[@]}")
 make -C "$build_dir" -j "$jobs" all-gcc all-target-libgcc all-target-libatomic \
   all-target-libada
 make -C "$build_dir" -j "$jobs" all-gnattools
