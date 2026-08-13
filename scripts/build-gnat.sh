@@ -36,17 +36,21 @@ case $(uname -s) in
   Linux) fallback_host_cxx=/usr/bin/g++ ;;
   *) echo "error: unsupported build host" >&2; exit 1 ;;
 esac
+using_fallback=false
 host_cxx=${GNAT_PATCHES_HOST_CXX:-$(command -v g++ || true)}
 host_cxx=$(command -v "$host_cxx" || true)
-[[ -n "$host_cxx" ]] || {
-  echo "error: no host C++ compiler is available" >&2
-  exit 1
-}
+if [[ -z "$host_cxx" && -z ${GNAT_PATCHES_HOST_CXX:-} ]]; then
+  host_cxx=$fallback_host_cxx
+  using_fallback=true
+elif [[ -z "$host_cxx" ]]; then
+  echo "error: requested host C++ compiler is unavailable" >&2; exit 1
+fi
 probe=$build_dir/.host-cxx-probe
 if [[ -z ${GNAT_PATCHES_HOST_CXX:-} ]] &&
    ! printf 'int main() { return 0; }\n' |
      "$host_cxx" -x c++ - -o "$probe" >/dev/null 2>&1; then
   host_cxx=$fallback_host_cxx
+  using_fallback=true
 fi
 rm -f "$probe"
 
@@ -67,7 +71,14 @@ else
 fi
 
 jobs=${GNAT_PATCHES_JOBS:-2}
-(cd "$build_dir" && CXX="$host_cxx" "${configure[@]}")
+configure_env=("CXX=$host_cxx")
+if $using_fallback && [[ $(uname -s) == Linux ]]; then
+  configure_env+=(
+    "CXXFLAGS=${CXXFLAGS:+$CXXFLAGS }-g -O2 -fno-PIE"
+    "LDFLAGS=${LDFLAGS:+$LDFLAGS }-no-pie"
+  )
+fi
+(cd "$build_dir" && env "${configure_env[@]}" "${configure[@]}")
 make -C "$build_dir" -j "$jobs" all-gcc all-target-libgcc all-target-libatomic \
   all-target-libada
 make -C "$build_dir" -j "$jobs" all-gnattools
