@@ -11,7 +11,7 @@ uses that storage-model object to select the existing call-by-copy path. Its
 indexed components, nested components, scalar and record copy-back, ordinary
 assignments, and access-value operations.
 
-`patches/gcc-14-16.patch` is canonical for the pinned 14.2.0, 15.3.0, and
-16.1.0 FSF and Darwin source baselines. `tests/storage_model_actuals.adb` is a
-byte-identical runnable copy of the test added by that patch. GCC 13.2.0 uses
-the fixture only as an unpatched known-good control.
+`patches/gcc-14-16.patch` is canonical for the pinned 14.2.0, 15.3.0, 16.1.0,
+and 16.2.0 FSF and Darwin source baselines. `tests/storage_model_actuals.adb`
+is a byte-identical runnable copy of the test added by that patch. GCC 13.2.0
+uses the fixture only as an unpatched known-good control.

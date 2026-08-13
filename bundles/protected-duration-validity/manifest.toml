@@ -4,7 +4,7 @@ status = "accepted"
 introduced_in_patchset = "1.1.0"
 problem = "Automatically selected lock-free protected bodies retain invalid Duration validity checks."
 upstream_issue = "https://github.com/flyology-ada/flyology/issues/21"
-affected_versions = ["13.2.0", "14.2.0", "15.3.0", "16.1.0"]
+affected_versions = ["13.2.0", "14.2.0", "15.3.0", "16.1.0", "16.2.0"]
 known_good_versions = []
 source_provenance = "Reproducer and cross-target observations recorded in the Flyology issue; correction derived from the pinned GCC sources and verified against every pinned FSF and Darwin source identity."
 files_modified = ["gcc/ada/exp_ch9.adb", "gcc/testsuite/gnat.dg/protected_duration_validity.adb"]
@@ -22,7 +22,7 @@ licensing = "GCC-derived compiler hunks remain GPL-3.0-or-later. The new test is
 
 [[variants]]
 id = "gcc-13-16"
-versions = ["13.2.0", "14.2.0", "15.3.0", "16.1.0"]
+versions = ["13.2.0", "14.2.0", "15.3.0", "16.1.0", "16.2.0"]
 source_flavors = ["linux", "darwin_arm64"]
 patch = "bundles/protected-duration-validity/patches/gcc-13-16.patch"
 sha256 = "6338408d12909a33b08aacb4e7fed00c3c3c861ef6646192ff640afc1309bc2e"

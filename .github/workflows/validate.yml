@@ -93,15 +93,15 @@ jobs:
           - {version: 13.2.0, major: 13, platform: linux-x86_64, alire_platform: linux-x86_64, runner: ubuntu-24.04}
           - {version: 14.2.0, major: 14, platform: linux-x86_64, alire_platform: linux-x86_64, runner: ubuntu-24.04}
           - {version: 15.3.0, major: 15, platform: linux-x86_64, alire_platform: linux-x86_64, runner: ubuntu-24.04}
-          - {version: 16.1.0, major: 16, platform: linux-x86_64, alire_platform: linux-x86_64, runner: ubuntu-24.04}
+          - {version: 16.2.0, major: 16, platform: linux-x86_64, alire_platform: linux-x86_64, runner: ubuntu-24.04}
           - {version: 13.2.0, major: 13, platform: linux-arm64, alire_platform: linux-aarch64, runner: ubuntu-24.04-arm}
           - {version: 14.2.0, major: 14, platform: linux-arm64, alire_platform: linux-aarch64, runner: ubuntu-24.04-arm}
           - {version: 15.3.0, major: 15, platform: linux-arm64, alire_platform: linux-aarch64, runner: ubuntu-24.04-arm}
-          - {version: 16.1.0, major: 16, platform: linux-arm64, alire_platform: linux-aarch64, runner: ubuntu-24.04-arm}
+          - {version: 16.2.0, major: 16, platform: linux-arm64, alire_platform: linux-aarch64, runner: ubuntu-24.04-arm}
           - {version: 13.2.0, major: 13, platform: macos-arm64, alire_platform: macos-aarch64, runner: macos-14, xcode: '15.4'}
           - {version: 14.2.0, major: 14, platform: macos-arm64, alire_platform: macos-aarch64, runner: macos-15, xcode: '16.4'}
           - {version: 15.3.0, major: 15, platform: macos-arm64, alire_platform: macos-aarch64, runner: macos-15, xcode: '16.4'}
-          - {version: 16.1.0, major: 16, platform: macos-arm64, alire_platform: macos-aarch64, runner: macos-15, xcode: '16.4'}
+          - {version: 16.2.0, major: 16, platform: macos-arm64, alire_platform: macos-aarch64, runner: macos-15, xcode: '16.4'}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 360
     env:
@@ -163,12 +163,27 @@ jobs:
           echo "$bootstrap/bin" >> "$GITHUB_PATH"
 
       - name: Run unpatched controls
+        if: matrix.version != '16.2.0'
         run: |
           ./scripts/run-regressions.sh "$BOOTSTRAP_ROOT" \
             1.1.0 "${{ matrix.major }}" unpatched
 
       - name: Fetch pinned GCC source
         run: ./scripts/fetch-source.sh "${{ matrix.version }}" work/source
+
+      - name: Build unpatched GCC 16.2 control
+        if: matrix.version == '16.2.0'
+        run: ./scripts/build-gnat.sh work/source build/control install/control
+
+      - name: Run unpatched GCC 16.2 controls
+        if: matrix.version == '16.2.0'
+        run: |
+          ./scripts/run-regressions.sh install/control \
+            1.1.0 "${{ matrix.major }}" unpatched
+
+      - name: Discard unpatched GCC 16.2 control build
+        if: matrix.version == '16.2.0'
+        run: rm -rf build/control install/control
 
       - name: Apply complete patchset
         run: ./scripts/apply-patchset.sh 1.1.0 "${{ matrix.major }}" work/source
