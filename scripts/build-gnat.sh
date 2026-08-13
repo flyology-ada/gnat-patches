@@ -32,16 +32,23 @@ configure=(
   --disable-libssp
 )
 
-case $(uname -s) in
-  Darwin) fallback_host_cxx=/usr/bin/clang++ ;;
-  Linux) fallback_host_cxx=/usr/bin/g++ ;;
+host_os=$(uname -s)
+case $host_os in
+  Darwin|Linux) ;;
   *) echo "error: unsupported build host" >&2; exit 1 ;;
 esac
+fallback_host_cxx() {
+  if [[ $host_os == Darwin ]]; then
+    "$root/scripts/homebrew-gxx.sh"
+  else
+    printf '%s\n' /usr/bin/g++
+  fi
+}
 using_fallback=false
 host_cxx=${GNAT_PATCHES_HOST_CXX:-$(command -v g++ || true)}
 host_cxx=$(command -v "$host_cxx" || true)
 if [[ -z "$host_cxx" && -z ${GNAT_PATCHES_HOST_CXX:-} ]]; then
-  host_cxx=$fallback_host_cxx
+  host_cxx=$(fallback_host_cxx)
   using_fallback=true
 elif [[ -z "$host_cxx" ]]; then
   echo "error: requested host C++ compiler is unavailable" >&2; exit 1
@@ -50,7 +57,7 @@ probe=$build_dir/.host-cxx-probe
 if [[ -z ${GNAT_PATCHES_HOST_CXX:-} ]] &&
    ! printf 'int main() { return 0; }\n' |
      "$host_cxx" -x c++ - -o "$probe" >/dev/null 2>&1; then
-  host_cxx=$fallback_host_cxx
+  host_cxx=$(fallback_host_cxx)
   using_fallback=true
 fi
 rm -f "$probe"
@@ -80,7 +87,7 @@ fi
 
 jobs=${GNAT_PATCHES_JOBS:-2}
 configure_env=("CXX=$host_cxx")
-if $using_fallback && [[ $(uname -s) == Linux ]]; then
+if $using_fallback && [[ $host_os == Linux ]]; then
   configure_env+=(
     "CXXFLAGS=${CXXFLAGS:+$CXXFLAGS }-g -O2 -fno-PIE"
     "LDFLAGS=${LDFLAGS:+$LDFLAGS }-no-pie"

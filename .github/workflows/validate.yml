@@ -133,7 +133,7 @@ jobs:
 
       - name: Install macOS build dependencies
         if: runner.os == 'macOS'
-        run: brew install gmp mpfr libmpc
+        run: brew install gcc gmp mpfr libmpc
 
       - name: Select pinned Xcode
         if: runner.os == 'macOS'
