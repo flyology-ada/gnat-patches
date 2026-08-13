@@ -60,7 +60,7 @@ if [[ $(uname -s) == Darwin ]]; then
     echo "error: only macOS arm64 is supported" >&2; exit 1;
   }
   sdk=$(xcrun --sdk macosx --show-sdk-path)
-  real_gnatlink=$(command -v gnatlink)
+  real_gnatmake=$(command -v gnatmake)
   bootstrap_libgcc=$(gcc -print-file-name=libgcc_s.1.1.dylib)
   [[ -f "$bootstrap_libgcc" ]] || {
     echo "error: Darwin bootstrap cannot resolve libgcc_s.1.1.dylib" >&2
@@ -68,9 +68,9 @@ if [[ $(uname -s) == Darwin ]]; then
   }
   bootstrap_wrapper_dir=$build_dir/bootstrap-wrappers
   mkdir -p "$bootstrap_wrapper_dir"
-  ln -s "$root/scripts/bootstrap-gnatlink.sh" \
-    "$bootstrap_wrapper_dir/gnatlink"
-  export GNAT_PATCHES_REAL_GNATLINK=$real_gnatlink
+  ln -s "$root/scripts/bootstrap-gnatmake.sh" \
+    "$bootstrap_wrapper_dir/gnatmake"
+  export GNAT_PATCHES_REAL_GNATMAKE=$real_gnatmake
   export GNAT_PATCHES_BOOTSTRAP_LIBGCC=$bootstrap_libgcc
   export PATH="$bootstrap_wrapper_dir:$PATH"
   configure+=(
