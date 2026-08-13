@@ -32,15 +32,23 @@ configure=(
 )
 
 case $(uname -s) in
-  Darwin) default_host_cxx=/usr/bin/clang++ ;;
-  Linux) default_host_cxx=/usr/bin/g++ ;;
+  Darwin) fallback_host_cxx=/usr/bin/clang++ ;;
+  Linux) fallback_host_cxx=/usr/bin/g++ ;;
   *) echo "error: unsupported build host" >&2; exit 1 ;;
 esac
-host_cxx=${GNAT_PATCHES_HOST_CXX:-$default_host_cxx}
-[[ -x "$host_cxx" ]] || {
-  echo "error: host C++ compiler is not executable: $host_cxx" >&2
+host_cxx=${GNAT_PATCHES_HOST_CXX:-$(command -v g++ || true)}
+host_cxx=$(command -v "$host_cxx" || true)
+[[ -n "$host_cxx" ]] || {
+  echo "error: no host C++ compiler is available" >&2
   exit 1
 }
+probe=$build_dir/.host-cxx-probe
+if [[ -z ${GNAT_PATCHES_HOST_CXX:-} ]] &&
+   ! printf 'int main() { return 0; }\n' |
+     "$host_cxx" -x c++ - -o "$probe" >/dev/null 2>&1; then
+  host_cxx=$fallback_host_cxx
+fi
+rm -f "$probe"
 
 if [[ $(uname -s) == Darwin ]]; then
   [[ $(uname -m) == arm64 || $(uname -m) == aarch64 ]] || {
