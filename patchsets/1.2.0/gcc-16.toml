@@ -2,5 +2,5 @@ schema = 1
 patchset_version = "1.2.0"
 gcc_major = 16
 source_version = "16.1.0"
-bundles = ["storage-model-actuals", "protected-duration-validity", "cxx-ada-template-qualification", "cxx-ada-template-record-termination", "cxx-ada-explicit-alignment", "cxx-ada-namespace-identity", "cxx-ada-qualified-method-names", "cxx-ada-casefold-identity", "cxx-ada-template-nested-types", "cxx-ada-anonymous-enums", "cxx-ada-char8-type"]
+bundles = ["storage-model-actuals", "protected-duration-validity", "cxx-ada-template-qualification", "cxx-ada-template-record-termination", "cxx-ada-explicit-alignment", "cxx-ada-namespace-identity", "cxx-ada-qualified-method-names", "cxx-ada-casefold-identity", "cxx-ada-template-nested-types", "cxx-ada-anonymous-enums", "cxx-ada-char8-type", "cxx-ada-vector-types"]
 control_tests = []

@@ -9,7 +9,7 @@ atomic_cases = 63
 pairwise_cases = 16
 pairwise_value_pairs = 88
 grammar_cases = 32
-runtime_suites = 14
+runtime_suites = 15
 dump_modes = ["full", "slim"]
 
 [[features]]
@@ -212,8 +212,9 @@ note = "Patchset 1.2.0 maps C++20 char8_t to ABI-equivalent Interfaces.C.unsigne
 [[features]]
 id = "complex-vector-types"
 category = "type-system"
-state = "confirmed-invalid-ada"
-evidence = "generated/catalog.py:complex_and_vector"
+state = "patched"
+evidence = "bundles/cxx-ada-vector-types,generated/catalog.py:complex_and_vector"
+note = "Complex float types already mapped to Ada.Numerics complex units. Patchset 1.2.0 replaces vector placeholders with aligned GNAT machine-vector arrays and a direct vector calling convention."
 
 [[features]]
 id = "anonymous-enum-constants"

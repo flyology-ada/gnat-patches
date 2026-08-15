@@ -1,0 +1,35 @@
+schema = 1
+id = "cxx-ada-vector-types"
+status = "accepted"
+introduced_in_patchset = "1.2.0"
+problem = "Fixed-size C++ vector typedefs and signatures are emitted as invalid <vector> placeholders, with no usable Ada machine type or calling convention."
+upstream_issue = "Pending GCC Bugzilla filing."
+affected_versions = ["13.2.0", "14.2.0", "15.3.0", "16.1.0"]
+known_good_versions = []
+source_provenance = "Repository-authored GCC patch and executable regression; exact application verified locally against the pinned Darwin release identities. Pinned FSF release application is required by Linux CI."
+files_modified = ["gcc/c-family/c-ada-spec.cc", "gcc/testsuite/g++.dg/ada-spec/vector-types.C"]
+regression_tests = ["gcc/testsuite/g++.dg/ada-spec/vector-types.C"]
+repository_fixture = "bundles/cxx-ada-vector-types/tests/vector-types.C"
+fixture_sha256 = "dfb4a2cdeba0a087d1fb9dc7abea01942201007f6b2b4e99ee8bcfac5c503b2a"
+repository_test_runner = "bundles/cxx-ada-vector-types/run-test.sh"
+application_command = "patch --fuzz=0 -p1 -i bundles/cxx-ada-vector-types/patches/VARIANT.patch"
+build_command = "PATH=/path/to/bootstrap/bin:$PATH ./scripts/build-gnat.sh SOURCE BUILD INSTALL"
+test_command = "./scripts/run-regressions.sh INSTALL 1.2.0 GCC_MAJOR patched"
+expected_failure_before_patch = "GNAT rejects vector typedefs and signatures containing the mapper's <vector> placeholder."
+expected_success_after_patch = "Integer and floating-point machine vectors compile and round-trip by value through C++ at -O0 and -O2."
+upstream_submission_state = "Not yet filed or submitted upstream."
+licensing = "GCC-derived compiler hunks remain GPL-3.0-or-later. The new test is proposed for the GCC testsuite under GCC project terms."
+
+[[variants]]
+id = "gcc-13-14"
+versions = ["13.2.0", "14.2.0"]
+source_flavors = ["linux", "darwin_arm64"]
+patch = "bundles/cxx-ada-vector-types/patches/gcc-13-14.patch"
+sha256 = "046eedf211540f78331c6bf1b043f629f83c534f0ab6d678d1150840d2e1ca22"
+
+[[variants]]
+id = "gcc-15-16"
+versions = ["15.3.0", "16.1.0"]
+source_flavors = ["linux", "darwin_arm64"]
+patch = "bundles/cxx-ada-vector-types/patches/gcc-15-16.patch"
+sha256 = "61f69cd8a61f7c81d1fd131fcf3707051de27e6490eeb15d8bfda38fecb7978f"
