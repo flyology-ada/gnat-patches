@@ -7,7 +7,7 @@ on:
         description: Exact patchset version to publish
         required: true
         type: string
-        default: 1.1.0
+        default: 1.2.0
       gcc_major:
         description: GCC major targeted by the aggregate
         required: true

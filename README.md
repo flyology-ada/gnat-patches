@@ -15,8 +15,10 @@ checksum-pinned upstream sources and proves them with source builds.
 
 ## Current patchset
 
-Patchset `1.1.0` is published for GCC 13, 14, 15, and 16. It contains two
-independent corrections, each with its own executable regression:
+Patchset `1.2.0` is the current repository candidate for GCC 13, 14, 15, and
+16. It contains three independent corrections, each with its own executable
+regression. Patchset `1.1.0` remains the latest published release until the
+`1.2.0` validation and publication workflows complete.
 
 - `storage-model-actuals`: selected and indexed actuals rooted at a
   `Designated_Storage_Model` dereference bypass `Copy_From` and `Copy_To`.
@@ -24,21 +26,25 @@ independent corrections, each with its own executable regression:
 - `protected-duration-validity`: an automatically selected lock-free protected
   body retains validity checks inserted before the protected type was marked
   lock-free. GCC 13 through 16 are affected.
+- `cxx-ada-template-qualification`: the C++ Ada spec dumper emits concrete
+  template instances in nested packages but drops those package qualifiers
+  from aliases, fields, parameters, and results. Two instantiations therefore
+  make the generated Ada spec ambiguous. GCC 13 through 16 are affected.
 
-| GCC source | `storage-model-actuals` | `protected-duration-validity` | Patchset 1.1.0 |
-| --- | --- | --- | --- |
-| 13.2.0 | known-good control | affected | patched toolchain |
-| 14.2.0 | affected | affected | patched toolchain |
-| 15.3.0 | affected | affected | patched toolchain |
-| 16.1.0 | affected | affected | patched toolchain |
+| GCC source | `storage-model-actuals` | `protected-duration-validity` | `cxx-ada-template-qualification` | Patchset 1.2.0 |
+| --- | --- | --- | --- | --- |
+| 13.2.0 | known-good control | affected | affected | patched toolchain |
+| 14.2.0 | affected | affected | affected | patched toolchain |
+| 15.3.0 | affected | affected | affected | patched toolchain |
+| 16.1.0 | affected | affected | affected | patched toolchain |
 
 GCC 13 was an unpatched control in patchset `1.0.1` because the only bundle at
 that time did not affect it. It carries a real code patch in `1.1.0`.
 
-Each canonical patch applies with `patch --fuzz=0` to the pinned FSF release
-sources and to the pinned Darwin-maintainer sources of every GCC major it
-declares. Exact context is required, so no hunk may apply with fuzz; a hunk may
-land at a line offset where a release moved surrounding code.
+Each canonical patch is required to apply with `patch --fuzz=0` to the pinned
+FSF release sources and to the pinned Darwin-maintainer sources of every GCC
+major it declares. Exact context is required, so no hunk may apply with fuzz; a
+hunk may land at a line offset where a release moved surrounding code.
 
 ### Target-dependent protected `Duration` failure
 
@@ -72,6 +78,8 @@ patched it requires success at both `-O0` and `-O2` everywhere.
   regression programs.
 - `sources/`: exact FSF release and Darwin source identities.
 - `patchsets/<version>/gcc-<major>.toml`: ordered aggregate for one GCC major.
+- `panels/cxx-ada-spec/`: executable C++ feature inventory, confirmed mapper
+  holes, representation boundaries, and planned probes.
 - `scripts/`: fetch, verification, application, build, test, and packaging
   entry points.
 - [`flyology-ada/alire-index`](https://github.com/flyology-ada/alire-index):
@@ -124,10 +132,10 @@ diagnostics; it is not searched by GCC.
 ```sh
 ./scripts/verify-repository.sh
 ./scripts/fetch-source.sh 16.1.0 work/gcc-16.1.0
-./scripts/apply-patchset.sh 1.1.0 16 work/gcc-16.1.0
+./scripts/apply-patchset.sh 1.2.0 16 work/gcc-16.1.0
 PATH=/path/to/bootstrap/bin:$PATH \
   ./scripts/build-gnat.sh work/gcc-16.1.0 build/gcc-16 install/gcc-16
-./scripts/run-regressions.sh install/gcc-16 1.1.0 16 patched
+./scripts/run-regressions.sh install/gcc-16 1.2.0 16 patched
 ```
 
 `run-regressions.sh` takes a toolchain root, a patchset version, a GCC major,
@@ -137,7 +145,7 @@ each bundle's own executable regression, so the same command covers a bootstrap
 compiler, a freshly built compiler, and a relocated release archive:
 
 ```sh
-./scripts/run-regressions.sh "$BOOTSTRAP_ROOT" 1.1.0 16 unpatched
+./scripts/run-regressions.sh "$BOOTSTRAP_ROOT" 1.2.0 16 unpatched
 ```
 
 To apply exactly one bundle instead of an aggregate:
@@ -154,13 +162,13 @@ before touching a source tree.
 Validation builds GCC/GNAT from source on Linux x86_64, Linux arm64, and macOS
 arm64 for GCC 13 through 16, which is twelve independent source-build lanes.
 Each lane runs the unpatched controls with the bootstrap compiler, applies the
-complete `1.1.0` aggregate to the declared source baseline, builds the
+complete `1.2.0` aggregate to the declared source baseline, builds the
 compiler, and runs every applicable bundle's executable regression at `-O0` and
 `-O2`. Source and bootstrap downloads are checksum-verified even when restored
 from cache. Failed jobs retain compact test and configuration logs.
 
-Each successful source-build lane also creates a relocatable native compiler
-archive and reruns the same executable regression from a fresh extraction.
+Each successful source-build lane also creates a relocatable native C, C++, and
+Ada compiler archive and reruns the same executable regression from a fresh extraction.
 These are the only compiler binaries eligible for a release; bootstrap
 archives are never republished as patched toolchains. The archives include the
 non-system GMP, MPFR, and MPC-family libraries used by the compiler build; the

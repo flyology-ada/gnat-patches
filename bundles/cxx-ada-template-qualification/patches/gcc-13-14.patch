@@ -1,0 +1,133 @@
+diff --git a/gcc/c-family/c-ada-spec.cc b/gcc/c-family/c-ada-spec.cc
+index b50b38775..f26fa676e 100644
+--- a/gcc/c-family/c-ada-spec.cc
++++ b/gcc/c-family/c-ada-spec.cc
+@@ -1327,6 +1327,7 @@ separate_class_package (tree decl)
+ }
+ 
+ static bool package_prefix = true;
++static tree current_template_instance = NULL_TREE;
+ 
+ /* Dump in BUFFER the name of an identifier NODE of type TYPE, following Ada
+    syntax.  LIMITED_ACCESS indicates whether NODE can be accessed through a
+@@ -1855,6 +1856,48 @@ dump_template_types (pretty_printer *buffer, tree types, int spc)
+     }
+ }
+ 
++/* If NODE is a concrete template instance emitted in a nested package,
++   qualify references to its type with that package.  */
++
++static bool
++dump_template_package_prefix (pretty_printer *buffer, tree node, int spc)
++{
++  if (!package_prefix || !cpp_check
++      || TYPE_MAIN_VARIANT (node) == current_template_instance)
++    return false;
++
++  for (int i = 0; i < to_dump_count; i++)
++    {
++      tree tmpl = to_dump[i];
++
++      if (!cpp_check (tmpl, IS_TEMPLATE))
++	continue;
++
++      /* DECL_SIZE_UNIT is DECL_TEMPLATE_INSTANTIATIONS in this context.  */
++      for (tree inst = DECL_SIZE_UNIT (tmpl);
++	   inst && inst != error_mark_node;
++	   inst = TREE_CHAIN (inst))
++	{
++	  tree types = TREE_PURPOSE (inst);
++	  tree instance = TREE_VALUE (inst);
++
++	  if (!RECORD_OR_UNION_TYPE_P (instance)
++	      || TYPE_MAIN_VARIANT (instance) != TYPE_MAIN_VARIANT (node))
++	    continue;
++
++	  package_prefix = false;
++	  dump_ada_node (buffer, TYPE_NAME (instance), tmpl, spc, false, true);
++	  dump_template_types (buffer, types, spc);
++	  pp_dot (buffer);
++	  dump_ada_node (buffer, TYPE_NAME (instance), tmpl, spc, false, true);
++	  package_prefix = true;
++	  return true;
++	}
++    }
++
++  return false;
++}
++
+ /* Dump in BUFFER the contents of all class instantiations associated with
+    a given template T.  SPC is the indentation level.  */
+ 
+@@ -1906,6 +1949,8 @@ dump_ada_template (pretty_printer *buffer, tree t, int spc)
+       spc += INDENT_INCR;
+       newline_and_indent (buffer, spc);
+ 
++      tree previous_template_instance = current_template_instance;
++      current_template_instance = TYPE_MAIN_VARIANT (instance);
+       TREE_VISITED (get_underlying_decl (instance)) = 1;
+       pp_string (buffer, "type ");
+       dump_ada_node (buffer, instance, t, spc, false, true);
+@@ -1928,6 +1973,7 @@ dump_ada_template (pretty_printer *buffer, tree t, int spc)
+       dump_ada_node (buffer, instance, t, spc, false, true);
+       dump_template_types (buffer, types, spc);
+       package_prefix = true;
++      current_template_instance = previous_template_instance;
+       pp_semicolon (buffer);
+       pp_newline (buffer);
+       pp_newline (buffer);
+@@ -2390,8 +2436,11 @@ dump_ada_node (pretty_printer *buffer, tree node, tree type, int spc,
+     case RECORD_TYPE:
+     case UNION_TYPE:
+       if (name_only)
+-	dump_ada_node (buffer, TYPE_NAME (node), node, spc, limited_access,
+-		       true);
++	{
++	  if (!dump_template_package_prefix (buffer, node, spc))
++	    dump_ada_node (buffer, TYPE_NAME (node), node, spc, limited_access,
++			   true);
++	}
+       else
+ 	dump_ada_structure (buffer, node, type, false, spc);
+       break;
+diff --git a/gcc/testsuite/g++.dg/ada-spec/template-instantiation-qualification.C b/gcc/testsuite/g++.dg/ada-spec/template-instantiation-qualification.C
+new file mode 100644
+index 000000000..30ca55dd6
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/ada-spec/template-instantiation-qualification.C
+@@ -0,0 +1,35 @@
++/* { dg-do compile } */
++/* { dg-options "-fdump-ada-spec-slim" } */
++/* { dg-final { scan-file template_instantiation_qualification_c.ads "subtype Int_Box is Box_int.Box;" } } */
++/* { dg-final { scan-file template_instantiation_qualification_c.ads "subtype Double_Box is Box_double.Box;" } } */
++/* { dg-final { scan-file template_instantiation_qualification_c.ads "item : aliased Box_int.Box;" } } */
++/* { dg-final { scan-file template_instantiation_qualification_c.ads "function identity \(value : Box_double.Box\) return Box_double.Box" } } */
++/* { dg-final { scan-file template_instantiation_qualification_c.ads "subtype Alias_Int_Box is Box_int.Box;" } } */
++
++template <typename T>
++class Box
++{
++public:
++  Box ();
++  T value () const;
++
++private:
++  T value_;
++};
++
++extern template class Box<int>;
++extern template class Box<double>;
++
++using Int_Box = Box<int>;
++using Double_Box = Box<double>;
++template <typename T> using Alias_Box = Box<T>;
++using Alias_Int_Box = Alias_Box<int>;
++
++struct Holder
++{
++  Box<int> item;
++};
++
++Box<double> identity (Box<double> value);
++
++/* { dg-final { cleanup-ada-spec } } */
