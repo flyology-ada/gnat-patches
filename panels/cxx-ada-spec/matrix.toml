@@ -9,7 +9,7 @@ atomic_cases = 63
 pairwise_cases = 16
 pairwise_value_pairs = 88
 grammar_cases = 32
-runtime_suites = 7
+runtime_suites = 8
 dump_modes = ["full", "slim"]
 
 [[features]]
@@ -153,9 +153,9 @@ evidence = "generated/catalog.py:nested_class,anonymous_namespace,nested_namespa
 [[features]]
 id = "explicit-alignment"
 category = "data-layout"
-state = "confirmed-layout-defect"
-evidence = "cases/known-defects/explicit_alignment.C"
-note = "alignas is omitted, producing the wrong Ada Object_Size and Alignment."
+state = "patched"
+evidence = "bundles/cxx-ada-explicit-alignment"
+note = "Patchset 1.2.0 emits the user-specified alignment independently of packed layout."
 
 [[features]]
 id = "virtual-inheritance-layout"

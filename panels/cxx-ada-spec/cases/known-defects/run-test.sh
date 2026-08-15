@@ -73,7 +73,5 @@ check_runtime_defect() {
 check_rejection namespace_collision 'conflicts with declaration|duplicate|already declared'
 check_runtime_defect inherited_tail_padding \
   "PASS expected inherited tail-padding mismatch"
-check_runtime_defect explicit_alignment \
-  "PASS expected explicit-alignment mismatch"
 check_runtime_defect virtual_inheritance_layout \
   "PASS expected virtual-inheritance mismatch"
