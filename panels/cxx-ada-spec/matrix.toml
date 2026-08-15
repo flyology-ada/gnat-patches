@@ -9,7 +9,7 @@ atomic_cases = 63
 pairwise_cases = 16
 pairwise_value_pairs = 88
 grammar_cases = 32
-runtime_suites = 11
+runtime_suites = 12
 dump_modes = ["full", "slim"]
 
 [[features]]
@@ -239,8 +239,9 @@ note = "Patchset 1.2.0 terminates the generated trivial records."
 [[features]]
 id = "advanced-template-parameters"
 category = "template"
-state = "confirmed-invalid-ada"
-evidence = "generated/catalog.py:non_type_template,default_template_arguments"
+state = "patched"
+evidence = "bundles/cxx-ada-template-nested-types"
+note = "Patchset 1.2.0 declares anonymous array field types inside concrete packages with non-type or defaulted template arguments."
 
 [[features]]
 id = "template-template-parameters"

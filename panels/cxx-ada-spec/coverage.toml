@@ -19,6 +19,7 @@ suites = [
   "bundles/cxx-ada-namespace-identity",
   "bundles/cxx-ada-qualified-method-names",
   "bundles/cxx-ada-casefold-identity",
+  "bundles/cxx-ada-template-nested-types",
   "panels/cxx-ada-spec/cases/known-defects",
 ]
 oracles = [
