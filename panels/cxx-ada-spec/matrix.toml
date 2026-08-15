@@ -9,7 +9,7 @@ atomic_cases = 63
 pairwise_cases = 16
 pairwise_value_pairs = 88
 grammar_cases = 32
-runtime_suites = 13
+runtime_suites = 14
 dump_modes = ["full", "slim"]
 
 [[features]]
@@ -205,9 +205,9 @@ evidence = "generated/catalog.py:member_function_pointer"
 [[features]]
 id = "extended-character-types"
 category = "type-system"
-state = "confirmed-invalid-ada"
-evidence = "generated/catalog.py:extended_characters"
-note = "char8_t is referenced without a corresponding Ada declaration."
+state = "patched"
+evidence = "bundles/cxx-ada-char8-type"
+note = "Patchset 1.2.0 maps C++20 char8_t to ABI-equivalent Interfaces.C.unsigned_char; wchar_t, char16_t, and char32_t retain their existing mappings."
 
 [[features]]
 id = "complex-vector-types"

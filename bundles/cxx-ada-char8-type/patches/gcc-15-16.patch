@@ -1,0 +1,36 @@
+diff --git a/gcc/c-family/c-ada-spec.cc b/gcc/c-family/c-ada-spec.cc
+index c7ae03223..3d452a1d2 100644
+--- a/gcc/c-family/c-ada-spec.cc
++++ b/gcc/c-family/c-ada-spec.cc
+@@ -2254,6 +2254,13 @@ dump_ada_node (pretty_printer *pp, tree node, tree type, int spc,
+     case FIXED_POINT_TYPE:
+     case BOOLEAN_TYPE:
+       if (TYPE_NAME (node)
++	  && ((TREE_CODE (TYPE_NAME (node)) == IDENTIFIER_NODE
++	       && id_equal (TYPE_NAME (node), "char8_t"))
++	      || (TREE_CODE (TYPE_NAME (node)) == TYPE_DECL
++		  && DECL_NAME (TYPE_NAME (node))
++		  && id_equal (DECL_NAME (TYPE_NAME (node)), "char8_t"))))
++	pp_string (pp, "unsigned_char");
++      else if (TYPE_NAME (node)
+ 	  && !(TREE_CODE (TYPE_NAME (node)) == TYPE_DECL
+ 	       && !strncmp (IDENTIFIER_POINTER (DECL_NAME (TYPE_NAME (node))),
+ 			   "__int128", 8)))
+diff --git a/gcc/testsuite/g++.dg/ada-spec/char8-type.C b/gcc/testsuite/g++.dg/ada-spec/char8-type.C
+new file mode 100644
+index 000000000..1e51ec035
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/ada-spec/char8-type.C
+@@ -0,0 +1,12 @@
++/* { dg-do compile { target c++20 } } */
++/* { dg-options "-fdump-ada-spec-slim" } */
++/* { dg-final { scan-file char8_type_c.ads "value : unsigned_char" } } */
++/* { dg-final { scan-file char8_type_c.ads "return unsigned_char" } } */
++
++char8_t
++char8_value (char8_t value)
++{
++  return value;
++}
++
++/* { dg-final { cleanup-ada-spec } } */

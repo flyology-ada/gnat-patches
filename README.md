@@ -16,7 +16,7 @@ checksum-pinned upstream sources and proves them with source builds.
 ## Current patchset
 
 Patchset `1.2.0` is the current repository candidate for GCC 13, 14, 15, and
-16. It contains ten independent corrections, each with its own executable
+16. It contains eleven independent corrections, each with its own executable
 regression. Patchset `1.1.0` remains the latest published release until the
 `1.2.0` validation and publication workflows complete.
 
@@ -58,13 +58,17 @@ regression. Patchset `1.1.0` remains the latest published release until the
   constants and appear in signatures as incomplete internal types. Synthetic
   Ada enum names consistently preserve sequential and sparse values. GCC 13
   through 16 are affected.
+- `cxx-ada-char8-type`: the dumper emits the undefined Ada name `char8_t`.
+  Mapping it to ABI-equivalent `Interfaces.C.unsigned_char` produces a usable
+  binding while retaining the distinct C++ mangled symbol. GCC 13 through 16
+  are affected.
 
-| GCC source | `storage-model-actuals` | `protected-duration-validity` | `cxx-ada-template-qualification` | `cxx-ada-template-record-termination` | `cxx-ada-explicit-alignment` | `cxx-ada-namespace-identity` | `cxx-ada-qualified-method-names` | `cxx-ada-casefold-identity` | `cxx-ada-template-nested-types` | `cxx-ada-anonymous-enums` | Patchset 1.2.0 |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 13.2.0 | known-good control | affected | affected | affected | affected | affected | affected | affected | affected | affected | patched toolchain |
-| 14.2.0 | affected | affected | affected | affected | affected | affected | affected | affected | affected | affected | patched toolchain |
-| 15.3.0 | affected | affected | affected | affected | affected | affected | affected | affected | affected | affected | patched toolchain |
-| 16.1.0 | affected | affected | affected | affected | affected | affected | affected | affected | affected | affected | patched toolchain |
+| GCC source | `storage-model-actuals` | `protected-duration-validity` | `cxx-ada-template-qualification` | `cxx-ada-template-record-termination` | `cxx-ada-explicit-alignment` | `cxx-ada-namespace-identity` | `cxx-ada-qualified-method-names` | `cxx-ada-casefold-identity` | `cxx-ada-template-nested-types` | `cxx-ada-anonymous-enums` | `cxx-ada-char8-type` | Patchset 1.2.0 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 13.2.0 | known-good control | affected | affected | affected | affected | affected | affected | affected | affected | affected | affected | patched toolchain |
+| 14.2.0 | affected | affected | affected | affected | affected | affected | affected | affected | affected | affected | affected | patched toolchain |
+| 15.3.0 | affected | affected | affected | affected | affected | affected | affected | affected | affected | affected | affected | patched toolchain |
+| 16.1.0 | affected | affected | affected | affected | affected | affected | affected | affected | affected | affected | affected | patched toolchain |
 
 GCC 13 was an unpatched control in patchset `1.0.1` because the only bundle at
 that time did not affect it. It carries a real code patch in `1.1.0`.
