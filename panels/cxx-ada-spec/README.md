@@ -43,6 +43,10 @@ tail-padding drift, explicit alignment before patching, virtual-inheritance layo
 and several version- or type-specific omissions. Independent problems must
 become independent patch bundles.
 
+The coverage summary reports both baselines. After the currently accepted
+patches, 12 atomic cases remain non-passing on GCC 15 and 16, and 13 remain on
+GCC 13 and 14 because their `__int128` mapping is also invalid.
+
 Run the complete current panel against a compiler root:
 
 ```sh

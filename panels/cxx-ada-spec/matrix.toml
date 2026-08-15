@@ -81,9 +81,9 @@ note = "Namespaces are flattened, so same-named declarations collide."
 [[features]]
 id = "trivial-template-record-syntax"
 category = "template"
-state = "confirmed-defect"
-evidence = "panels/cxx-ada-spec/cases/known-defects/trivial_template_record.C"
-note = "A trivial template record can be emitted without the semicolon terminating its Convention aspect. Keep this in a separate patch bundle."
+state = "patched"
+evidence = "bundles/cxx-ada-template-record-termination"
+note = "Patchset 1.2.0 terminates the Convention aspect for trivial records emitted in concrete template packages."
 
 [[features]]
 id = "multiple-inheritance-interface-secondary"

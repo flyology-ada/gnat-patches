@@ -57,13 +57,17 @@ def main() -> int:
 
     expectations_path = PANEL / "generated" / "catalog-expectations.toml"
     print(f"atomic catalog: {len(CASES)} cases in {len(coverage['groups'])} groups")
-    for major in ("13", "14", "15", "16"):
-        expected = expectation_table(expectations_path, major)
-        nonpassing = sum(expected.get(case, "pass") != "pass" for case in CASES)
-        print(
-            f"  GCC {major}: {len(CASES) - nonpassing} compile, "
-            f"{nonpassing} classified non-passing"
-        )
+    for state in ("unpatched", "patched"):
+        print(f"  {state} expectations:")
+        for major in ("13", "14", "15", "16"):
+            expected = expectation_table(expectations_path, major, state)
+            nonpassing = sum(
+                expected.get(case, "pass") != "pass" for case in CASES
+            )
+            print(
+                f"    GCC {major}: {len(CASES) - nonpassing} compile, "
+                f"{nonpassing} classified non-passing"
+            )
 
     combinations = pairwise_cases()
     pair_count = sum(
