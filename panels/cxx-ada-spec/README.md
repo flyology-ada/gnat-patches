@@ -29,23 +29,23 @@ The executable panel currently has four layers:
   translation unit, with periodic inheritance and overload clusters. They
   exercise higher-order interactions in the currently representable subset and
   alternate full and slim dump modes.
-- Ten runtime suites link C++ and Ada at `-O0` and `-O2`. They check scalar,
+- Eleven runtime suites link C++ and Ada at `-O0` and `-O2`. They check scalar,
   enum, record, union, pointer, reference, and callback calling conventions;
   object size, alignment, and field offsets; ordinary and interface virtual
   dispatch; template qualification, record termination, and explicit
   alignment, namespace and method identity; and the exact behavior of known
   defects.
 
-The known-defect layer currently reproduces Ada-casefold collisions, malformed
-template records before patching, remaining advanced template failures,
+The known-defect layer currently reproduces malformed template records before
+patching, remaining advanced template failures,
 pointer-to-member syntax failures, inherited tail-padding drift, explicit
 alignment before patching, virtual-inheritance layout drift,
 and several version- or type-specific omissions. Independent problems must
 become independent patch bundles.
 
 The coverage summary reports both baselines. After the currently accepted
-patches, nine atomic cases remain non-passing on GCC 15 and 16, and ten remain
-on GCC 13 and 14 because their `__int128` mapping is also invalid.
+patches, eight atomic cases remain non-passing on GCC 15 and 16, and nine
+remain on GCC 13 and 14 because their `__int128` mapping is also invalid.
 
 Run the complete current panel against a compiler root:
 

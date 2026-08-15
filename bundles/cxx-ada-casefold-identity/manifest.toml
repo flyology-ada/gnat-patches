@@ -1,0 +1,35 @@
+schema = 1
+id = "cxx-ada-casefold-identity"
+status = "accepted"
+introduced_in_patchset = "1.2.0"
+problem = "The C++ Ada spec dumper emits case-distinct C++ identifiers as duplicate Ada identifiers."
+upstream_issue = "Not yet filed."
+affected_versions = ["13.2.0", "14.2.0", "15.3.0", "16.1.0"]
+known_good_versions = []
+source_provenance = "Repository-authored GCC patch and executable regression; exact application verified locally against the pinned Darwin release identities. Pinned FSF release application is required by Linux CI."
+files_modified = ["gcc/c-family/c-ada-spec.cc", "gcc/testsuite/g++.dg/ada-spec/casefold-identity.C"]
+regression_tests = ["gcc/testsuite/g++.dg/ada-spec/casefold-identity.C"]
+repository_fixture = "bundles/cxx-ada-casefold-identity/tests/casefold-identity.C"
+fixture_sha256 = "ddeac6163886392cc380ef233de8f592ed012714d069412a9d735067691333bd"
+repository_test_runner = "bundles/cxx-ada-casefold-identity/run-test.sh"
+application_command = "patch --fuzz=0 -p1 -i bundles/cxx-ada-casefold-identity/patches/VARIANT.patch"
+build_command = "PATH=/path/to/bootstrap/bin:$PATH ./scripts/build-gnat.sh SOURCE BUILD INSTALL"
+test_command = "./scripts/run-regressions.sh INSTALL 1.2.0 GCC_MAJOR patched"
+expected_failure_before_patch = "GNAT rejects records, aliases, fields, or functions whose C++ identifiers differ only by case."
+expected_success_after_patch = "Scope-local Case suffixes preserve every case-distinct identity and all generated references compile and link at -O0 and -O2."
+upstream_submission_state = "Not yet filed or submitted upstream."
+licensing = "GCC-derived compiler hunks remain GPL-3.0-or-later. The new test is proposed for the GCC testsuite under GCC project terms."
+
+[[variants]]
+id = "gcc-13-14"
+versions = ["13.2.0", "14.2.0"]
+source_flavors = ["linux", "darwin_arm64"]
+patch = "bundles/cxx-ada-casefold-identity/patches/gcc-13-14.patch"
+sha256 = "1e89baf1ff79f11b893903645f30f1a3456674cb5c6d2b5a1007b715fa860fd1"
+
+[[variants]]
+id = "gcc-15-16"
+versions = ["15.3.0", "16.1.0"]
+source_flavors = ["linux", "darwin_arm64"]
+patch = "bundles/cxx-ada-casefold-identity/patches/gcc-15-16.patch"
+sha256 = "7dcb4024a2f13f4b31c154bb4c76c16c5b54e0330456e7a8047e84ca19bbc6f2"

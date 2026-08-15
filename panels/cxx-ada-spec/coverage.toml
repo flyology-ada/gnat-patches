@@ -18,6 +18,7 @@ suites = [
   "bundles/cxx-ada-explicit-alignment",
   "bundles/cxx-ada-namespace-identity",
   "bundles/cxx-ada-qualified-method-names",
+  "bundles/cxx-ada-casefold-identity",
   "panels/cxx-ada-spec/cases/known-defects",
 ]
 oracles = [

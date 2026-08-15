@@ -9,7 +9,7 @@ atomic_cases = 63
 pairwise_cases = 16
 pairwise_value_pairs = 88
 grammar_cases = 32
-runtime_suites = 10
+runtime_suites = 11
 dump_modes = ["full", "slim"]
 
 [[features]]
@@ -167,9 +167,9 @@ note = "The generated Ada type compiles but does not match the virtual-base obje
 [[features]]
 id = "ada-casefold-collisions"
 category = "name-lookup"
-state = "confirmed-invalid-ada"
-evidence = "generated/catalog.py:casefold_collision"
-note = "Distinct C++ identifiers that differ only by case collide in Ada."
+state = "patched"
+evidence = "bundles/cxx-ada-casefold-identity"
+note = "Patchset 1.2.0 assigns stable scope-local suffixes to later case variants and all of their references."
 
 [[features]]
 id = "method-cv-overloads"

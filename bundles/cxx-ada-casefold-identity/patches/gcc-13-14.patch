@@ -1,0 +1,165 @@
+diff --git a/gcc/c-family/c-ada-spec.cc b/gcc/c-family/c-ada-spec.cc
+--- a/gcc/c-family/c-ada-spec.cc
++++ b/gcc/c-family/c-ada-spec.cc
+@@ -1353,6 +1353,89 @@
+ static bool package_prefix = true;
+ static tree current_template_instance = NULL_TREE;
+ 
++struct casefold_identifier
++{
++  tree name;
++  unsigned int suffix;
++  casefold_identifier *next;
++};
++
++struct casefold_name_hash
++{
++  hashval_t hash;
++  tree context;
++  char *name;
++  casefold_identifier *identifiers;
++
++  ~casefold_name_hash ()
++  {
++    free (name);
++    while (identifiers)
++      {
++	casefold_identifier *next = identifiers->next;
++	delete identifiers;
++	identifiers = next;
++      }
++  }
++};
++
++struct casefold_name_hasher : delete_ptr_hash<casefold_name_hash>
++{
++  static inline hashval_t hash (casefold_name_hash *t)
++    { return t->hash; }
++  static inline bool equal (casefold_name_hash *a, casefold_name_hash *b)
++    { return a->context == b->context && !strcmp (a->name, b->name); }
++};
++
++typedef hash_table<casefold_name_hasher> casefold_htable_t;
++static casefold_htable_t *casefold_names;
++
++/* Return the suffix needed to distinguish NAME from identifiers in the same
++   C++ scope that differ only by Ada-insensitive casing.  */
++
++static unsigned int
++casefold_suffix (const char *name, tree identifier, tree decl)
++{
++  if (!cpp_check || !decl || !DECL_CONTEXT (decl))
++    return 0;
++
++  char *folded = xstrdup (name);
++  for (char *p = folded; *p; ++p)
++    *p = TOLOWER (*p);
++
++  casefold_name_hash in, *entry, **slot;
++  in.context = DECL_CONTEXT (decl);
++  in.name = folded;
++  in.identifiers = NULL;
++  in.hash = htab_hash_string (folded) ^ htab_hash_pointer (in.context);
++  slot = casefold_names->find_slot_with_hash (&in, in.hash, INSERT);
++  entry = *slot;
++
++  if (!entry)
++    {
++      entry = new casefold_name_hash;
++      entry->hash = in.hash;
++      entry->context = in.context;
++      entry->name = folded;
++      entry->identifiers = new casefold_identifier { identifier, 0, NULL };
++      *slot = entry;
++      in.name = NULL;
++      return 0;
++    }
++
++  free (folded);
++  in.name = NULL;
++  casefold_identifier *last = NULL;
++  for (casefold_identifier *item = entry->identifiers; item;
++       last = item, item = item->next)
++    if (item->name == identifier)
++      return item->suffix;
++
++  const unsigned int suffix = last->suffix ? last->suffix + 1 : 2;
++  last->next = new casefold_identifier { identifier, suffix, NULL };
++  return suffix;
++}
++
+ /* Dump in BUFFER the name of an identifier NODE of type TYPE, following Ada
+    syntax.  LIMITED_ACCESS indicates whether NODE can be accessed through a
+    limited 'with' clause rather than a regular 'with' clause.  */
+@@ -1365,6 +1448,7 @@ pp_ada_tree_identifier (pretty_printer *buffer, tree node, tree type,
+   bool space_found = false;
+   char *s = to_ada_name (name, &space_found);
+   tree decl = get_underlying_decl (type);
++  const unsigned int casefold = casefold_suffix (s, node, decl);
+ 
+   if (decl)
+     {
+@@ -1454,2 +1538,8 @@ pp_ada_tree_identifier (pretty_printer *buffer, tree node, tree type,
++  if (casefold)
++    {
++      pp_string (buffer, "_Case_");
++      pp_decimal_int (buffer, casefold);
++    }
++
+   free (s);
+ }
+@@ -3695,5 +3785,6 @@ dump_ada_specs (void (*collect_all_refs)(const char *),
+   bitmap_obstack_initialize (NULL);
+ 
+   overloaded_names = init_overloaded_names ();
++  casefold_names = new casefold_htable_t (64);
+ 
+   /* Iterate over the list of files to dump specs for.  */
+@@ -3707,6 +3798,7 @@ dump_ada_specs (void (*collect_all_refs)(const char *),
+   /* Free various tables.  */
+   free (source_refs);
+   delete overloaded_names;
++  delete casefold_names;
+ 
+   bitmap_obstack_release (NULL);
+ }
+diff --git a/gcc/testsuite/g++.dg/ada-spec/casefold-identity.C b/gcc/testsuite/g++.dg/ada-spec/casefold-identity.C
+new file mode 100644
+index 000000000..4ec7a2332
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/ada-spec/casefold-identity.C
+@@ -0,0 +1,34 @@
++/* { dg-do compile } */
++/* { dg-options "-fdump-ada-spec-slim" } */
++/* { dg-final { scan-file casefold_identity_c.ads "type ITEM_Case_2" } } */
++/* { dg-final { scan-file casefold_identity_c.ads "subtype ALIAS_Case_2" } } */
++/* { dg-final { scan-file casefold_identity_c.ads "VALUE_Case_2" } } */
++/* { dg-final { scan-file casefold_identity_c.ads "VaLuE_Case_3" } } */
++/* { dg-final { scan-file casefold_identity_c.ads "function MEASURE_Case_2" } } */
++
++struct Item
++{
++  int value;
++};
++
++struct ITEM
++{
++  double value;
++};
++
++using Alias = Item;
++using ALIAS = ITEM;
++
++struct Fields
++{
++  int value;
++  int VALUE;
++  int VaLuE;
++};
++
++int measure (Item item) { return item.value; }
++int MEASURE (ITEM item) { return static_cast<int> (item.value); }
++int combine (Fields fields)
++{ return fields.value + fields.VALUE + fields.VaLuE; }
++
++/* { dg-final { cleanup-ada-spec } } */
