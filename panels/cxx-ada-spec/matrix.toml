@@ -9,7 +9,7 @@ atomic_cases = 63
 pairwise_cases = 16
 pairwise_value_pairs = 88
 grammar_cases = 32
-runtime_suites = 9
+runtime_suites = 10
 dump_modes = ["full", "slim"]
 
 [[features]]
@@ -126,16 +126,16 @@ evidence = "generated/catalog.py:operators,conversion_operators"
 [[features]]
 id = "references-rvalue-references"
 category = "type-system"
-state = "mixed"
-evidence = "generated/catalog.py:free_rvalue_references,ref_qualified_methods"
-note = "Free rvalue-reference profiles compile; methods overloaded only by ref qualifier collide in Ada."
+state = "verified-ada-compile"
+evidence = "generated/catalog.py:free_rvalue_references,bundles/cxx-ada-qualified-method-names"
+note = "Patchset 1.2.0 preserves lvalue- and rvalue-qualified method identity in stable Ada suffixes."
 
 [[features]]
 id = "cv-qualifiers-noexcept"
 category = "type-system"
-state = "mixed"
-evidence = "generated/catalog.py:method_cv_overloads,noexcept_default_arguments"
-note = "Noexcept/default arguments compile; methods overloaded only by cv qualification collide in Ada."
+state = "verified-ada-compile"
+evidence = "bundles/cxx-ada-qualified-method-names,generated/catalog.py:noexcept_default_arguments"
+note = "Patchset 1.2.0 preserves cv-qualified method identity in stable Ada suffixes; noexcept/default arguments compile."
 
 [[features]]
 id = "enums-bitfields-unions"
@@ -174,21 +174,21 @@ note = "Distinct C++ identifiers that differ only by case collide in Ada."
 [[features]]
 id = "method-cv-overloads"
 category = "function"
-state = "confirmed-invalid-ada"
-evidence = "generated/catalog.py:method_cv_overloads"
+state = "patched"
+evidence = "bundles/cxx-ada-qualified-method-names"
 
 [[features]]
 id = "method-ref-qualifier-overloads"
 category = "function"
-state = "confirmed-invalid-ada"
-evidence = "generated/catalog.py:ref_qualified_methods"
+state = "patched"
+evidence = "bundles/cxx-ada-qualified-method-names"
 
 [[features]]
 id = "copy-move-special-members"
 category = "function"
-state = "confirmed-invalid-ada"
-evidence = "generated/catalog.py:copy_move_constructors"
-note = "Generated assignment declarations collide."
+state = "patched"
+evidence = "bundles/cxx-ada-qualified-method-names"
+note = "Patchset 1.2.0 gives move assignment a distinct Ada name."
 
 [[features]]
 id = "data-member-pointers"

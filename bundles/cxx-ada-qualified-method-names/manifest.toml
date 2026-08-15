@@ -1,0 +1,35 @@
+schema = 1
+id = "cxx-ada-qualified-method-names"
+status = "accepted"
+introduced_in_patchset = "1.2.0"
+problem = "The C++ Ada spec dumper emits colliding names for cv/ref-qualified methods and for copy/move assignment operators."
+upstream_issue = "Not yet filed."
+affected_versions = ["13.2.0", "14.2.0", "15.3.0", "16.1.0"]
+known_good_versions = []
+source_provenance = "Repository-authored GCC patch and executable regression; exact application verified locally against the pinned Darwin release identities. Pinned FSF release application is required by Linux CI."
+files_modified = ["gcc/c-family/c-ada-spec.h", "gcc/c-family/c-ada-spec.cc", "gcc/cp/decl2.cc", "gcc/testsuite/g++.dg/ada-spec/qualified-method-names.C"]
+regression_tests = ["gcc/testsuite/g++.dg/ada-spec/qualified-method-names.C"]
+repository_fixture = "bundles/cxx-ada-qualified-method-names/tests/qualified-method-names.C"
+fixture_sha256 = "38096d50c80f04ed37b55d29eae96b1dc56e8fa25ff019584d4180fdf1501e7c"
+repository_test_runner = "bundles/cxx-ada-qualified-method-names/run-test.sh"
+application_command = "patch --fuzz=0 -p1 -i bundles/cxx-ada-qualified-method-names/patches/VARIANT.patch"
+build_command = "PATH=/path/to/bootstrap/bin:$PATH ./scripts/build-gnat.sh SOURCE BUILD INSTALL"
+test_command = "./scripts/run-regressions.sh INSTALL 1.2.0 GCC_MAJOR patched"
+expected_failure_before_patch = "GNAT rejects duplicate method or assignment declarations because C++ qualifier identity is absent from the Ada names."
+expected_success_after_patch = "Stable qualifier suffixes produce compilable Ada and call the correct cv/ref-qualified methods and copy/move assignment symbols at -O0 and -O2."
+upstream_submission_state = "Not yet filed or submitted upstream."
+licensing = "GCC-derived compiler hunks remain GPL-3.0-or-later. The new test is proposed for the GCC testsuite under GCC project terms."
+
+[[variants]]
+id = "gcc-13-14"
+versions = ["13.2.0", "14.2.0"]
+source_flavors = ["linux", "darwin_arm64"]
+patch = "bundles/cxx-ada-qualified-method-names/patches/gcc-13-14.patch"
+sha256 = "d06449cb1c9eafacb3de478c1b5e0ef0404af6d4068b3f3bf46392d97c31eb15"
+
+[[variants]]
+id = "gcc-15-16"
+versions = ["15.3.0", "16.1.0"]
+source_flavors = ["linux", "darwin_arm64"]
+patch = "bundles/cxx-ada-qualified-method-names/patches/gcc-15-16.patch"
+sha256 = "af23fec81ce3ada9bc5d4ae61c0ce3c11c8981646d28175b88a56981411810bc"

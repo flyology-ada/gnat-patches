@@ -9,7 +9,7 @@ procedure panel_core_namespaced is
      (Object : access constant
         Bindings.Class_bridge_panel_Base.bridge_panel_Base'Class) return int is
    begin
-      return Bindings.Class_bridge_panel_Base.value (Object);
+      return Bindings.Class_bridge_panel_Base.value_Const (Object);
    end Dispatch;
 
    Object : aliased
@@ -41,8 +41,8 @@ begin
    Bindings.Class_bridge_panel_Base.add (Object'Access, 2);
    Bindings.Class_bridge_panel_Base.add (Object'Access, 3, 4);
    if Dispatch (Object'Access) /= 48
-     or else Bindings.Class_bridge_panel_Derived.value (Object'Access) /= 48
-     or else Bindings.Class_bridge_panel_Derived.scale (Object'Access) /= 3
+     or else Bindings.Class_bridge_panel_Derived.value_Const (Object'Access) /= 48
+     or else Bindings.Class_bridge_panel_Derived.scale_Const (Object'Access) /= 3
    then
       raise Program_Error with "inheritance, overload, or field mapping failed";
    end if;

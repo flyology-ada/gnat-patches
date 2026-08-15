@@ -28,10 +28,13 @@ integer_128 = "ada-reject"
 
 [patched]
 alias_template = "pass"
+copy_move_constructors = "pass"
 constrained_template = "pass"
 full_specialization = "pass"
 nested_template = "pass"
+method_cv_overloads = "pass"
 partial_specialization = "pass"
+ref_qualified_methods = "pass"
 template_template_parameter = "pass"
 
 [diagnostics]

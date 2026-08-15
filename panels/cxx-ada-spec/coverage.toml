@@ -17,6 +17,7 @@ suites = [
   "bundles/cxx-ada-template-record-termination",
   "bundles/cxx-ada-explicit-alignment",
   "bundles/cxx-ada-namespace-identity",
+  "bundles/cxx-ada-qualified-method-names",
   "panels/cxx-ada-spec/cases/known-defects",
 ]
 oracles = [
