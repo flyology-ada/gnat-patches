@@ -1,0 +1,248 @@
+schema = 2
+panel = "cxx-ada-spec"
+driver_options = ["-fdump-ada-spec", "-fdump-ada-spec-slim"]
+gcc_versions = ["13.2.0", "14.2.0", "15.3.0", "16.1.0"]
+
+[coverage]
+manifest = "panels/cxx-ada-spec/coverage.toml"
+atomic_cases = 63
+pairwise_cases = 16
+pairwise_value_pairs = 88
+grammar_cases = 32
+runtime_suites = 6
+dump_modes = ["full", "slim"]
+
+[[features]]
+id = "constructors-destructors"
+category = "class"
+state = "verified-working"
+evidence = "panels/cxx-ada-spec/cases/core-language"
+
+[[features]]
+id = "data-members-layout"
+category = "class"
+state = "verified-working-with-guard"
+evidence = "panels/cxx-ada-spec/cases/core-language"
+note = "Generated bindings expose layout. Compare Object_Size with compiler-produced sizeof values because Itanium mangling does not encode member layout."
+
+[[features]]
+id = "overloaded-methods"
+category = "function"
+state = "verified-working"
+evidence = "panels/cxx-ada-spec/cases/core-language"
+
+[[features]]
+id = "static-methods"
+category = "function"
+state = "verified-working"
+evidence = "panels/cxx-ada-spec/cases/core-language"
+
+[[features]]
+id = "virtual-methods"
+category = "dispatch"
+state = "verified-working"
+evidence = "panels/cxx-ada-spec/cases/core-language"
+
+[[features]]
+id = "single-inheritance"
+category = "inheritance"
+state = "verified-working"
+evidence = "panels/cxx-ada-spec/cases/core-language"
+note = "The positive case avoids inherited tail-padding reuse and checks both Ada and C++ object sizes."
+
+[[features]]
+id = "inherited-tail-padding-layout"
+category = "data-layout"
+state = "confirmed-defect"
+evidence = "panels/cxx-ada-spec/cases/known-defects/inherited_tail_padding.C"
+note = "C++ reuses a non-POD base's tail padding for a derived member, while the Ada extension appends it after the base Object_Size; the emitted layouts differ."
+
+[[features]]
+id = "explicit-template-instantiations"
+category = "template"
+state = "verified-working"
+evidence = "bundles/cxx-ada-template-qualification"
+
+[[features]]
+id = "external-template-instance-references"
+category = "template"
+state = "patched"
+evidence = "bundles/cxx-ada-template-qualification"
+note = "Aliases, fields, parameters, and results need the generated instance-package qualifier."
+
+[[features]]
+id = "namespace-collisions"
+category = "name-lookup"
+state = "confirmed-defect"
+upstream = "GCC PR 109260"
+evidence = "panels/cxx-ada-spec/cases/known-defects/namespace_collision.C"
+note = "Namespaces are flattened, so same-named declarations collide."
+
+[[features]]
+id = "trivial-template-record-syntax"
+category = "template"
+state = "confirmed-defect"
+evidence = "panels/cxx-ada-spec/cases/known-defects/trivial_template_record.C"
+note = "A trivial template record can be emitted without the semicolon terminating its Convention aspect. Keep this in a separate patch bundle."
+
+[[features]]
+id = "multiple-inheritance-interface-secondary"
+category = "inheritance"
+state = "verified-working"
+evidence = "panels/cxx-ada-spec/cases/interface-secondary-base"
+note = "The dumper maps a pure abstract, data-free secondary base to a limited interface; the runtime test verifies Ada dispatch and secondary-base pointer adjustment."
+
+[[features]]
+id = "multiple-inheritance-concrete-secondary"
+category = "inheritance"
+state = "facade-required"
+note = "Ada cannot mirror the concrete secondary-base layout. A C++-compiled facade must perform base-subobject pointer adjustment."
+
+[[features]]
+id = "uninstantiated-templates"
+category = "template"
+state = "not-emitted"
+note = "The dumper emits no declaration until the C++ template is instantiated."
+
+[[features]]
+id = "standard-library-nontrivial-values"
+category = "library"
+state = "facade-required"
+note = "Slim dumps omit required units; full dumps expand transitively, and nontrivial C++ values such as std::string cannot safely cross this binding by value."
+
+[[features]]
+id = "exceptions"
+category = "runtime"
+state = "binding-compiles-runtime-boundary"
+evidence = "generated/catalog.py:exception_throw"
+note = "The declaration maps and compiles, but exception propagation across the language boundary remains unsupported and untested."
+
+[[features]]
+id = "operators-conversions"
+category = "function"
+state = "verified-ada-compile"
+evidence = "generated/catalog.py:operators,conversion_operators"
+
+[[features]]
+id = "references-rvalue-references"
+category = "type-system"
+state = "mixed"
+evidence = "generated/catalog.py:free_rvalue_references,ref_qualified_methods"
+note = "Free rvalue-reference profiles compile; methods overloaded only by ref qualifier collide in Ada."
+
+[[features]]
+id = "cv-qualifiers-noexcept"
+category = "type-system"
+state = "mixed"
+evidence = "generated/catalog.py:method_cv_overloads,noexcept_default_arguments"
+note = "Noexcept/default arguments compile; methods overloaded only by cv qualification collide in Ada."
+
+[[features]]
+id = "enums-bitfields-unions"
+category = "data-layout"
+state = "verified-runtime"
+evidence = "cases/abi-layout,cases/call-abi,generated/catalog.py"
+note = "Named enums, bit-fields, and unions compile; their size, alignment, and by-value runtime behavior are checked."
+
+[[features]]
+id = "nested-classes-anonymous-scopes"
+category = "name-lookup"
+state = "verified-ada-compile"
+evidence = "generated/catalog.py:nested_class,anonymous_namespace,nested_namespace"
+
+[[features]]
+id = "explicit-alignment"
+category = "data-layout"
+state = "confirmed-layout-defect"
+evidence = "cases/known-defects/explicit_alignment.C"
+note = "alignas is omitted, producing the wrong Ada Object_Size and Alignment."
+
+[[features]]
+id = "virtual-inheritance-layout"
+category = "inheritance"
+state = "confirmed-layout-defect"
+evidence = "cases/known-defects/virtual_inheritance_layout.C"
+note = "The generated Ada type compiles but does not match the virtual-base object size or alignment."
+
+[[features]]
+id = "ada-casefold-collisions"
+category = "name-lookup"
+state = "confirmed-invalid-ada"
+evidence = "generated/catalog.py:casefold_collision"
+note = "Distinct C++ identifiers that differ only by case collide in Ada."
+
+[[features]]
+id = "method-cv-overloads"
+category = "function"
+state = "confirmed-invalid-ada"
+evidence = "generated/catalog.py:method_cv_overloads"
+
+[[features]]
+id = "method-ref-qualifier-overloads"
+category = "function"
+state = "confirmed-invalid-ada"
+evidence = "generated/catalog.py:ref_qualified_methods"
+
+[[features]]
+id = "copy-move-special-members"
+category = "function"
+state = "confirmed-invalid-ada"
+evidence = "generated/catalog.py:copy_move_constructors"
+note = "Generated assignment declarations collide."
+
+[[features]]
+id = "data-member-pointers"
+category = "type-system"
+state = "confirmed-invalid-ada"
+evidence = "generated/catalog.py:data_member_pointer"
+
+[[features]]
+id = "member-function-pointers"
+category = "type-system"
+state = "confirmed-invalid-ada"
+evidence = "generated/catalog.py:member_function_pointer"
+
+[[features]]
+id = "extended-character-types"
+category = "type-system"
+state = "confirmed-invalid-ada"
+evidence = "generated/catalog.py:extended_characters"
+note = "char8_t is referenced without a corresponding Ada declaration."
+
+[[features]]
+id = "complex-vector-types"
+category = "type-system"
+state = "confirmed-invalid-ada"
+evidence = "generated/catalog.py:complex_and_vector"
+
+[[features]]
+id = "anonymous-enum-constants"
+category = "type-system"
+state = "confirmed-omission"
+evidence = "generated/catalog.py:anonymous_enum"
+note = "The generated unit omits the anonymous enumeration constants."
+
+[[features]]
+id = "integer-128"
+category = "type-system"
+state = "version-dependent"
+evidence = "generated/catalog.py:integer_128"
+note = "Generated Ada is invalid on GCC 13 and 14 and compiles on GCC 15 and 16."
+
+[[features]]
+id = "class-template-specializations"
+category = "template"
+state = "confirmed-invalid-ada"
+evidence = "generated/catalog.py:partial_specialization,full_specialization"
+
+[[features]]
+id = "advanced-template-parameters"
+category = "template"
+state = "confirmed-invalid-ada"
+evidence = "generated/catalog.py:non_type_template,default_template_arguments,template_template_parameter"
+
+[[features]]
+id = "nested-alias-constrained-templates"
+category = "template"
+state = "confirmed-invalid-ada"
+evidence = "generated/catalog.py:nested_template,alias_template,constrained_template"

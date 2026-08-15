@@ -1,0 +1,58 @@
+# C++ to Ada specification feature panel
+
+This panel turns exploratory `g++ -fdump-ada-spec` observations into repeatable
+evidence. It separates three outcomes that need different treatment:
+
+- a supported mapping, which gets a positive end-to-end C++/Ada case;
+- a mapper defect, which gets an independent patch bundle with an executable
+  before/after regression;
+- a C++ construct Ada cannot represent directly, which is documented as a
+  facade boundary rather than disguised as a mapper bug.
+
+`matrix.toml` records feature-level conclusions. `coverage.toml` assigns every
+atomic probe to a feature group, lists the runtime oracles, and states the
+remaining limits. `generated/coverage.py` fails if a catalog probe is omitted
+or assigned twice.
+
+The executable panel currently has four layers:
+
+- 63 isolated atomic probes cover types and layout, pointers and functions,
+  templates, inheritance, names and linkage, and runtime/storage declarations.
+  Each probe runs in its own directory, so one malformed dump cannot mask a
+  later feature. Required declarations are checked before the generated Ada is
+  compiled. Versioned expectation files distinguish successful mappings from
+  repeatable invalid Ada and omissions.
+- 16 generated cases cover all 88 value pairs across payload kind, reference
+  carrier, C++ scope, qualifier, and full/slim dump mode. This is pairwise
+  interaction coverage, not a hand-selected sample.
+- 32 fixed-seed grammar cases combine three to seven declarations per
+  translation unit, with periodic inheritance and overload clusters. They
+  exercise higher-order interactions in the currently representable subset and
+  alternate full and slim dump modes.
+- Six runtime suites link C++ and Ada at `-O0` and `-O2`. They check scalar,
+  enum, record, union, pointer, reference, and callback calling conventions;
+  object size, alignment, and field offsets; ordinary and interface virtual
+  dispatch; template qualification; and the exact behavior of known defects.
+
+The known-defect layer currently reproduces namespace and Ada-casefold
+collisions, malformed template records and advanced template forms, cv/ref
+method overload collisions, pointer-to-member syntax failures, inherited
+tail-padding drift, lost explicit alignment, virtual-inheritance layout drift,
+and several version- or type-specific omissions. Independent problems must
+become independent patch bundles.
+
+Run the complete current panel against a compiler root:
+
+```sh
+./panels/cxx-ada-spec/run-panel.sh TOOLCHAIN_ROOT GCC_VERSION unpatched
+```
+
+Use `patched` after applying every accepted C++ Ada mapper bundle. An expected
+pre-patch compiler rejection counts as a passing defect characterization; a
+patched run must generate compilable Ada and execute its consumer.
+
+The matrix is deliberately broader than the current patchset. New confirmed
+defects must become independent `bundles/<id>/` entries instead of being folded
+into the template-qualification patch. The panel is operationally broad but not
+mathematically exhaustive; `coverage.toml` explicitly lists constructs still
+requiring probes or runtime ABI oracles.

@@ -24,6 +24,15 @@ for script in scripts/*.sh scripts/*.py ci/*.sh; do
   fi
 done
 
+while IFS= read -r script; do
+  if [[ ! -x "$script" ]]; then
+    echo "error: $script is not executable" >&2
+    exit 1
+  fi
+done < <(find panels -type f \( -name '*.sh' -o -name '*.py' \) -print)
+
+PYTHONDONTWRITEBYTECODE=1 python3 panels/cxx-ada-spec/generated/coverage.py
+
 archive_test=$(mktemp -d "${TMPDIR:-/tmp}/gnat-patches-archive-test.XXXXXX")
 trap 'rm -rf "$archive_test"' EXIT
 mkdir -p "$archive_test/source/bin" "$archive_test/source/lib"
