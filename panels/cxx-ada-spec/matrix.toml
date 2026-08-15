@@ -9,7 +9,7 @@ atomic_cases = 63
 pairwise_cases = 16
 pairwise_value_pairs = 88
 grammar_cases = 32
-runtime_suites = 15
+runtime_suites = 16
 dump_modes = ["full", "slim"]
 
 [[features]]
@@ -193,14 +193,16 @@ note = "Patchset 1.2.0 gives move assignment a distinct Ada name."
 [[features]]
 id = "data-member-pointers"
 category = "type-system"
-state = "confirmed-invalid-ada"
-evidence = "generated/catalog.py:data_member_pointer"
+state = "patched"
+evidence = "bundles/cxx-ada-member-pointers"
+note = "Patchset 1.2.0 preserves the Itanium ABI ptrdiff_t offset, including its -1 null representation; dereferencing remains a C++ operation."
 
 [[features]]
 id = "member-function-pointers"
 category = "type-system"
-state = "confirmed-invalid-ada"
-evidence = "generated/catalog.py:member_function_pointer"
+state = "patched"
+evidence = "bundles/cxx-ada-member-pointers"
+note = "Patchset 1.2.0 preserves the opaque two-word Itanium ABI representation, including nonvirtual, virtual, and null values; invocation remains a C++ operation."
 
 [[features]]
 id = "extended-character-types"

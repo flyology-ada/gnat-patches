@@ -1,0 +1,84 @@
+diff --git a/gcc/c-family/c-ada-spec.cc b/gcc/c-family/c-ada-spec.cc
+index b50b38775..e30fd67d7 100644
+--- a/gcc/c-family/c-ada-spec.cc
++++ b/gcc/c-family/c-ada-spec.cc
+@@ -2129,6 +2129,12 @@ dump_ada_node (pretty_printer *buffer, tree node, tree type, int spc,
+ 	pp_string (buffer, "address");
+       break;
+ 
++    case OFFSET_TYPE:
++      /* The Itanium C++ ABI represents a data-member pointer as a ptrdiff_t
++	offset, with -1 reserved for null.  */
++      pp_string (buffer, "ptrdiff_t");
++      break;
++
+     case VECTOR_TYPE:
+       pp_string (buffer, "<vector>");
+       break;
+@@ -2227,6 +2233,15 @@ dump_ada_node (pretty_printer *buffer, tree node, tree type, int spc,
+ 	dump_ada_node (buffer, TYPE_NAME (node), node, spc, limited_access,
+ 		       true);
+ 
++      else if (TREE_CODE (TREE_TYPE (node)) == METHOD_TYPE)
++	{
++	  /* A member-function pointer's first word is either a function pointer
++	     or an encoded virtual-table offset, so it is not an Ada access-to-
++	     subprogram value.  Preserve it as an opaque address-sized word.  */
++	  append_withs ("System", false);
++	  pp_string (buffer, "System.Address");
++	}
++
+       else if (TREE_CODE (TREE_TYPE (node)) == FUNCTION_TYPE)
+ 	{
+ 	  if (VOID_TYPE_P (TREE_TYPE (TREE_TYPE (node))))
+diff --git a/gcc/testsuite/g++.dg/ada-spec/member-pointers.C b/gcc/testsuite/g++.dg/ada-spec/member-pointers.C
+new file mode 100644
+index 000000000..1007ec8ee
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/ada-spec/member-pointers.C
+@@ -0,0 +1,45 @@
++/* { dg-do compile } */
++/* { dg-options "-std=gnu++20 -fdump-ada-spec-slim" } */
++/* { dg-final { scan-file member_pointers_c.ads "subtype Data_Member is ptrdiff_t;" } } */
++/* { dg-final { scan-file member_pointers_c.ads "uu_pfn : System.Address;" } } */
++/* { dg-final { scan-file member_pointers_c.ads "uu_delta : aliased long;" } } */
++
++struct Data_Object
++{
++  int first;
++  int field;
++};
++
++using Data_Member = int Data_Object::*;
++
++struct Method_Object
++{
++  virtual int virtual_method (int value) const { return value + 20; }
++  int nonvirtual_method (int value) const { return value + 10; }
++};
++
++using Method_Member = int (Method_Object::*) (int) const;
++
++Data_Member get_data_member () { return &Data_Object::field; }
++Data_Member get_null_data_member () { return nullptr; }
++int apply_data_member (Data_Member member)
++{
++  Data_Object object { 1, 42 };
++  return object.*member;
++}
++bool is_null_data_member (Data_Member member) { return member == nullptr; }
++
++Method_Member get_nonvirtual_method ()
++{
++  return &Method_Object::nonvirtual_method;
++}
++Method_Member get_virtual_method () { return &Method_Object::virtual_method; }
++Method_Member get_null_method () { return nullptr; }
++int apply_method (Method_Member member, int value)
++{
++  Method_Object object;
++  return (object.*member) (value);
++}
++bool is_null_method (Method_Member member) { return member == nullptr; }
++
++/* { dg-final { cleanup-ada-spec } } */
