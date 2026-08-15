@@ -9,7 +9,7 @@ atomic_cases = 63
 pairwise_cases = 16
 pairwise_value_pairs = 88
 grammar_cases = 32
-runtime_suites = 12
+runtime_suites = 13
 dump_modes = ["full", "slim"]
 
 [[features]]
@@ -218,9 +218,9 @@ evidence = "generated/catalog.py:complex_and_vector"
 [[features]]
 id = "anonymous-enum-constants"
 category = "type-system"
-state = "confirmed-omission"
-evidence = "generated/catalog.py:anonymous_enum"
-note = "The generated unit omits the anonymous enumeration constants."
+state = "patched"
+evidence = "bundles/cxx-ada-anonymous-enums"
+note = "Patchset 1.2.0 emits sequential enumerations or integer-subtype constants and maps signature references consistently to the synthetic type."
 
 [[features]]
 id = "integer-128"

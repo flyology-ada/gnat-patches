@@ -29,28 +29,29 @@ The executable panel currently has four layers:
   translation unit, with periodic inheritance and overload clusters. They
   exercise higher-order interactions in the currently representable subset and
   alternate full and slim dump modes.
-- Twelve runtime suites link C++ and Ada at `-O0` and `-O2`. They check scalar,
+- Thirteen runtime suites link C++ and Ada at `-O0` and `-O2`. They check scalar,
   enum, record, union, pointer, reference, and callback calling conventions;
   object size, alignment, and field offsets; ordinary and interface virtual
-  dispatch; template qualification, record termination, nested types, and explicit
-  alignment, namespace and method identity; and the exact behavior of known
-  defects.
+  dispatch; template qualification, record termination, nested types, explicit
+  alignment, namespace and method identity, and anonymous enumeration values;
+  and the exact behavior of known defects.
 
 The known-defect layer currently reproduces malformed template records before
-patching, anonymous nested template types before patching,
-pointer-to-member syntax failures, inherited tail-padding drift, explicit
-alignment before patching, virtual-inheritance layout drift,
+patching, anonymous nested template types before patching, anonymous enum
+omissions before patching, pointer-to-member syntax failures, inherited
+tail-padding drift, explicit alignment before patching, virtual-inheritance
+layout drift,
 and several version- or type-specific omissions. Independent problems must
 become independent patch bundles.
 
 The coverage summary reports both baselines. After the currently accepted
-patches, six atomic cases remain non-passing on GCC 15 and 16, and seven remain
+patches, five atomic cases remain non-passing on GCC 15 and 16, and six remain
 on GCC 13 and 14 because their `__int128` mapping is also invalid.
 
 The remaining confirmed inventory is deliberately explicit:
 
-- generated-spec failures on every tested major: anonymous enum constants,
-  complex/vector types, concrete secondary multiple inheritance, data-member
+- generated-spec failures on every tested major: complex/vector types,
+  concrete secondary multiple inheritance, data-member
   pointers, member-function pointers, and `char8_t`;
 - an additional generated-spec failure on GCC 13 and 14: `__int128`;
 - runtime layout defects on every tested major: inherited tail-padding reuse

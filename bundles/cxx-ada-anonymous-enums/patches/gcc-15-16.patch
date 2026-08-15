@@ -1,0 +1,154 @@
+diff --git a/gcc/c-family/c-ada-spec.cc b/gcc/c-family/c-ada-spec.cc
+index c7ae03223..395f5c2a8 100644
+--- a/gcc/c-family/c-ada-spec.cc
++++ b/gcc/c-family/c-ada-spec.cc
+@@ -2077,6 +2077,44 @@ dump_ada_enum_type (pretty_printer *pp, tree node, tree type, int spc)
+     }
+ }
+ 
++/* Dump in PP the declaration of an anonymous enumeral NODE.  Its enumerators
++   are members of the enclosing C++ scope, so do not prefix non-sequential
++   values with the synthetic Ada type name.  */
++
++static void
++dump_ada_anonymous_enum (pretty_printer *pp, tree node, int spc)
++{
++  INDENT (spc);
++  pp_string (pp, is_simple_enum (node) ? "type " : "subtype ");
++  dump_anonymous_type_name (pp, node);
++  pp_string (pp, " is ");
++
++  if (is_simple_enum (node))
++    dump_ada_enum_type (pp, node, NULL_TREE, spc);
++  else
++    {
++      pp_string (pp, TYPE_UNSIGNED (node) ? "unsigned" : "int");
++
++      for (tree value = TYPE_VALUES (node); value; value = TREE_CHAIN (value))
++	{
++	  tree int_val = TREE_VALUE (value);
++
++	  if (TREE_CODE (int_val) != INTEGER_CST)
++	    int_val = DECL_INITIAL (int_val);
++
++	  pp_semicolon (pp);
++	  newline_and_indent (pp, spc);
++	  pp_ada_tree_identifier (pp, TREE_PURPOSE (value), node, false);
++	  pp_string (pp, " : constant ");
++	  dump_anonymous_type_name (pp, node);
++	  pp_string (pp, " := ");
++	  dump_ada_node (pp, int_val, node, spc, false, true);
++	}
++    }
++
++  pp_semicolon (pp);
++}
++
+ /* Return true if NODE is the __bf16 type.  */
+ 
+ static bool
+@@ -2220,7 +2258,18 @@ dump_ada_node (pretty_printer *pp, tree node, tree type, int spc,
+ 
+     case ENUMERAL_TYPE:
+       if (name_only)
+-	dump_ada_node (pp, TYPE_NAME (node), node, spc, false, true);
++	{
++	  tree enum_name = TYPE_NAME (node);
++	  tree enum_id = (enum_name && TREE_CODE (enum_name) == TYPE_DECL
++			  ? DECL_NAME (enum_name) : enum_name);
++
++	  if (enum_id
++	      && (*IDENTIFIER_POINTER (enum_id) != '.'
++		  && *IDENTIFIER_POINTER (enum_id) != '$'))
++	    dump_ada_node (pp, enum_name, node, spc, false, true);
++	  else
++	    dump_anonymous_type_name (pp, node);
++	}
+       else
+ 	dump_ada_enum_type (pp, node, type, spc);
+       break;
+@@ -2917,9 +2966,20 @@ dump_ada_declaration (pretty_printer *pp, tree t, tree type, int spc)
+   if (cpp_check && cpp_check (t, IS_TEMPLATE))
+     return dump_ada_template (pp, t, spc);
+ 
+-  /* Skip enumeral values: will be handled as part of the type itself.  */
++  /* Named enumeral values are handled as part of the type itself.  C++ does
++     may not expose a TYPE_DECL for a top-level anonymous enum, so emit its
++     synthetic type and all enumerators when the first CONST_DECL is seen.  */
+   if (TREE_CODE (t) == CONST_DECL && TREE_CODE (TREE_TYPE (t)) == ENUMERAL_TYPE)
+-    return 0;
++    {
++      tree enum_type = TREE_TYPE (t);
++
++      if (TYPE_NAME (enum_type)
++	  || !bitmap_set_bit (dumped_anonymous_types, TYPE_UID (enum_type)))
++	return 0;
++
++      dump_ada_anonymous_enum (pp, enum_type, spc);
++      return 1;
++    }
+ 
+   if (TREE_CODE (t) == TYPE_DECL)
+     {
+@@ -2972,10 +3032,29 @@ dump_ada_declaration (pretty_printer *pp, tree t, tree type, int spc)
+ 	  TREE_VISITED (stub) = 1;
+ 	}
+ 
+-      /* Skip unnamed or anonymous structs/unions/enum types.  */
++      /* Emit anonymous enums under a synthetic type name so their enumerators
++	 remain available in the enclosing Ada package.  */
+       if (!orig
+-	  && (RECORD_OR_UNION_TYPE_P (TREE_TYPE (t))
+-	      || TREE_CODE (TREE_TYPE (t)) == ENUMERAL_TYPE)
++	  && TREE_CODE (TREE_TYPE (t)) == ENUMERAL_TYPE
++	  && ((!decl_name && !name)
++	      || (decl_name
++		  && (*IDENTIFIER_POINTER (decl_name) == '.'
++		      || *IDENTIFIER_POINTER (decl_name) == '$')
++		  && TYPE_NAME (TREE_TYPE (t)) == t)))
++	{
++	  tree enum_type = TREE_TYPE (t);
++
++	  if (!bitmap_set_bit (dumped_anonymous_types, TYPE_UID (enum_type)))
++	    return 0;
++
++	  dump_ada_anonymous_enum (pp, enum_type, spc);
++	  TREE_VISITED (t) = 1;
++	  return 1;
++	}
++
++      /* Skip unnamed or anonymous structs/unions.  */
++      if (!orig
++	  && RECORD_OR_UNION_TYPE_P (TREE_TYPE (t))
+ 	  && !decl_name
+ 	  && !name)
+ 	return 0;
+diff --git a/gcc/testsuite/g++.dg/ada-spec/anonymous-enums.C b/gcc/testsuite/g++.dg/ada-spec/anonymous-enums.C
+new file mode 100644
+index 000000000..250428e97
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/ada-spec/anonymous-enums.C
+@@ -0,0 +1,23 @@
++/* { dg-do compile } */
++/* { dg-options "-std=gnu++20 -fdump-ada-spec-slim" } */
++/* { dg-final { scan-file anonymous_enums_c.ads "Sequential_Zero" } } */
++/* { dg-final { scan-file anonymous_enums_c.ads "Sequential_One" } } */
++/* { dg-final { scan-file anonymous_enums_c.ads "Sparse_Minus : constant anon_enum[0-9]+ := -1;" } } */
++/* { dg-final { scan-file anonymous_enums_c.ads "Sparse_Five : constant anon_enum[0-9]+ := 5;" } } */
++
++enum { Sequential_Zero, Sequential_One };
++enum { Sparse_Minus = -1, Sparse_Five = 5 };
++
++extern "C" int
++sequential_value (decltype (Sequential_Zero) value)
++{
++  return value;
++}
++
++extern "C" int
++sparse_value (decltype (Sparse_Minus) value)
++{
++  return value;
++}
++
++/* { dg-final { cleanup-ada-spec } } */

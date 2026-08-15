@@ -28,6 +28,7 @@ integer_128 = "ada-reject"
 
 [patched]
 alias_template = "pass"
+anonymous_enum = "pass"
 casefold_collision = "pass"
 copy_move_constructors = "pass"
 constrained_template = "pass"
