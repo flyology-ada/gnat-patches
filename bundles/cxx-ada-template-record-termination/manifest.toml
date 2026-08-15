@@ -1,0 +1,35 @@
+schema = 1
+id = "cxx-ada-template-record-termination"
+status = "accepted"
+introduced_in_patchset = "1.2.0"
+problem = "The C++ Ada spec dumper omits the terminating semicolon from trivial record declarations emitted for concrete class-template instances."
+upstream_issue = "Pending GCC Bugzilla filing."
+affected_versions = ["13.2.0", "14.2.0", "15.3.0", "16.1.0"]
+known_good_versions = []
+source_provenance = "Repository-authored GCC patch and executable regression; exact application verified locally against the pinned Darwin release identities. Pinned FSF release application is required by Linux CI."
+files_modified = ["gcc/c-family/c-ada-spec.cc", "gcc/testsuite/g++.dg/ada-spec/template-record-termination.C"]
+regression_tests = ["gcc/testsuite/g++.dg/ada-spec/template-record-termination.C"]
+repository_fixture = "bundles/cxx-ada-template-record-termination/tests/template-record-termination.C"
+fixture_sha256 = "c8497f40d88ee08980eb6d7414f8a01c95e81161974093fee81d2adc6dde4f13"
+repository_test_runner = "bundles/cxx-ada-template-record-termination/run-test.sh"
+application_command = "patch --fuzz=0 -p1 -i bundles/cxx-ada-template-record-termination/patches/VARIANT.patch"
+build_command = "PATH=/path/to/bootstrap/bin:$PATH ./scripts/build-gnat.sh SOURCE BUILD INSTALL"
+test_command = "./scripts/run-regressions.sh INSTALL 1.2.0 GCC_MAJOR patched"
+expected_failure_before_patch = "GNAT rejects the generated Ada specification at the unterminated C_Pass_By_Copy aspect."
+expected_success_after_patch = "Every generated template record is terminated and the Ada consumer compiles at -O0 and -O2."
+upstream_submission_state = "Not yet filed or submitted upstream."
+licensing = "GCC-derived compiler hunks remain GPL-3.0-or-later. The new test is proposed for the GCC testsuite under GCC project terms."
+
+[[variants]]
+id = "gcc-13-14"
+versions = ["13.2.0", "14.2.0"]
+source_flavors = ["linux", "darwin_arm64"]
+patch = "bundles/cxx-ada-template-record-termination/patches/gcc-13-14.patch"
+sha256 = "d3e4f3784943166957eb53b8ec5031f91eedc4946b272e6122149625cf06a8ae"
+
+[[variants]]
+id = "gcc-15-16"
+versions = ["15.3.0", "16.1.0"]
+source_flavors = ["linux", "darwin_arm64"]
+patch = "bundles/cxx-ada-template-record-termination/patches/gcc-15-16.patch"
+sha256 = "410ff115e39d1b6f9e3f5c31c3bebec41e2f10cf2d2641b0e78b1e2f0ba31ef7"

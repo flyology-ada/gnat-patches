@@ -9,7 +9,7 @@ atomic_cases = 63
 pairwise_cases = 16
 pairwise_value_pairs = 88
 grammar_cases = 32
-runtime_suites = 6
+runtime_suites = 7
 dump_modes = ["full", "slim"]
 
 [[features]]
@@ -232,17 +232,26 @@ note = "Generated Ada is invalid on GCC 13 and 14 and compiles on GCC 15 and 16.
 [[features]]
 id = "class-template-specializations"
 category = "template"
-state = "confirmed-invalid-ada"
+state = "patched"
 evidence = "generated/catalog.py:partial_specialization,full_specialization"
+note = "Patchset 1.2.0 terminates the generated trivial records."
 
 [[features]]
 id = "advanced-template-parameters"
 category = "template"
 state = "confirmed-invalid-ada"
-evidence = "generated/catalog.py:non_type_template,default_template_arguments,template_template_parameter"
+evidence = "generated/catalog.py:non_type_template,default_template_arguments"
+
+[[features]]
+id = "template-template-parameters"
+category = "template"
+state = "patched"
+evidence = "generated/catalog.py:template_template_parameter"
+note = "Patchset 1.2.0 terminates the generated trivial record."
 
 [[features]]
 id = "nested-alias-constrained-templates"
 category = "template"
-state = "confirmed-invalid-ada"
+state = "patched"
 evidence = "generated/catalog.py:nested_template,alias_template,constrained_template"
+note = "Patchset 1.2.0 terminates trivial records and maps alias-template instances to the concrete type in their generated packages."

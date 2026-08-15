@@ -20,7 +20,9 @@ state=$3
 "$root/panels/cxx-ada-spec/cases/call-abi/run-test.sh" "$toolchain" "$version"
 "$root/panels/cxx-ada-spec/cases/interface-secondary-base/run-test.sh" "$toolchain" "$version"
 "$root/bundles/cxx-ada-template-qualification/run-test.sh" "$toolchain" "$version" "$state"
+"$root/bundles/cxx-ada-template-record-termination/run-test.sh" \
+  "$toolchain" "$version" "$state"
 "$root/panels/cxx-ada-spec/cases/known-defects/run-test.sh" "$toolchain" "$version"
-"$root/panels/cxx-ada-spec/generated/run-test.sh" "$toolchain" "$version"
+"$root/panels/cxx-ada-spec/generated/run-test.sh" "$toolchain" "$version" "$state"
 
 echo "C++ Ada feature panel: PASS GCC $version ($state)"

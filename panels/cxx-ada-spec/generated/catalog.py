@@ -330,6 +330,8 @@ def main() -> int:
     parser.add_argument("--discover", action="store_true")
     parser.add_argument("--case", choices=sorted(CASES))
     parser.add_argument("--show-spec", action="store_true")
+    parser.add_argument("--state", choices=("unpatched", "patched"),
+                        default="unpatched")
     args = parser.parse_args()
 
     major = args.version.split(".", 1)[0]
@@ -337,7 +339,9 @@ def main() -> int:
     gxx = toolchain / "bin" / "g++"
     gnatmake = toolchain / "bin" / "gnatmake"
     expectations = expectation_table(
-        pathlib.Path(__file__).with_name("catalog-expectations.toml"), major
+        pathlib.Path(__file__).with_name("catalog-expectations.toml"),
+        major,
+        args.state,
     )
     with pathlib.Path(__file__).with_name("catalog-expectations.toml").open(
         "rb"
@@ -345,6 +349,10 @@ def main() -> int:
         expectation_data = tomllib.load(stream)
     diagnostics = dict(expectation_data.get("diagnostics", {}))
     diagnostics.update(expectation_data.get(f"diagnostics_gcc_{major}", {}))
+    diagnostics.update(expectation_data.get(f"diagnostics_{args.state}", {}))
+    diagnostics.update(
+        expectation_data.get(f"diagnostics_{args.state}_gcc_{major}", {})
+    )
     failures = 0
     with tempfile.TemporaryDirectory(prefix="gnat-cxx-ada-catalog-") as temp:
         root = pathlib.Path(temp)
@@ -373,7 +381,7 @@ def main() -> int:
                 print(f"FAIL {identifier}: expected {expected}, got {result}")
                 if diagnostic:
                     print("  " + diagnostic.splitlines()[0])
-            elif identifier in diagnostics and not re.search(
+            elif result != "pass" and identifier in diagnostics and not re.search(
                 diagnostics[identifier], diagnostic, re.IGNORECASE
             ):
                 failures += 1

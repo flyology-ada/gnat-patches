@@ -26,6 +26,14 @@ integer_128 = "ada-reject"
 [gcc_14]
 integer_128 = "ada-reject"
 
+[patched]
+alias_template = "pass"
+constrained_template = "pass"
+full_specialization = "pass"
+nested_template = "pass"
+partial_specialization = "pass"
+template_template_parameter = "pass"
+
 [diagnostics]
 alias_template = "missing.*;"
 anonymous_enum = "missing pattern: Anonymous_Zero"
@@ -48,6 +56,7 @@ template_template_parameter = "missing.*;"
 
 [diagnostics_gcc_13]
 integer_128 = "uu_int128_unsigned.*undefined"
+
 
 [diagnostics_gcc_14]
 integer_128 = "uu_int128_unsigned.*undefined"

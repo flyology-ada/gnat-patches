@@ -71,7 +71,6 @@ check_runtime_defect() {
 }
 
 check_rejection namespace_collision 'conflicts with declaration|duplicate|already declared'
-check_rejection trivial_template_record 'missing.*;|aspect.*requires|declaration expected'
 check_runtime_defect inherited_tail_padding \
   "PASS expected inherited tail-padding mismatch"
 check_runtime_defect explicit_alignment \

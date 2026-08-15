@@ -29,13 +29,15 @@ The executable panel currently has four layers:
   translation unit, with periodic inheritance and overload clusters. They
   exercise higher-order interactions in the currently representable subset and
   alternate full and slim dump modes.
-- Six runtime suites link C++ and Ada at `-O0` and `-O2`. They check scalar,
+- Seven runtime suites link C++ and Ada at `-O0` and `-O2`. They check scalar,
   enum, record, union, pointer, reference, and callback calling conventions;
   object size, alignment, and field offsets; ordinary and interface virtual
-  dispatch; template qualification; and the exact behavior of known defects.
+  dispatch; template qualification and record termination; and the exact
+  behavior of known defects.
 
 The known-defect layer currently reproduces namespace and Ada-casefold
-collisions, malformed template records and advanced template forms, cv/ref
+collisions, malformed template records before patching, remaining advanced
+template failures, cv/ref
 method overload collisions, pointer-to-member syntax failures, inherited
 tail-padding drift, lost explicit alignment, virtual-inheritance layout drift,
 and several version- or type-specific omissions. Independent problems must

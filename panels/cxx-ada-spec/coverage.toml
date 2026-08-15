@@ -14,6 +14,7 @@ suites = [
   "panels/cxx-ada-spec/cases/call-abi",
   "panels/cxx-ada-spec/cases/interface-secondary-base",
   "bundles/cxx-ada-template-qualification",
+  "bundles/cxx-ada-template-record-termination",
   "panels/cxx-ada-spec/cases/known-defects",
 ]
 oracles = [

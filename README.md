@@ -16,7 +16,7 @@ checksum-pinned upstream sources and proves them with source builds.
 ## Current patchset
 
 Patchset `1.2.0` is the current repository candidate for GCC 13, 14, 15, and
-16. It contains three independent corrections, each with its own executable
+16. It contains four independent corrections, each with its own executable
 regression. Patchset `1.1.0` remains the latest published release until the
 `1.2.0` validation and publication workflows complete.
 
@@ -30,13 +30,17 @@ regression. Patchset `1.1.0` remains the latest published release until the
   template instances in nested packages but drops those package qualifiers
   from aliases, fields, parameters, and results. Two instantiations therefore
   make the generated Ada spec ambiguous. GCC 13 through 16 are affected.
+- `cxx-ada-template-record-termination`: the dumper omits the semicolon after
+  trivial records emitted inside concrete template-instance packages. Primary,
+  specialized, nested, constrained, and template-template forms all reach the
+  same broken printer path. GCC 13 through 16 are affected.
 
-| GCC source | `storage-model-actuals` | `protected-duration-validity` | `cxx-ada-template-qualification` | Patchset 1.2.0 |
-| --- | --- | --- | --- | --- |
-| 13.2.0 | known-good control | affected | affected | patched toolchain |
-| 14.2.0 | affected | affected | affected | patched toolchain |
-| 15.3.0 | affected | affected | affected | patched toolchain |
-| 16.1.0 | affected | affected | affected | patched toolchain |
+| GCC source | `storage-model-actuals` | `protected-duration-validity` | `cxx-ada-template-qualification` | `cxx-ada-template-record-termination` | Patchset 1.2.0 |
+| --- | --- | --- | --- | --- | --- |
+| 13.2.0 | known-good control | affected | affected | affected | patched toolchain |
+| 14.2.0 | affected | affected | affected | affected | patched toolchain |
+| 15.3.0 | affected | affected | affected | affected | patched toolchain |
+| 16.1.0 | affected | affected | affected | affected | patched toolchain |
 
 GCC 13 was an unpatched control in patchset `1.0.1` because the only bundle at
 that time did not affect it. It carries a real code patch in `1.1.0`.

@@ -100,11 +100,16 @@ def source_for(case: tuple[str, ...]) -> str:
     return f"{declaration}\n\n{use}\n"
 
 
-def expectation_table(path: pathlib.Path, major: str) -> dict[str, str]:
+def expectation_table(
+    path: pathlib.Path, major: str, state: str | None = None
+) -> dict[str, str]:
     with path.open("rb") as stream:
         data = tomllib.load(stream)
     expected = {case: result for case, result in data.get("all", {}).items()}
     expected.update(data.get(f"gcc_{major}", {}))
+    if state:
+        expected.update(data.get(state, {}))
+        expected.update(data.get(f"{state}_gcc_{major}", {}))
     return expected
 
 
