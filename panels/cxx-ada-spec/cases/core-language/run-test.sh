@@ -23,12 +23,18 @@ trap 'rm -rf "$work"' EXIT
 for optimization in 0 2; do
   case_dir="$work/O$optimization"
   mkdir -p "$case_dir"
-  cp "$case_root/panel_api.C" "$case_root/panel_core.adb" "$case_dir/"
+  cp "$case_root/panel_api.C" "$case_root/panel_core.adb" \
+    "$case_root/panel_core_namespaced.adb" "$case_dir/"
   (
     cd "$case_dir"
     "${REGRESSION_ENV[@]}" "$gxx" -c "-O$optimization" -fdump-ada-spec-slim panel_api.C
-    "${REGRESSION_ENV[@]}" "$REGRESSION_GNATMAKE" -q -f "-O$optimization" panel_core.adb -largs panel_api.o -lstdc++
-    "${REGRESSION_ENV[@]}" ./panel_core
+    consumer=panel_core.adb
+    if grep -Fq "package Class_bridge_panel_Base" panel_api_c.ads; then
+      consumer=panel_core_namespaced.adb
+    fi
+    "${REGRESSION_ENV[@]}" "$REGRESSION_GNATMAKE" -q -f "-O$optimization" \
+      "$consumer" -largs panel_api.o -lstdc++
+    "${REGRESSION_ENV[@]}" "./${consumer%.adb}"
   )
   echo "cxx-ada core-language panel -O$optimization: PASS (GCC $version)"
 done

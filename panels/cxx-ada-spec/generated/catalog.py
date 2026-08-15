@@ -247,12 +247,12 @@ double f_double(double v); long double f_long_double(long double v);
     "inline_namespace": (
         "namespace api { inline namespace v1 { struct Item { int value; }; } } "
         "api::Item consume(api::Item);\n",
-        (r"type Item", r"function consume"),
+        (r"type (?:api_v1_)?Item", r"function consume"),
     ),
     "nested_namespace": (
         "namespace first::second { struct Item { int value; }; } "
         "first::second::Item consume(first::second::Item);\n",
-        (r"type Item", r"function consume"),
+        (r"type (?:first_second_)?Item", r"function consume"),
     ),
     "anonymous_namespace": (
         "namespace { struct Hidden { int value; }; Hidden consume(Hidden); }\n",
@@ -273,7 +273,7 @@ double f_double(double v); long double f_long_double(long double v);
     "namespace_alias": (
         "namespace original { struct Item { int value; }; } "
         "namespace alias = original; alias::Item consume(alias::Item);\n",
-        (r"type Item", r"function consume"),
+        (r"type (?:original_)?Item", r"function consume"),
     ),
     "typedef_and_using": (
         "struct Original { int value; }; typedef Original OldAlias; "

@@ -1,0 +1,93 @@
+diff --git a/gcc/c-family/c-ada-spec.cc b/gcc/c-family/c-ada-spec.cc
+--- a/gcc/c-family/c-ada-spec.cc
++++ b/gcc/c-family/c-ada-spec.cc
+@@ -1327,3 +1327,26 @@ separate_class_package (tree decl)
+ }
+ 
++/* Dump the named C++ namespace path containing DECL, using underscores as
++   separators so the entity remains in the generated Ada package.  */
++
++static void
++pp_ada_namespace_prefix (pretty_printer *buffer, tree decl)
++{
++  if (!cpp_check || !decl)
++    return;
++
++  tree context = DECL_CONTEXT (decl);
++  if (!context || TREE_CODE (context) != NAMESPACE_DECL
++      || !DECL_NAME (context))
++    return;
++
++  pp_ada_namespace_prefix (buffer, context);
++  bool space_found = false;
++  char *name = to_ada_name (IDENTIFIER_POINTER (DECL_NAME (context)),
++			    &space_found);
++  pp_string (buffer, name);
++  pp_underscore (buffer);
++  free (name);
++}
++
+ static bool package_prefix = true;
+@@ -1356,12 +1379,15 @@ pp_ada_tree_identifier (pretty_printer *buffer, tree node, tree type,
+ 	  if (separate_class_package (decl))
+ 	    {
+ 	      pp_string (buffer, "Class_");
++	      pp_ada_namespace_prefix (buffer, decl);
+ 	      pp_string (buffer, s);
+ 	      pp_dot (buffer);
+ 	    }
+ 	}
+     }
+ 
++  pp_ada_namespace_prefix (buffer, decl);
++
+   if (space_found)
+     if (!strcmp (s, "short_int"))
+       pp_string (buffer, "short");
+diff --git a/gcc/testsuite/g++.dg/ada-spec/namespace-identity.C b/gcc/testsuite/g++.dg/ada-spec/namespace-identity.C
+new file mode 100644
+index 000000000..b06264f04
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/ada-spec/namespace-identity.C
+@@ -0,0 +1,41 @@
++/* { dg-do compile } */
++/* { dg-options "-fdump-ada-spec-slim" } */
++/* { dg-final { scan-file namespace_identity_c.ads "type first_inner_Item" } } */
++/* { dg-final { scan-file namespace_identity_c.ads "type second_inner_Item" } } */
++/* { dg-final { scan-file namespace_identity_c.ads "function first_inner_transform" } } */
++/* { dg-final { scan-file namespace_identity_c.ads "function second_inner_transform" } } */
++/* { dg-final { scan-file namespace_identity_c.ads "package Class_first_inner_Object" } } */
++/* { dg-final { scan-file namespace_identity_c.ads "package Class_second_inner_Object" } } */
++
++namespace first::inner
++{
++  struct Item { int value; };
++  Item transform (Item value);
++
++  class Object
++  {
++  public:
++    int get () const;
++  private:
++    int value_;
++  };
++}
++
++namespace second::inner
++{
++  struct Item { double value; };
++  Item transform (Item value);
++
++  class Object
++  {
++  public:
++    int get () const;
++  private:
++    double value_;
++  };
++}
++
++using First_Item = first::inner::Item;
++using Second_Item = second::inner::Item;
++
++/* { dg-final { cleanup-ada-spec } } */

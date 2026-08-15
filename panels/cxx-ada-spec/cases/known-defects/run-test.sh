@@ -70,7 +70,6 @@ check_runtime_defect() {
   echo "cxx-ada known defect $id: expected layout mismatch (GCC $version)"
 }
 
-check_rejection namespace_collision 'conflicts with declaration|duplicate|already declared'
 check_runtime_defect inherited_tail_padding \
   "PASS expected inherited tail-padding mismatch"
 check_runtime_defect virtual_inheritance_layout \

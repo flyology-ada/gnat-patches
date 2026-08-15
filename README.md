@@ -16,7 +16,7 @@ checksum-pinned upstream sources and proves them with source builds.
 ## Current patchset
 
 Patchset `1.2.0` is the current repository candidate for GCC 13, 14, 15, and
-16. It contains five independent corrections, each with its own executable
+16. It contains six independent corrections, each with its own executable
 regression. Patchset `1.1.0` remains the latest published release until the
 `1.2.0` validation and publication workflows complete.
 
@@ -37,13 +37,18 @@ regression. Patchset `1.1.0` remains the latest published release until the
 - `cxx-ada-explicit-alignment`: the dumper omits a record's user-specified
   `alignas` unless the layout is also packed or contains bit fields, so Ada and
   C++ disagree on object size and alignment. GCC 13 through 16 are affected.
+- `cxx-ada-namespace-identity`: the dumper flattens named C++ namespaces, so
+  unrelated declarations with the same unqualified name collide in Ada. The
+  correction preserves complete named namespace paths in records, functions,
+  aliases, type references, and generated class packages. GCC 13 through 16
+  are affected.
 
-| GCC source | `storage-model-actuals` | `protected-duration-validity` | `cxx-ada-template-qualification` | `cxx-ada-template-record-termination` | `cxx-ada-explicit-alignment` | Patchset 1.2.0 |
-| --- | --- | --- | --- | --- | --- | --- |
-| 13.2.0 | known-good control | affected | affected | affected | affected | patched toolchain |
-| 14.2.0 | affected | affected | affected | affected | affected | patched toolchain |
-| 15.3.0 | affected | affected | affected | affected | affected | patched toolchain |
-| 16.1.0 | affected | affected | affected | affected | affected | patched toolchain |
+| GCC source | `storage-model-actuals` | `protected-duration-validity` | `cxx-ada-template-qualification` | `cxx-ada-template-record-termination` | `cxx-ada-explicit-alignment` | `cxx-ada-namespace-identity` | Patchset 1.2.0 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 13.2.0 | known-good control | affected | affected | affected | affected | affected | patched toolchain |
+| 14.2.0 | affected | affected | affected | affected | affected | affected | patched toolchain |
+| 15.3.0 | affected | affected | affected | affected | affected | affected | patched toolchain |
+| 16.1.0 | affected | affected | affected | affected | affected | affected | patched toolchain |
 
 GCC 13 was an unpatched control in patchset `1.0.1` because the only bundle at
 that time did not affect it. It carries a real code patch in `1.1.0`.

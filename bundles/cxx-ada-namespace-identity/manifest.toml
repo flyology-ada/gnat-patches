@@ -1,0 +1,35 @@
+schema = 1
+id = "cxx-ada-namespace-identity"
+status = "accepted"
+introduced_in_patchset = "1.2.0"
+problem = "The C++ Ada spec dumper flattens named namespaces, causing unrelated declarations with the same unqualified name to collide in Ada."
+upstream_issue = "GCC PR 109260."
+affected_versions = ["13.2.0", "14.2.0", "15.3.0", "16.1.0"]
+known_good_versions = []
+source_provenance = "Repository-authored GCC patch and executable regression; exact application verified locally against the pinned Darwin release identities. Pinned FSF release application is required by Linux CI."
+files_modified = ["gcc/c-family/c-ada-spec.cc", "gcc/testsuite/g++.dg/ada-spec/namespace-identity.C"]
+regression_tests = ["gcc/testsuite/g++.dg/ada-spec/namespace-identity.C"]
+repository_fixture = "bundles/cxx-ada-namespace-identity/tests/namespace-identity.C"
+fixture_sha256 = "8a0903b7009bb13f52334fa2e9c440aa8343218e9e338781b71d7637ca8f2bf7"
+repository_test_runner = "bundles/cxx-ada-namespace-identity/run-test.sh"
+application_command = "patch --fuzz=0 -p1 -i bundles/cxx-ada-namespace-identity/patches/VARIANT.patch"
+build_command = "PATH=/path/to/bootstrap/bin:$PATH ./scripts/build-gnat.sh SOURCE BUILD INSTALL"
+test_command = "./scripts/run-regressions.sh INSTALL 1.2.0 GCC_MAJOR patched"
+expected_failure_before_patch = "GNAT rejects duplicate type, function, or class-package identifiers after namespaces are flattened."
+expected_success_after_patch = "Named namespace paths produce distinct, internally consistent Ada identifiers and the generated specification compiles at -O0 and -O2."
+upstream_submission_state = "Not yet filed or submitted upstream."
+licensing = "GCC-derived compiler hunks remain GPL-3.0-or-later. The new test is proposed for the GCC testsuite under GCC project terms."
+
+[[variants]]
+id = "gcc-13-14"
+versions = ["13.2.0", "14.2.0"]
+source_flavors = ["linux", "darwin_arm64"]
+patch = "bundles/cxx-ada-namespace-identity/patches/gcc-13-14.patch"
+sha256 = "f3f767b8cfa8c57a16a6a293bb73f3c33aee25d071649fec8de93176c9418dbb"
+
+[[variants]]
+id = "gcc-15-16"
+versions = ["15.3.0", "16.1.0"]
+source_flavors = ["linux", "darwin_arm64"]
+patch = "bundles/cxx-ada-namespace-identity/patches/gcc-15-16.patch"
+sha256 = "934cb2a7e718d738125be7de742fd116c0fea10924586b1ef2906a67fc2731f1"
