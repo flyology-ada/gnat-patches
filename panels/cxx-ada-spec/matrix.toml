@@ -9,7 +9,7 @@ atomic_cases = 63
 pairwise_cases = 16
 pairwise_value_pairs = 88
 grammar_cases = 32
-runtime_suites = 16
+runtime_suites = 17
 dump_modes = ["full", "slim"]
 
 [[features]]
@@ -228,9 +228,9 @@ note = "Patchset 1.2.0 emits sequential enumerations or integer-subtype constant
 [[features]]
 id = "integer-128"
 category = "type-system"
-state = "version-dependent"
-evidence = "generated/catalog.py:integer_128"
-note = "Generated Ada is invalid on GCC 13 and 14 and compiles on GCC 15 and 16."
+state = "patched"
+evidence = "bundles/cxx-ada-int128-types"
+note = "Patchset 1.2.0 backports GCC 15's prefix recognition to GCC 13 and 14; GCC 15 and 16 are known-good controls."
 
 [[features]]
 id = "class-template-specializations"

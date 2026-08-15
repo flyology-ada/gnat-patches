@@ -16,7 +16,7 @@ checksum-pinned upstream sources and proves them with source builds.
 ## Current patchset
 
 Patchset `1.2.0` is the current repository candidate for GCC 13, 14, 15, and
-16. It contains thirteen independent corrections, each with its own executable
+16. It contains fourteen independent corrections, each with its own executable
 regression. Patchset `1.1.0` remains the latest published release until the
 `1.2.0` validation and publication workflows complete.
 
@@ -62,6 +62,10 @@ regression. Patchset `1.1.0` remains the latest published release until the
   Mapping it to ABI-equivalent `Interfaces.C.unsigned_char` produces a usable
   binding while retaining the distinct C++ mangled symbol. GCC 13 through 16
   are affected.
+- `cxx-ada-int128-types`: GCC 13 and 14 recognize signed `__int128` but emit
+  unsigned `__int128` as the undefined Ada identifier `uu_int128_unsigned`.
+  Prefix recognition maps both forms to `Interfaces.C.Extensions`; GCC 15 and
+  16 are known-good controls.
 - `cxx-ada-vector-types`: fixed-size C++ vectors are printed as `<vector>`.
   Exact Ada machine-vector arrays, target alignment, and direct vector ABI
   classification make integer and floating vectors callable. GCC 13 through
@@ -71,12 +75,12 @@ regression. Patchset `1.1.0` remains the latest published release until the
   nonvirtual, virtual, and null values as opaque callable-through-C++ values.
   GCC 13 through 16 are affected.
 
-| GCC source | `storage-model-actuals` | `protected-duration-validity` | `cxx-ada-template-qualification` | `cxx-ada-template-record-termination` | `cxx-ada-explicit-alignment` | `cxx-ada-namespace-identity` | `cxx-ada-qualified-method-names` | `cxx-ada-casefold-identity` | `cxx-ada-template-nested-types` | `cxx-ada-anonymous-enums` | `cxx-ada-char8-type` | `cxx-ada-vector-types` | `cxx-ada-member-pointers` | Patchset 1.2.0 |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 13.2.0 | known-good control | affected | affected | affected | affected | affected | affected | affected | affected | affected | affected | affected | affected | patched toolchain |
-| 14.2.0 | affected | affected | affected | affected | affected | affected | affected | affected | affected | affected | affected | affected | affected | patched toolchain |
-| 15.3.0 | affected | affected | affected | affected | affected | affected | affected | affected | affected | affected | affected | affected | affected | patched toolchain |
-| 16.1.0 | affected | affected | affected | affected | affected | affected | affected | affected | affected | affected | affected | affected | affected | patched toolchain |
+| GCC source | `storage-model-actuals` | `protected-duration-validity` | `cxx-ada-template-qualification` | `cxx-ada-template-record-termination` | `cxx-ada-explicit-alignment` | `cxx-ada-namespace-identity` | `cxx-ada-qualified-method-names` | `cxx-ada-casefold-identity` | `cxx-ada-template-nested-types` | `cxx-ada-anonymous-enums` | `cxx-ada-char8-type` | `cxx-ada-int128-types` | `cxx-ada-vector-types` | `cxx-ada-member-pointers` | Patchset 1.2.0 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 13.2.0 | known-good control | affected | affected | affected | affected | affected | affected | affected | affected | affected | affected | affected | affected | affected | patched toolchain |
+| 14.2.0 | affected | affected | affected | affected | affected | affected | affected | affected | affected | affected | affected | affected | affected | affected | patched toolchain |
+| 15.3.0 | affected | affected | affected | affected | affected | affected | affected | affected | affected | affected | affected | known-good control | affected | affected | patched toolchain |
+| 16.1.0 | affected | affected | affected | affected | affected | affected | affected | affected | affected | affected | affected | known-good control | affected | affected | patched toolchain |
 
 GCC 13 was an unpatched control in patchset `1.0.1` because the only bundle at
 that time did not affect it. It carries a real code patch in `1.1.0`.

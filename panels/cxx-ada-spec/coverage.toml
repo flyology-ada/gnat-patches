@@ -22,6 +22,7 @@ suites = [
   "bundles/cxx-ada-template-nested-types",
   "bundles/cxx-ada-anonymous-enums",
   "bundles/cxx-ada-char8-type",
+  "bundles/cxx-ada-int128-types",
   "bundles/cxx-ada-vector-types",
   "bundles/cxx-ada-member-pointers",
   "panels/cxx-ada-spec/cases/known-defects",

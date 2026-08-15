@@ -29,38 +29,35 @@ The executable panel currently has four layers:
   translation unit, with periodic inheritance and overload clusters. They
   exercise higher-order interactions in the currently representable subset and
   alternate full and slim dump modes.
-- Sixteen runtime suites link C++ and Ada at `-O0` and `-O2`. They check scalar,
+- Seventeen runtime suites link C++ and Ada at `-O0` and `-O2`. They check scalar,
   enum, record, union, pointer, reference, and callback calling conventions;
   object size, alignment, and field offsets; ordinary and interface virtual
   dispatch; template qualification, record termination, nested types, explicit
   alignment, namespace and method identity, anonymous enumeration values, and
-  `char8_t`, machine vectors, and opaque pointer-to-member values; and the exact
-  behavior of known defects.
+  `char8_t`, 128-bit integers, machine vectors, and opaque pointer-to-member
+  values; and the exact behavior of known defects.
 
 The known-defect layer currently reproduces malformed template records before
 patching, anonymous nested template types before patching, anonymous enum
 omissions before patching, pointer-to-member syntax failures, inherited
 tail-padding drift, explicit alignment before patching, virtual-inheritance
-layout drift,
-and several version- or type-specific omissions. Independent problems must
-become independent patch bundles.
+layout drift, unsigned 128-bit integer failures on GCC 13 and 14 before
+patching, and several version- or type-specific omissions. Independent
+problems must become independent patch bundles.
 
 The coverage summary reports both baselines. After the currently accepted
-patches, one atomic case remains non-passing on GCC 15 and 16, and two remain
-on GCC 13 and 14 because their `__int128` mapping is also invalid.
+patches, one atomic case remains non-passing on every supported major.
 
 The confirmed-history ledger is larger than that residual atomic count:
-eleven independent C++ mapper defects now have accepted 1.2.0 bundles, one
-version-specific mapper defect remains, two runtime layout defects remain, and
-one concrete-inheritance form is a direct-representation boundary. The
-following list is only the work still open or intentionally bounded, not the
-complete defect history.
+twelve independent C++ mapper defects now have accepted 1.2.0 bundles, two
+runtime layout defects remain, and one concrete-inheritance form is a
+direct-representation boundary. The following list is only the work still open
+or intentionally bounded, not the complete defect history.
 
 The remaining confirmed inventory is deliberately explicit:
 
 - a generated-spec failure on every tested major: concrete secondary multiple
   inheritance;
-- an additional generated-spec failure on GCC 13 and 14: `__int128`;
 - runtime layout defects on every tested major: inherited tail-padding reuse
   and virtual inheritance;
 - tested semantic boundaries rather than hidden mapper successes:

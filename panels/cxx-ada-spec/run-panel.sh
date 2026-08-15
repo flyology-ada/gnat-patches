@@ -36,6 +36,8 @@ state=$3
   "$toolchain" "$version" "$state"
 "$root/bundles/cxx-ada-char8-type/run-test.sh" \
   "$toolchain" "$version" "$state"
+"$root/bundles/cxx-ada-int128-types/run-test.sh" \
+  "$toolchain" "$version" "$state"
 "$root/bundles/cxx-ada-vector-types/run-test.sh" \
   "$toolchain" "$version" "$state"
 "$root/bundles/cxx-ada-member-pointers/run-test.sh" \
