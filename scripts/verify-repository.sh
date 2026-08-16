@@ -8,6 +8,7 @@ python3 scripts/manifest.py validate
 ci/test-bootstrap-gnatmake.sh
 ci/test-generate-alire-index.sh
 ci/test-homebrew-gxx.sh
+ci/test-quarantine-darwin-include-fixed.sh
 
 if rg --hidden -n 'uses: [^#[:space:]]+@(v[0-9]+|main|master)([[:space:]]|$)' .github/workflows; then
   echo "error: GitHub Actions must use immutable commit SHAs" >&2

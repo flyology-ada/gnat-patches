@@ -99,6 +99,11 @@ make -C "$build_dir" -j "$jobs" all-gcc all-target-libgcc all-target-libatomic \
 make -C "$build_dir" -j "$jobs" all-gnattools
 make -C "$build_dir" -j 1 install-gcc install-target-libgcc \
   install-target-libatomic install-target-libstdc++-v3 install-target-libada
+if [[ $host_os == Darwin ]]; then
+  fixed_count=$("$root/scripts/quarantine-darwin-include-fixed.sh" \
+    "$install_dir" build-sdk)
+  echo "Darwin compiler: quarantined $fixed_count SDK-derived include-fixed directory" >&2
+fi
 "$install_dir/bin/gcc" -v
 "$install_dir/bin/g++" --version
 "$install_dir/bin/gnatmake" --version

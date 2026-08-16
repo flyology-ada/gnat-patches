@@ -176,9 +176,14 @@ separate unpatched 16.2 compiler for the before-patch controls.
 On Darwin it then quarantines the archive's `include-fixed` directory: those
 headers are generated from the Xcode SDK used to build the bootstrap and are
 not valid inputs for a later runner SDK. The compiler build consequently reads
-the current pinned runner's SDK headers and generates its own fixed headers.
-The original directory remains beside it as `include-fixed.bootstrap-sdk` for
-diagnostics; it is not searched by GCC.
+the current pinned runner's SDK headers. After installation, `build-gnat.sh`
+also quarantines the fixed headers generated from that pinned build SDK. The
+installed compiler deliberately selects the portable Command Line Tools or
+standard Xcode SDK path at use time, so retaining build-SDK declarations such
+as `FILE` would mix two SDKs and can break ordinary C++ headers including
+`<string>`. The original directories remain beside the active include search
+path as `include-fixed.bootstrap-sdk` and `include-fixed.build-sdk` for
+diagnostics; neither is searched by GCC.
 
 ```sh
 ./scripts/verify-repository.sh
