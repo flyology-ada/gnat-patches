@@ -1,0 +1,96 @@
+diff --git a/gcc/c-family/c-ada-spec.cc b/gcc/c-family/c-ada-spec.cc
+index c325cbf..914bca7 100644
+--- a/gcc/c-family/c-ada-spec.cc
++++ b/gcc/c-family/c-ada-spec.cc
+@@ -3717,27 +3717,24 @@ print_method_qualifiers (pretty_printer *pp, tree t)
+     pp_string (pp, "_Rvalue");
+ }
+ 
+-/* Return true if METHOD_NAME collides with the enclosing C++ TYPE name after
+-   Ada's case-insensitive identifier conversion.  */
++/* Return true if METHOD_NAME collides with the enclosing class or another
++   type made directly visible by a generated class-package use clause.  */
+ 
+ static bool
+-method_name_matches_type (tree method_name, tree type)
++method_name_matches_visible_type (tree method_name, tree type)
+ {
+-  if (!method_name || !RECORD_OR_UNION_TYPE_P (type) || !TYPE_NAME (type))
++  if (!method_name)
+     return false;
+ 
+-  tree type_decl = TYPE_NAME (type);
+-  tree type_name_node = TREE_CODE (type_decl) == TYPE_DECL
+-			? DECL_NAME (type_decl) : type_decl;
+-  if (!type_name_node || TREE_CODE (type_name_node) != IDENTIFIER_NODE)
+-    return false;
++  if (identifier_matches_type (method_name, type))
++    return true;
+ 
+-  char *method_ada = to_ada_name (IDENTIFIER_POINTER (method_name), NULL);
+-  char *type_ada = to_ada_name (IDENTIFIER_POINTER (type_name_node), NULL);
+-  const bool matches = !strcasecmp (method_ada, type_ada);
+-  free (method_ada);
+-  free (type_ada);
+-  return matches;
++  for (int i = 0; i < to_dump_count; i++)
++    if (TREE_CODE (to_dump[i]) == TYPE_DECL
++	&& identifier_matches_type (method_name, TREE_TYPE (to_dump[i])))
++      return true;
++
++  return false;
+ }
+ 
+ /* Return the name of type T.  */
+@@ -4084,7 +4081,7 @@ dump_ada_declaration (pretty_printer *pp, tree t, tree type, int spc)
+ 	  if (is_method)
+ 	    {
+ 	      print_method_qualifiers (pp, t);
+-	      if (method_name_matches_type (decl_name, type))
++	      if (method_name_matches_visible_type (decl_name, type))
+ 		pp_string (pp, "_Method");
+ 	    }
+ 	  if (suffix > 1)
+diff --git a/gcc/testsuite/g++.dg/ada-spec/visible-type-method-names.C b/gcc/testsuite/g++.dg/ada-spec/visible-type-method-names.C
+new file mode 100644
+index 0000000..5d57089
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/ada-spec/visible-type-method-names.C
+@@ -0,0 +1,36 @@
++/* { dg-do compile } */
++/* { dg-options "-fdump-ada-spec-slim" } */
++/* { dg-final { scan-file visible_type_method_names_c.ads "function result_Method" } } */
++
++struct Result
++{
++  int get ();
++  int value;
++};
++
++class Widget
++{
++public:
++  int result ();
++  int value;
++};
++
++int Result::get () { return value; }
++int Widget::result () { return value; }
++
++extern "C" Widget *cpp_create_widget (int value)
++{
++  Widget *object = new Widget;
++  object->value = value;
++  return object;
++}
++
++extern "C" Result *cpp_create_result (int value)
++{
++  return new Result { value };
++}
++
++extern "C" void cpp_delete_widget (Widget *object) { delete object; }
++extern "C" void cpp_delete_result (Result *object) { delete object; }
++
++/* { dg-final { cleanup-ada-spec } } */
+

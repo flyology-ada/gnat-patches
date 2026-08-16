@@ -9,7 +9,7 @@ atomic_cases = 63
 pairwise_cases = 16
 pairwise_value_pairs = 88
 grammar_cases = 32
-runtime_suites = 23
+runtime_suites = 24
 dump_modes = ["full", "slim"]
 
 [[features]]
@@ -119,6 +119,13 @@ category = "name-lookup"
 state = "patched"
 evidence = "bundles/cxx-ada-profile-formal-type-names"
 note = "Patchset 1.2.0 prefixes a formal when its Ada identifier would hide its own type, a later formal's type, or the result type."
+
+[[features]]
+id = "visible-type-method-name-collisions"
+category = "name-lookup"
+state = "patched"
+evidence = "bundles/cxx-ada-visible-type-method-names"
+note = "Patchset 1.2.0 gives a method a stable Method suffix when its identifier collides with a type made visible from another generated class package."
 
 [[features]]
 id = "uninstantiated-templates"
