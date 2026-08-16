@@ -48,7 +48,7 @@ index cfafae2..62137ec 100644
  
  static void
 -dump_ada_tail_padding_layout (pretty_printer *buffer, tree node, tree type,
--			      int spc)
+-                              int spc)
 +dump_ada_cpp_layout (pretty_printer *buffer, tree node, tree type, int spc,
 +		     bool has_virtual_base)
  {
@@ -221,4 +221,3 @@ index 0000000..514d8e4
 +}
 +
 +/* { dg-final { cleanup-ada-spec } } */
-

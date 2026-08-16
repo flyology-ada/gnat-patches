@@ -32,7 +32,7 @@ id = "gcc-14"
 versions = ["14.2.0"]
 source_flavors = ["linux", "darwin_arm64"]
 patch = "bundles/cxx-ada-virtual-inheritance-layout/patches/gcc-14.patch"
-sha256 = "7f351af2961bf9c0445fd5244761105f0fc512c42904020805db6a340e4e7116"
+sha256 = "6ba96fa828c1904f56896bf7d17f496e06cc90212367a393f974f70aac1c8049"
 
 [[variants]]
 id = "gcc-15-16"

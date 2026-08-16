@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import pathlib
+import re
 import sys
 import tomllib
 
@@ -18,11 +19,132 @@ ROOT = pathlib.Path(__file__).resolve().parents[3]
 PANEL = ROOT / "panels" / "cxx-ada-spec"
 
 
+def accepted_cxx_bundles() -> dict[str, tuple[pathlib.Path, dict]]:
+    """Return every accepted C++ Ada defect bundle by manifest identity."""
+    result: dict[str, tuple[pathlib.Path, dict]] = {}
+    for path in sorted((ROOT / "bundles").glob("cxx-ada-*/manifest.toml")):
+        with path.open("rb") as stream:
+            manifest = tomllib.load(stream)
+        bundle_id = manifest.get("id")
+        if manifest.get("status") == "accepted":
+            if not bundle_id or bundle_id in result:
+                raise SystemExit(f"error: invalid C++ Ada bundle identity in {path}")
+            result[bundle_id] = (path.parent, manifest)
+    return result
+
+
+def validate_confirmed_bundles(coverage: dict, matrix: dict) -> int:
+    """Prove that every confirmed mapper defect keeps its full evidence chain."""
+    bundles = accepted_cxx_bundles()
+    expected_suites = {f"bundles/{bundle_id}" for bundle_id in bundles}
+    declared_suites = {
+        suite for suite in coverage["runtime"]["suites"]
+        if suite.startswith("bundles/cxx-ada-")
+    }
+    if declared_suites != expected_suites:
+        missing = sorted(expected_suites - declared_suites)
+        extra = sorted(declared_suites - expected_suites)
+        if missing:
+            print("error: confirmed bundles absent from runtime coverage: " +
+                  ", ".join(missing))
+        if extra:
+            print("error: unknown C++ Ada runtime bundles: " + ", ".join(extra))
+        raise SystemExit(1)
+
+    driver = (PANEL / "run-panel.sh").read_text()
+    panel_readme = (PANEL / "README.md").read_text()
+    evidence = "\n".join(
+        feature.get("evidence", "") for feature in matrix["features"]
+    )
+    fence_pattern = re.compile(
+        r"^```([^\n]*)\n(.*?)^```$", re.MULTILINE | re.DOTALL
+    )
+    before_words = re.compile(
+        r"unpatched|before (?:the )?patch|current|stock GCC|broken|wrong|"
+        r"loses|omits|too small|does not exist",
+        re.IGNORECASE,
+    )
+    after_words = re.compile(
+        r"corrected|after (?:the )?patch|with the patch|patched|should|fix",
+        re.IGNORECASE,
+    )
+
+    for bundle_id, (directory, manifest) in bundles.items():
+        runner_rel = manifest["repository_test_runner"]
+        runner = (ROOT / runner_rel).read_text()
+        if runner_rel not in driver:
+            raise SystemExit(
+                f"error: confirmed bundle {bundle_id} is absent from run-panel.sh"
+            )
+        if not re.search(r"for optimization in 0 2; do", runner):
+            raise SystemExit(
+                f"error: confirmed bundle {bundle_id} does not run at -O0 and -O2"
+            )
+        if "unpatched" not in runner or "patched" not in runner:
+            raise SystemExit(
+                f"error: confirmed bundle {bundle_id} lacks before/after execution"
+            )
+
+        bundle_ref = f"bundles/{bundle_id}"
+        if bundle_ref not in evidence:
+            raise SystemExit(
+                f"error: confirmed bundle {bundle_id} has no matrix evidence"
+            )
+        if f"{bundle_ref}/README.md" not in panel_readme:
+            raise SystemExit(
+                f"error: confirmed bundle {bundle_id} is absent from the "
+                "panel defect ledger"
+            )
+
+        readme_path = directory / "README.md"
+        if not readme_path.is_file():
+            raise SystemExit(f"error: confirmed bundle {bundle_id} has no README")
+        readme = readme_path.read_text()
+        blocks = [(match.group(1), match.group(2))
+                  for match in fence_pattern.finditer(readme)]
+        languages = [language for language, _ in blocks]
+        try:
+            cpp_index = languages.index("c++")
+            first_ada = languages.index("ada", cpp_index + 1)
+            second_ada = languages.index("ada", first_ada + 1)
+        except ValueError as exc:
+            raise SystemExit(
+                f"error: {bundle_id} README must show offending C++, "
+                "unpatched Ada, and corrected Ada inline"
+            ) from exc
+        if any(not blocks[index][1].strip()
+               for index in (cpp_index, first_ada, second_ada)):
+            raise SystemExit(
+                f"error: {bundle_id} README contains an empty required example"
+            )
+        if not before_words.search(readme) or not after_words.search(readme):
+            raise SystemExit(
+                f"error: {bundle_id} README does not identify both current "
+                "and corrected output"
+            )
+
+    return len(bundles)
+
+
 def main() -> int:
     with (PANEL / "coverage.toml").open("rb") as stream:
         coverage = tomllib.load(stream)
     with (PANEL / "matrix.toml").open("rb") as stream:
         matrix = tomllib.load(stream)
+
+    confirmed_count = validate_confirmed_bundles(coverage, matrix)
+
+    driver = (PANEL / "run-panel.sh").read_text()
+    for suite in coverage["runtime"]["suites"]:
+        directory = ROOT / suite
+        runner = directory / "run-test.sh"
+        if not directory.is_dir() or not runner.is_file():
+            raise SystemExit(f"error: runtime suite {suite} has no run-test.sh")
+        runner_rel = runner.relative_to(ROOT).as_posix()
+        if runner_rel not in driver:
+            raise SystemExit(
+                f"error: runtime suite {suite} is absent from run-panel.sh"
+            )
 
     assigned: dict[str, str] = {}
     for group in coverage["groups"]:
@@ -96,6 +218,10 @@ def main() -> int:
     )
     print(f"deterministic grammar survey: {CASE_COUNT} cases, seed {SEED}")
     print(f"runtime suites: {len(coverage['runtime']['suites'])}")
+    print(
+        f"confirmed C++ defects: {confirmed_count} bundles with inline "
+        "before/after evidence"
+    )
     print(f"mapper tree-code families: {len(coverage['mapper_tree_codes'])}")
     print(f"explicit remaining limits: {len(coverage['limits']['not_yet_covered'])}")
     return 0

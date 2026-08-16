@@ -56,8 +56,34 @@ patches, all 63 atomic cases pass on every supported major.
 
 The confirmed-history ledger is larger than that residual atomic count:
 twenty-one independent C++ mapper defects now have accepted 1.2.0 bundles and no
-confirmed fixed-layout runtime defect remains. The following list is only the
-work still open or intentionally bounded, not the complete defect history.
+confirmed fixed-layout runtime defect remains. Every linked bundle contains the
+offending C++, the unpatched Ada output, the corrected Ada output, and an
+executable `-O0`/`-O2` before/after regression:
+
+- [`cxx-ada-template-qualification`](../../bundles/cxx-ada-template-qualification/README.md): references outside a concrete template package lose their instance qualifier;
+- [`cxx-ada-template-record-termination`](../../bundles/cxx-ada-template-record-termination/README.md): trivial concrete template records leave their Convention aspect unterminated;
+- [`cxx-ada-explicit-alignment`](../../bundles/cxx-ada-explicit-alignment/README.md): explicitly over-aligned records retain only their natural Ada alignment;
+- [`cxx-ada-namespace-identity`](../../bundles/cxx-ada-namespace-identity/README.md): distinct named C++ namespaces collapse into duplicate Ada identifiers;
+- [`cxx-ada-qualified-method-names`](../../bundles/cxx-ada-qualified-method-names/README.md): cv/ref-qualified overloads and move assignment collapse onto Ada homographs;
+- [`cxx-ada-casefold-identity`](../../bundles/cxx-ada-casefold-identity/README.md): C++ identifiers differing only by case collide in Ada;
+- [`cxx-ada-template-nested-types`](../../bundles/cxx-ada-template-nested-types/README.md): anonymous field types are emitted outside the concrete template package that needs them;
+- [`cxx-ada-anonymous-enums`](../../bundles/cxx-ada-anonymous-enums/README.md): top-level anonymous enumerators and their synthetic type are omitted;
+- [`cxx-ada-char8-type`](../../bundles/cxx-ada-char8-type/README.md): `char8_t` maps to a nonexistent Ada identifier;
+- [`cxx-ada-int128-types`](../../bundles/cxx-ada-int128-types/README.md): GCC 13 and 14 fail to recognize the unsigned internal 128-bit type name;
+- [`cxx-ada-vector-types`](../../bundles/cxx-ada-vector-types/README.md): machine vectors map to placeholders that cannot appear in profiles;
+- [`cxx-ada-member-pointers`](../../bundles/cxx-ada-member-pointers/README.md): data- and function-member pointer representations are emitted without Ada types;
+- [`cxx-ada-inherited-tail-padding`](../../bundles/cxx-ada-inherited-tail-padding/README.md): Ada inheritance prevents C++ reuse of base tail padding and moves derived fields;
+- [`cxx-ada-empty-class-storage`](../../bundles/cxx-ada-empty-class-storage/README.md): empty complete objects receive zero storage while overlapping empty subobjects are represented as ordinary fields;
+- [`cxx-ada-virtual-inheritance-layout`](../../bundles/cxx-ada-virtual-inheritance-layout/README.md): virtual bases lose complete size, alignment, and field positions;
+- [`cxx-ada-enclosing-type-method-names`](../../bundles/cxx-ada-enclosing-type-method-names/README.md): a method collides case-insensitively with its enclosing Ada type;
+- [`cxx-ada-virtual-diamond-layout`](../../bundles/cxx-ada-virtual-diamond-layout/README.md): direct diamond bases incorrectly include their shared virtual base as complete storage;
+- [`cxx-ada-profile-formal-type-names`](../../bundles/cxx-ada-profile-formal-type-names/README.md): a formal hides its own, a later formal's, or the result type;
+- [`cxx-ada-concrete-multiple-inheritance`](../../bundles/cxx-ada-concrete-multiple-inheritance/README.md): additional concrete bases are emitted as illegal Ada progenitors instead of nested ABI storage;
+- [`cxx-ada-visible-type-method-names`](../../bundles/cxx-ada-visible-type-method-names/README.md): a method hides a type made visible from another generated class package;
+- [`cxx-ada-derived-virtual-slots`](../../bundles/cxx-ada-derived-virtual-slots/README.md): class-specific destructor names shift later derived virtuals away from their C++ vtable slots.
+
+The following list is only the work still open or intentionally bounded, not
+the complete defect history.
 
 The remaining confirmed inventory is deliberately explicit:
 

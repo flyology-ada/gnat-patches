@@ -67,6 +67,26 @@ an access-to-storage type to `access Right'Class` with an instantiation of
 `Ada.Unchecked_Conversion`. The address does not change: the secondary vtable
 entry performs C++'s required adjustment back to `Both`.
 
+## Interoperability boundary
+
+Fixed-layout concrete multiple inheritance does not require a C++ wrapper for
+secondary-base field access or virtual dispatch. Ada can take the address of
+the generated nested storage view and dispatch through the converted
+`access Right'Class` value directly.
+
+This is ABI-faithful binding support, not native or fully type-safe Ada
+multiple inheritance. The conversion is deliberately unchecked, and its
+validity depends on the generated component retaining the compiler-provided
+C++ subobject offset and layout. The regression uses C++ helpers to construct
+and destroy a real C++ object and to provide an independent cross-language
+oracle; those helpers are not needed merely to invoke `Right`'s virtual method
+from Ada.
+
+A virtual base is different: its address may require a runtime lookup through
+the object's C++ ABI metadata. Such a dynamic virtual-base conversion cannot
+be represented by a fixed nested component and still requires an imported C++
+wrapper or equivalent ABI-aware thunk.
+
 The executable regression runs at `-O0` and `-O2`. It compares C++ `sizeof`
 and the secondary-base offset with Ada's object size and component address,
 dispatches through the primary, complete, and converted secondary views,
