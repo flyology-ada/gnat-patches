@@ -25,18 +25,18 @@ id = "gcc-13"
 versions = ["13.2.0"]
 source_flavors = ["linux", "darwin_arm64"]
 patch = "bundles/cxx-ada-virtual-inheritance-layout/patches/gcc-13.patch"
-sha256 = "8c9eaf9d9df6c2898f58974f316828f35404356e8bbc186102ed6461a4e87439"
+sha256 = "919cfe35481ec31d1bf47768f419043951b0bb8a1416e1d34cf1075c5fff76b0"
 
 [[variants]]
 id = "gcc-14"
 versions = ["14.2.0"]
 source_flavors = ["linux", "darwin_arm64"]
 patch = "bundles/cxx-ada-virtual-inheritance-layout/patches/gcc-14.patch"
-sha256 = "6ba96fa828c1904f56896bf7d17f496e06cc90212367a393f974f70aac1c8049"
+sha256 = "db832d2ab314145855a67e1c46d5bb1cff3a6cd4c3b04eb94d8665a0acec176e"
 
 [[variants]]
 id = "gcc-15-16"
 versions = ["15.3.0", "16.1.0", "16.2.0"]
 source_flavors = ["linux", "darwin_arm64"]
 patch = "bundles/cxx-ada-virtual-inheritance-layout/patches/gcc-15-16.patch"
-sha256 = "41b68968c3ef388f24dc4c294adbd59306f98c0a729584eba7e7321a24c2efc6"
+sha256 = "c833a38a4be5e984feb11ef253b34cbae120547e46732f1fb69954c8022472a5"

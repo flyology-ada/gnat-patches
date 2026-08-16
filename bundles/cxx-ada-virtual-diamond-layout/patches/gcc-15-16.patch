@@ -2,7 +2,7 @@ diff --git a/gcc/c-family/c-ada-spec.cc b/gcc/c-family/c-ada-spec.cc
 index e79c97d..22f1761 100644
 --- a/gcc/c-family/c-ada-spec.cc
 +++ b/gcc/c-family/c-ada-spec.cc
-@@ -2924,6 +2924,210 @@ is_ada_record_field (tree field)
+@@ -2924,6 +2924,216 @@ is_ada_record_field (tree field)
    return DECL_NAME (field) || !is_tagged_type (TREE_TYPE (field));
  }
  
@@ -57,7 +57,7 @@ index e79c97d..22f1761 100644
 +field_fits_as_base (tree node, tree field)
 +{
 +  const int data_size = cpp_check (node, GET_AS_BASE_SIZE);
-+  if (data_size < 0 || !is_ada_record_field (field)
++  if (data_size < 0 || !is_ada_record_field (node, field)
 +      || !DECL_FIELD_OFFSET (field) || !DECL_FIELD_BIT_OFFSET (field)
 +      || !DECL_SIZE (field)
 +      || !tree_fits_uhwi_p (DECL_FIELD_OFFSET (field))
@@ -100,7 +100,7 @@ index e79c97d..22f1761 100644
 +  newline_and_indent (pp, spc);
 +  pp_string (pp, "type ");
 +  dump_ada_node (pp, TYPE_NAME (node), type, spc, false, true);
-+  pp_string (pp, "_As_Base is limited record");
++  pp_string (pp, "_As_Base is record");
 +  pp_newline (pp);
 +
 +  for (tree field = TYPE_FIELDS (node); field; field = TREE_CHAIN (field))
@@ -113,11 +113,11 @@ index e79c97d..22f1761 100644
 +
 +	    INDENT (spc + INDENT_INCR);
 +	    if (field_num == 0)
-+	      pp_string (pp, "parent : aliased ");
++	      pp_string (pp, "parent : ");
 +	    else
 +	      {
 +		char buf[32];
-+		sprintf (buf, "field_%d : aliased ", field_num + 1);
++		sprintf (buf, "field_%d : ", field_num + 1);
 +		pp_string (pp, buf);
 +	      }
 +	    dump_ada_record_field_type (pp, field);
@@ -125,8 +125,14 @@ index e79c97d..22f1761 100644
 +	    pp_newline (pp);
 +	    field_num++;
 +	  }
-+	else if (dump_ada_declaration (pp, field, type, spc + INDENT_INCR))
++	else
 +	  {
++	    INDENT (spc + INDENT_INCR);
++	    dump_ada_node (pp, field, type, spc, false, true);
++	    pp_string (pp, " : ");
++	    dump_ada_record_field_type (pp, field);
++	    pp_string (pp, ";  -- ");
++	    dump_sloc (pp, field);
 +	    pp_newline (pp);
 +	    field_num++;
 +	  }

@@ -1,26 +1,3 @@
-diff --git a/gcc/ada/gcc-interface/decl.cc b/gcc/ada/gcc-interface/decl.cc
---- a/gcc/ada/gcc-interface/decl.cc
-+++ b/gcc/ada/gcc-interface/decl.cc
-@@ -8062,9 +8062,17 @@ gnat_to_gnu_field (Entity_Id gnat_field, tree gnu_record_type, int packed,
-       /* Ensure the position doesn't overlap with the parent subtype if there
- 	 is one.  It would be impossible to build CONSTRUCTORs and accessing
- 	 the parent could clobber the component in the extension if directly
--	 done.  We accept it with -gnatd.K for the sake of compatibility.  */
-+	 done.  Fully represented imported C++ classes are an exception because
-+	 the C++ ABI can reuse a base class's tail padding and the front end
-+	 expands their assignments component by component.  We also accept the
-+	 overlap with -gnatd.K for the sake of compatibility.  */
-       if (Present (gnat_parent)
--	  && !(Debug_Flag_Dot_KK && Is_Fully_Repped_Tagged_Type (gnat_parent)))
-+	  && !((Debug_Flag_Dot_KK
-+		 || (Is_CPP_Class (gnat_record_type)
-+		     && Is_CPP_Class (gnat_parent)
-+		     && Is_Imported (gnat_record_type)
-+		     && Is_Imported (gnat_parent)))
-+	       && Is_Fully_Repped_Tagged_Type (gnat_parent)))
- 	{
- 	  tree gnu_parent = gnat_to_gnu_type (gnat_parent);
- 
 diff --git a/gcc/c-family/c-ada-spec.cc b/gcc/c-family/c-ada-spec.cc
 --- a/gcc/c-family/c-ada-spec.cc
 +++ b/gcc/c-family/c-ada-spec.cc
@@ -35,7 +12,7 @@ diff --git a/gcc/c-family/c-ada-spec.cc b/gcc/c-family/c-ada-spec.cc
 +static bool
 +needs_tail_padding_layout (tree node)
 +{
-+  if (!cpp_check || !is_tagged_type (node))
++  if (!cpp_check || !RECORD_OR_UNION_TYPE_P (node))
 +    return false;
 +
 +  const int data_size = cpp_check (node, GET_AS_BASE_SIZE);
@@ -187,42 +164,48 @@ diff --git a/gcc/cp/decl2.cc b/gcc/cp/decl2.cc
        case GET_FUNCTION_QUALIFIERS:
  	{
  	  int qualifiers = 0;
-@@ -5305,6 +5314,41 @@ cpp_check (tree t, cpp_operation op)
+@@ -5305,6 +5314,47 @@ cpp_check (tree t, cpp_operation op)
  	return TREE_CODE (t) == TEMPLATE_DECL;
        case IS_TRIVIAL:
  	return trivial_type_p (t);
 +      case REUSES_BASE_TAIL_PADDING:
 +	{
-+	  if (!CLASS_TYPE_P (t) || !COMPLETE_TYPE_P (t) || !TYPE_BINFO (t)
-+	      || BINFO_N_BASE_BINFOS (TYPE_BINFO (t)) != 1)
++	  if (!CLASS_TYPE_P (t) || !COMPLETE_TYPE_P (t) || !TYPE_BINFO (t))
 +	    return 0;
 +
-+	  tree base_binfo = BINFO_BASE_BINFO (TYPE_BINFO (t), 0);
-+	  if (BINFO_VIRTUAL_P (base_binfo)
-+	      || !tree_fits_uhwi_p (BINFO_OFFSET (base_binfo)))
-+	    return 0;
++	  for (unsigned int i = 0;
++	       i < BINFO_N_BASE_BINFOS (TYPE_BINFO (t));
++	       ++i)
++	    {
++	      tree base_binfo = BINFO_BASE_BINFO (TYPE_BINFO (t), i);
++	      if (BINFO_VIRTUAL_P (base_binfo)
++		  || !tree_fits_uhwi_p (BINFO_OFFSET (base_binfo)))
++		continue;
 +
-+	  tree base_type = BINFO_TYPE (base_binfo);
-+	  const HOST_WIDE_INT data_size
-+	    = int_size_in_bytes (CLASSTYPE_AS_BASE (base_type));
-+	  const HOST_WIDE_INT object_size = int_size_in_bytes (base_type);
-+	  if (data_size < 0 || object_size <= data_size)
-+	    return 0;
++	      tree base_type = BINFO_TYPE (base_binfo);
++	      const HOST_WIDE_INT data_size
++		= int_size_in_bytes (CLASSTYPE_AS_BASE (base_type));
++	      const HOST_WIDE_INT object_size = int_size_in_bytes (base_type);
++	      if (data_size < 0 || object_size <= data_size)
++		continue;
 +
-+	  const unsigned HOST_WIDE_INT base_offset
-+	    = tree_to_uhwi (BINFO_OFFSET (base_binfo));
-+	  for (tree field = TYPE_FIELDS (t); field; field = DECL_CHAIN (field))
-+	    if (TREE_CODE (field) == FIELD_DECL
-+		&& !DECL_ARTIFICIAL (field)
-+		&& tree_fits_uhwi_p (bit_position (field)))
-+	      {
-+		const unsigned HOST_WIDE_INT field_bitpos
-+		  = tree_to_uhwi (bit_position (field));
-+		if (field_bitpos >= (base_offset + data_size) * BITS_PER_UNIT
-+		    && field_bitpos < ((base_offset + object_size)
-+				   * BITS_PER_UNIT))
-+		  return 1;
-+	      }
++	      const unsigned HOST_WIDE_INT base_offset
++		= tree_to_uhwi (BINFO_OFFSET (base_binfo));
++	      for (tree field = TYPE_FIELDS (t); field;
++		   field = DECL_CHAIN (field))
++		if (TREE_CODE (field) == FIELD_DECL
++		    && !DECL_ARTIFICIAL (field)
++		    && tree_fits_uhwi_p (bit_position (field)))
++		  {
++		    const unsigned HOST_WIDE_INT field_bitpos
++		      = tree_to_uhwi (bit_position (field));
++		    if (field_bitpos
++			>= (base_offset + data_size) * BITS_PER_UNIT
++			&& field_bitpos < ((base_offset + object_size)
++					   * BITS_PER_UNIT))
++		      return 1;
++		  }
++	    }
 +
 +	  return 0;
 +	}
@@ -233,7 +216,7 @@ diff --git a/gcc/testsuite/g++.dg/ada-spec/inherited-tail-padding.C b/gcc/testsu
 new file mode 100644
 --- /dev/null
 +++ b/gcc/testsuite/g++.dg/ada-spec/inherited-tail-padding.C
-@@ -0,0 +1,61 @@
+@@ -0,0 +1,114 @@
 +/* { dg-do compile } */
 +/* { dg-require-effective-target lp64 } */
 +/* { dg-options "-fdump-ada-spec-slim" } */
@@ -241,6 +224,9 @@ new file mode 100644
 +/* { dg-final { scan-file inherited_tail_padding_c.ads "for Tail_Base'Object_Size use 128;" } } */
 +/* { dg-final { scan-file inherited_tail_padding_c.ads "value_u at 8 range 0 .. 31;" } } */
 +/* { dg-final { scan-file inherited_tail_padding_c.ads "extra_u at 12 range 0 .. 31;" } } */
++/* { dg-final { scan-file inherited_tail_padding_c.ads "for Plain_Base'Size use 24;" } } */
++/* { dg-final { scan-file inherited_tail_padding_c.ads "derived_char at 3 range 0 .. 7;" } } */
++/* { dg-final { scan-file inherited_tail_padding_c.ads "extra at 7 range 0 .. 7;" } } */
 +
 +class Tail_Base
 +{
@@ -294,41 +280,54 @@ new file mode 100644
 +  return object->extra ();
 +}
 +
++struct Plain_Base
++{
++  short base_short;
++  char base_char;
++  Plain_Base () : base_short (1), base_char (2) {}
++};
++
++struct Plain_Derived : Plain_Base
++{
++  char derived_char;
++  Plain_Derived () : derived_char (3) {}
++};
++
++struct Plain_Left
++{
++  short left_short;
++  char left_char;
++  Plain_Left () : left_short (4), left_char (5) {}
++};
++
++struct Plain_Right
++{
++  short right_short;
++  char right_char;
++  Plain_Right () : right_short (6), right_char (7) {}
++};
++
++struct Plain_Both : Plain_Left, Plain_Right
++{
++  char extra;
++  Plain_Both () : extra (8) {}
++};
++
++extern "C" Plain_Derived *cpp_plain_create () { return new Plain_Derived; }
++extern "C" void cpp_plain_delete (Plain_Derived *p) { delete p; }
++extern "C" unsigned long cpp_plain_size () { return sizeof (Plain_Derived); }
++extern "C" int cpp_plain_values (const Plain_Derived *p)
++{
++  return p->base_short + p->base_char + p->derived_char;
++}
++
++extern "C" Plain_Both *cpp_both_create () { return new Plain_Both; }
++extern "C" void cpp_both_delete (Plain_Both *p) { delete p; }
++extern "C" unsigned long cpp_both_plain_size () { return sizeof (Plain_Both); }
++extern "C" int cpp_both_values (const Plain_Both *p)
++{
++  return p->left_short + p->left_char + p->right_short
++    + p->right_char + p->extra;
++}
++
 +/* { dg-final { cleanup-ada-spec } } */
-diff --git a/gcc/testsuite/gnat.dg/cpp_tail_padding.adb b/gcc/testsuite/gnat.dg/cpp_tail_padding.adb
-new file mode 100644
---- /dev/null
-+++ b/gcc/testsuite/gnat.dg/cpp_tail_padding.adb
-@@ -0,0 +1,32 @@
-+--  { dg-do compile }
-+--  { dg-require-effective-target lp64 }
-+
-+procedure Cpp_Tail_Padding is
-+   pragma Warnings (Off);
-+
-+   type Tail_Base is tagged limited record
-+      Value : Integer;
-+   end record
-+   with Import => True,
-+        Convention => CPP;
-+
-+   for Tail_Base'Size use 96;
-+   for Tail_Base'Object_Size use 128;
-+   for Tail_Base use record
-+      Value at 8 range 0 .. 31;
-+   end record;
-+
-+   type Tail_Derived is limited new Tail_Base with record
-+      Extra : Integer;
-+   end record
-+   with Import => True,
-+        Convention => CPP;
-+
-+   for Tail_Derived'Size use 128;
-+   for Tail_Derived'Object_Size use 128;
-+   for Tail_Derived use record
-+      Extra at 12 range 0 .. 31;
-+   end record;
-+begin
-+   null;
-+end Cpp_Tail_Padding;

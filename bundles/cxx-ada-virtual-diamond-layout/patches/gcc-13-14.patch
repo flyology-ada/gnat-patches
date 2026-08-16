@@ -2,7 +2,7 @@ diff --git a/gcc/c-family/c-ada-spec.cc b/gcc/c-family/c-ada-spec.cc
 index 7bee7f4..d0f00c1 100644
 --- a/gcc/c-family/c-ada-spec.cc
 +++ b/gcc/c-family/c-ada-spec.cc
-@@ -2856,6 +2856,210 @@ is_ada_record_field (tree field)
+@@ -2856,6 +2856,216 @@ is_ada_record_field (tree field)
    return DECL_NAME (field) || !is_tagged_type (TREE_TYPE (field));
  }
  
@@ -57,7 +57,7 @@ index 7bee7f4..d0f00c1 100644
 +field_fits_as_base (tree node, tree field)
 +{
 +  const int data_size = cpp_check (node, GET_AS_BASE_SIZE);
-+  if (data_size < 0 || !is_ada_record_field (field)
++  if (data_size < 0 || !is_ada_record_field (node, field)
 +      || !DECL_FIELD_OFFSET (field) || !DECL_FIELD_BIT_OFFSET (field)
 +      || !DECL_SIZE (field)
 +      || !tree_fits_uhwi_p (DECL_FIELD_OFFSET (field))
@@ -100,7 +100,7 @@ index 7bee7f4..d0f00c1 100644
 +  newline_and_indent (buffer, spc);
 +  pp_string (buffer, "type ");
 +  dump_ada_node (buffer, TYPE_NAME (node), type, spc, false, true);
-+  pp_string (buffer, "_As_Base is limited record");
++  pp_string (buffer, "_As_Base is record");
 +  pp_newline (buffer);
 +
 +  for (tree field = TYPE_FIELDS (node); field; field = TREE_CHAIN (field))
@@ -113,11 +113,11 @@ index 7bee7f4..d0f00c1 100644
 +
 +	    INDENT (spc + INDENT_INCR);
 +	    if (field_num == 0)
-+	      pp_string (buffer, "parent : aliased ");
++	      pp_string (buffer, "parent : ");
 +	    else
 +	      {
 +		char buf[32];
-+		sprintf (buf, "field_%d : aliased ", field_num + 1);
++		sprintf (buf, "field_%d : ", field_num + 1);
 +		pp_string (buffer, buf);
 +	      }
 +	    dump_ada_record_field_type (buffer, field);
@@ -125,8 +125,14 @@ index 7bee7f4..d0f00c1 100644
 +	    pp_newline (buffer);
 +	    field_num++;
 +	  }
-+	else if (dump_ada_declaration (buffer, field, type, spc + INDENT_INCR))
++	else
 +	  {
++	    INDENT (spc + INDENT_INCR);
++	    dump_ada_node (buffer, field, type, spc, false, true);
++	    pp_string (buffer, " : ");
++	    dump_ada_record_field_type (buffer, field);
++	    pp_string (buffer, ";  -- ");
++	    dump_sloc (buffer, field);
 +	    pp_newline (buffer);
 +	    field_num++;
 +	  }

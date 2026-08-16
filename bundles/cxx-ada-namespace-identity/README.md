@@ -23,23 +23,47 @@ type c_Entry is record
 end record;
 ```
 
-The corrected output incorporates the complete named namespace path:
+The corrected output preserves the C++ hierarchy as nested Ada packages:
 
 ```ada
-type left_c_Entry is record
-   value : aliased int;
-end record;
+package left is
+   type Entry is record
+      value : aliased int;
+   end record;
+end left;
 
-type right_c_Entry is record
-   value : aliased double;
-end record;
+package right is
+   type Entry is record
+      value : aliased double;
+   end record;
+end right;
 ```
 
-The same prefix is used for functions, type references, aliases, nested
-namespaces, and generated `Class_` packages. Anonymous namespaces remain
-unprefixed because their declarations already have translation-unit-local
-linkage and no source-level namespace name.
+This also distinguishes an underscore from a namespace boundary without an
+encoded flat name:
+
+```c++
+namespace a_b { struct Marker { int value; }; }
+namespace a::b { struct Marker { double value; }; }
+```
+
+```ada
+package a_b is
+   type Marker is record ... end record;
+end a_b;
+
+package a is
+   package b is
+      type Marker is record ... end record;
+   end b;
+end a;
+```
+
+Functions, aliases, reopened namespaces, and generated `Class_` packages stay
+inside the corresponding package. Anonymous namespaces remain transparent
+because they have no source-level name and their declarations already have
+translation-unit-local linkage.
 
 The executable regression generates and compiles Ada for duplicate records,
-functions, and nontrivial classes in two nested namespace paths at `-O0` and
-`-O2`.
+functions, nontrivial classes, reopened namespaces, and the `a_b` versus `a::b`
+boundary case at `-O0` and `-O2`.

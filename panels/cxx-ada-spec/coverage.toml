@@ -38,6 +38,7 @@ suites = [
   "bundles/cxx-ada-concrete-multiple-inheritance",
   "bundles/cxx-ada-visible-type-method-names",
   "bundles/cxx-ada-derived-virtual-slots",
+  "bundles/cxx-ada-generated-name-identity",
 ]
 oracles = [
   "generated Ada compiles",
@@ -184,6 +185,7 @@ not_yet_covered = [
   "runtime ABI execution for every compile-only atomic catalog entry",
   "portable recovery of a propagated exception's C++ language identity across GNAT runtime versions",
   "Linux AArch64 long double call interoperability on GNAT releases whose Ada and C++ target conventions disagree",
+  "direct Ada dispatch to vector-bearing C++ methods; use a C++ wrapper so method dispatch stays under the C++ ABI",
   "instrumented branch coverage measurement for c-ada-spec.cc",
   "mutation testing that proves each mapper branch has a sensitive oracle",
   "coverage-guided grammar fuzzing with automatic failure minimization",

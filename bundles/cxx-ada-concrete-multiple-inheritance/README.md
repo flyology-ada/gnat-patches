@@ -38,10 +38,12 @@ concrete parent. It emits the secondary base as a nested storage view whose
 component at its C++ ABI offset:
 
 ```ada
-type Right_As_Base is limited record
-   r : aliased int;
+type Right_As_Base is record
+   r : int;
 end record
 with Convention => C_Pass_By_Copy;
+pragma Component_Alignment (Storage_Unit, Right_As_Base);
+for Right_As_Base'Size use 96;
 for Right_As_Base'Object_Size use 96;
 for Right_As_Base'Alignment use 4;
 for Right_As_Base use record

@@ -9,6 +9,7 @@ procedure Empty_Class_Storage_Consumer is
    With_Member : Bindings.With_Empty_Member;
    With_Array : Bindings.With_Empty_Array;
    With_NUA : Bindings.With_No_Unique_Address;
+   With_Repeated_NUA : Bindings.With_Repeated_No_Unique_Address;
 
    function Bytes (Bits : Natural) return unsigned_long is
      (unsigned_long (Bits / System.Storage_Unit));
@@ -59,4 +60,13 @@ begin
         Bindings.cpp_with_no_unique_address_size
       and then unsigned_long (With_NUA.value'Position) =
         Bindings.cpp_with_no_unique_address_value_offset);
+
+   Report
+     ("REPEATED_NO_UNIQUE_ADDRESS",
+      Bytes (Bindings.With_Repeated_No_Unique_Address'Object_Size) =
+        Bindings.cpp_with_repeated_no_unique_address_size
+      and then unsigned_long (With_Repeated_NUA.first'Position) =
+        Bindings.cpp_with_repeated_no_unique_address_first_offset
+      and then unsigned_long (With_Repeated_NUA.second'Position) =
+        Bindings.cpp_with_repeated_no_unique_address_second_offset);
 end Empty_Class_Storage_Consumer;

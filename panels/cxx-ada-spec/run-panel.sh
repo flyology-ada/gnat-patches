@@ -64,6 +64,8 @@ state=$3
   "$toolchain" "$version" "$state"
 "$root/bundles/cxx-ada-derived-virtual-slots/run-test.sh" \
   "$toolchain" "$version" "$state"
+"$root/bundles/cxx-ada-generated-name-identity/run-test.sh" \
+  "$toolchain" "$version" "$state"
 "$root/panels/cxx-ada-spec/generated/run-test.sh" "$toolchain" "$version" "$state"
 
 echo "C++ Ada feature panel: PASS GCC $version ($state)"

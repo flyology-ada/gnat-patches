@@ -25,11 +25,11 @@ id = "gcc-13-14"
 versions = ["13.2.0", "14.2.0"]
 source_flavors = ["linux", "darwin_arm64"]
 patch = "bundles/cxx-ada-concrete-multiple-inheritance/patches/gcc-13-14.patch"
-sha256 = "200351c54c82d34c5cc5f314b2524d8c1ec170156f1207b95398d629c06b9e49"
+sha256 = "43e85324dc1c00ad5bf3ed3cd20a5fb4735115870ef7ad6f4f826236cd72d181"
 
 [[variants]]
 id = "gcc-15-16"
 versions = ["15.3.0", "16.1.0", "16.2.0"]
 source_flavors = ["linux", "darwin_arm64"]
 patch = "bundles/cxx-ada-concrete-multiple-inheritance/patches/gcc-15-16.patch"
-sha256 = "3a596d709033a7772aa7bfc433309cc5c4429c4e4d8404c4e2eced5c3b9762e5"
+sha256 = "8cdb3d3458dcbfd3e1045b7288263130e7a561a8e53c6f515f6be9efdfb731e8"

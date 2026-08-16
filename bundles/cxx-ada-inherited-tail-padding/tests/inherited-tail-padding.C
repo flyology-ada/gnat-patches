@@ -5,6 +5,9 @@
 /* { dg-final { scan-file inherited_tail_padding_c.ads "for Tail_Base'Object_Size use 128;" } } */
 /* { dg-final { scan-file inherited_tail_padding_c.ads "value_u at 8 range 0 .. 31;" } } */
 /* { dg-final { scan-file inherited_tail_padding_c.ads "extra_u at 12 range 0 .. 31;" } } */
+/* { dg-final { scan-file inherited_tail_padding_c.ads "for Plain_Base'Size use 24;" } } */
+/* { dg-final { scan-file inherited_tail_padding_c.ads "derived_char at 3 range 0 .. 7;" } } */
+/* { dg-final { scan-file inherited_tail_padding_c.ads "extra at 7 range 0 .. 7;" } } */
 
 class Tail_Base
 {
@@ -56,6 +59,56 @@ extern "C" int
 cpp_extra (const Tail_Derived *object)
 {
   return object->extra ();
+}
+
+struct Plain_Base
+{
+  short base_short;
+  char base_char;
+  Plain_Base () : base_short (1), base_char (2) {}
+};
+
+struct Plain_Derived : Plain_Base
+{
+  char derived_char;
+  Plain_Derived () : derived_char (3) {}
+};
+
+struct Plain_Left
+{
+  short left_short;
+  char left_char;
+  Plain_Left () : left_short (4), left_char (5) {}
+};
+
+struct Plain_Right
+{
+  short right_short;
+  char right_char;
+  Plain_Right () : right_short (6), right_char (7) {}
+};
+
+struct Plain_Both : Plain_Left, Plain_Right
+{
+  char extra;
+  Plain_Both () : extra (8) {}
+};
+
+extern "C" Plain_Derived *cpp_plain_create () { return new Plain_Derived; }
+extern "C" void cpp_plain_delete (Plain_Derived *p) { delete p; }
+extern "C" unsigned long cpp_plain_size () { return sizeof (Plain_Derived); }
+extern "C" int cpp_plain_values (const Plain_Derived *p)
+{
+  return p->base_short + p->base_char + p->derived_char;
+}
+
+extern "C" Plain_Both *cpp_both_create () { return new Plain_Both; }
+extern "C" void cpp_both_delete (Plain_Both *p) { delete p; }
+extern "C" unsigned long cpp_both_plain_size () { return sizeof (Plain_Both); }
+extern "C" int cpp_both_values (const Plain_Both *p)
+{
+  return p->left_short + p->left_char + p->right_short
+    + p->right_char + p->extra;
 }
 
 /* { dg-final { cleanup-ada-spec } } */

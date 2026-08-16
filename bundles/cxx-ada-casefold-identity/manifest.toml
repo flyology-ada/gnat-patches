@@ -25,11 +25,11 @@ id = "gcc-13-14"
 versions = ["13.2.0", "14.2.0"]
 source_flavors = ["linux", "darwin_arm64"]
 patch = "bundles/cxx-ada-casefold-identity/patches/gcc-13-14.patch"
-sha256 = "528ca204cad7439afe24a9bd4bf8b5afc6a4a4f8b78d1b366687de62d0cb2607"
+sha256 = "d746f3f39368ecd57753d2a8d5d00108810bfcb3e6f1dc90d6f30e1af5b0f278"
 
 [[variants]]
 id = "gcc-15-16"
 versions = ["15.3.0", "16.1.0", "16.2.0"]
 source_flavors = ["linux", "darwin_arm64"]
 patch = "bundles/cxx-ada-casefold-identity/patches/gcc-15-16.patch"
-sha256 = "aa72831e880573c60685eae2aec54c4a4b79c03fe0329d15ff2c6a02c5b552f0"
+sha256 = "59b0e68f46e16297b5edb7c27cf8a0f3046116a761cbd622c8a47520b8ac808c"

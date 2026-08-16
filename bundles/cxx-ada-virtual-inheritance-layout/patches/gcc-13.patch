@@ -2,19 +2,19 @@ diff --git a/gcc/c-family/c-ada-spec.cc b/gcc/c-family/c-ada-spec.cc
 index 88ca0f5..7bd245e 100644
 --- a/gcc/c-family/c-ada-spec.cc
 +++ b/gcc/c-family/c-ada-spec.cc
-@@ -2842,6 +2842,20 @@ is_abi_ignored_empty_field (tree field)
- 	  && cpp_check (TREE_TYPE (field), GET_AS_BASE_SIZE) == 0);
+@@ -3115,6 +3115,20 @@ is_abi_ignored_empty_field (tree node, tree field)
+   return false;
  }
  
 +/* Return true if FIELD is represented as a component in the generated Ada
 +   record.  Keep this in step with dump_ada_structure.  */
 +
 +static bool
-+is_ada_record_field (tree field)
++is_ada_record_field (tree node, tree field)
 +{
 +  if (TREE_CODE (field) != FIELD_DECL
 +      || DECL_VIRTUAL_P (field)
-+      || is_abi_ignored_empty_field (field))
++      || is_abi_ignored_empty_field (node, field))
 +    return false;
 +
 +  return DECL_NAME (field) || !is_tagged_type (TREE_TYPE (field));
@@ -30,7 +30,7 @@ index 88ca0f5..7bd245e 100644
 -    if (TREE_CODE (field) == FIELD_DECL
 -	&& DECL_NAME (field)
 -	&& !DECL_VIRTUAL_P (field)
-+    if (is_ada_record_field (field)
++    if (is_ada_record_field (node, field)
  	&& (!DECL_FIELD_OFFSET (field)
  	    || !DECL_FIELD_BIT_OFFSET (field)
  	    || !DECL_SIZE (field)
@@ -50,7 +50,7 @@ index 88ca0f5..7bd245e 100644
 -dump_ada_tail_padding_layout (pretty_printer *buffer, tree node, tree type,
 -                              int spc)
 +dump_ada_cpp_layout (pretty_printer *buffer, tree node, tree type, int spc,
-+                     bool has_virtual_base)
++		     bool has_virtual_base)
  {
    const int data_size = cpp_check (node, GET_AS_BASE_SIZE);
    const HOST_WIDE_INT object_size = int_size_in_bytes (node);
@@ -91,7 +91,7 @@ index 88ca0f5..7bd245e 100644
 -    if (TREE_CODE (field) == FIELD_DECL
 -	&& DECL_NAME (field)
 -	&& !DECL_VIRTUAL_P (field))
-+    if (is_ada_record_field (field))
++    if (is_ada_record_field (node, field))
        {
 +	field_num++;
  	const unsigned HOST_WIDE_INT bitpos
@@ -221,4 +221,3 @@ index 0000000..514d8e4
 +}
 +
 +/* { dg-final { cleanup-ada-spec } } */
-

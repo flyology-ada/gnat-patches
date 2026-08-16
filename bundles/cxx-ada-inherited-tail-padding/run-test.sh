@@ -23,14 +23,19 @@ gxx="$REGRESSION_TOOLCHAIN/bin/g++"
 }
 
 cxx_fixture="$root/bundles/cxx-ada-inherited-tail-padding/tests/inherited-tail-padding.C"
-ada_fixture="$root/bundles/cxx-ada-inherited-tail-padding/tests/inherited_tail_padding_consumer.adb"
+if [[ "$state" == unpatched ]]; then
+  ada_fixture="$root/bundles/cxx-ada-inherited-tail-padding/tests/inherited_tail_padding_unpatched_consumer.adb"
+else
+  ada_fixture="$root/bundles/cxx-ada-inherited-tail-padding/tests/inherited_tail_padding_consumer.adb"
+fi
 work=$(mktemp -d "${TMPDIR:-/tmp}/gnat-cxx-ada-tail-padding.XXXXXX")
 trap 'rm -rf "$work"' EXIT
 
 for optimization in 0 2; do
   case_dir="$work/O$optimization"
   mkdir -p "$case_dir"
-  cp "$cxx_fixture" "$ada_fixture" "$case_dir/"
+  cp "$cxx_fixture" "$case_dir/"
+  cp "$ada_fixture" "$case_dir/inherited_tail_padding_consumer.adb"
   (
     cd "$case_dir"
     "${REGRESSION_ENV[@]}" "$gxx" -c "-O$optimization" \
@@ -59,6 +64,9 @@ for optimization in 0 2; do
   grep -F "for Tail_Base'Object_Size use" "$spec"
   grep -F "value_u at" "$spec"
   grep -F "extra_u at" "$spec"
+  grep -F "for Plain_Base'Size use 24;" "$spec"
+  grep -F "derived_char at 3 range 0 .. 7;" "$spec"
+  grep -F "extra at 7 range 0 .. 7;" "$spec"
   grep -F "MATCH C++ Ada inherited tail padding" "$case_dir/output.log"
   echo "cxx-ada-inherited-tail-padding -O$optimization: patched (GCC $version)"
 done

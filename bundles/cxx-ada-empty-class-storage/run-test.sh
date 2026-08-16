@@ -52,6 +52,7 @@ for optimization in 0 2; do
     grep -Fx "MEMBER MISMATCH" "$case_dir/output.log"
     grep -Fx "ARRAY MATCH" "$case_dir/output.log"
     grep -Fx "NO_UNIQUE_ADDRESS MATCH" "$case_dir/output.log"
+    grep -Fx "REPEATED_NO_UNIQUE_ADDRESS MISMATCH" "$case_dir/output.log"
     if grep -Fq "for Empty'Object_Size use" "$spec"; then
       echo "error: unpatched mapper unexpectedly emitted empty-class size" >&2
       exit 1
@@ -62,16 +63,22 @@ for optimization in 0 2; do
 
   grep -F "for Empty'Size use 0;" "$spec"
   grep -F "for Empty'Object_Size use 8;" "$spec"
-  if grep -Fq "parent : aliased Empty_Base;" "$spec" \
-    || grep -Fq "ignored : aliased Empty;" "$spec"; then
-    echo "error: patched mapper retained an ABI-overlapping empty field" >&2
+  if grep -Fq "parent : aliased Empty_Base;" "$spec"; then
+    echo "error: patched mapper retained an artificial empty base field" >&2
     exit 1
   fi
+  if grep -Fq "ignored : aliased Empty;" "$spec"; then
+    echo "error: patched mapper retained an overlapping no_unique_address field" >&2
+    exit 1
+  fi
+  grep -F "first : aliased Empty;" "$spec"
+  grep -F "second : aliased Empty;" "$spec"
   grep -Fx "EMPTY MATCH" "$case_dir/output.log"
   grep -Fx "METHOD_EMPTY MATCH" "$case_dir/output.log"
   grep -Fx "EBO MATCH" "$case_dir/output.log"
   grep -Fx "MEMBER MATCH" "$case_dir/output.log"
   grep -Fx "ARRAY MATCH" "$case_dir/output.log"
   grep -Fx "NO_UNIQUE_ADDRESS MATCH" "$case_dir/output.log"
+  grep -Fx "REPEATED_NO_UNIQUE_ADDRESS MATCH" "$case_dir/output.log"
   echo "cxx-ada-empty-class-storage -O$optimization: patched (GCC $version)"
 done

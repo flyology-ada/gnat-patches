@@ -29,7 +29,7 @@ The executable panel currently has four layers:
   translation unit, with periodic inheritance and overload clusters. They
   exercise higher-order interactions in the currently representable subset and
   alternate full and slim dump modes.
-- Twenty-nine runtime suites link C++ and Ada at `-O0` and `-O2`. They check scalar,
+- Thirty runtime suites link C++ and Ada at `-O0` and `-O2`. They check scalar,
   enum, record, union, pointer, reference, and callback calling conventions;
   object size, alignment, and field offsets; ordinary, interface, and concrete
   secondary-base virtual dispatch, including recursively nested concrete bases;
@@ -38,7 +38,8 @@ The executable panel currently has four layers:
   alignment, namespace and method identity—including enclosing-type,
   use-visible type/method, and subprogram-profile collisions—anonymous
   enumeration values, and
-  `char8_t`, 128-bit integers, machine vectors, and opaque pointer-to-member
+  `char8_t`, 128-bit integers, machine vectors through a C++ method wrapper,
+  and opaque pointer-to-member
   values; uninstantiated-template emission, a nontrivial standard-library value
   facade, C++ exception propagation into an Ada handler; and the exact behavior
   of known defects.
@@ -64,7 +65,7 @@ The coverage summary reports both baselines. After the currently accepted
 patches, all 63 atomic cases pass on every supported major.
 
 The confirmed-history ledger is larger than that residual atomic count:
-twenty-one independent C++ mapper defects now have accepted 1.2.0 bundles and no
+twenty-two independent C++ mapper defects now have accepted 1.2.0 bundles and no
 confirmed fixed-layout runtime defect remains. Every linked bundle contains the
 offending C++, the unpatched Ada output, the corrected Ada output, and an
 executable `-O0`/`-O2` before/after regression:
@@ -90,6 +91,7 @@ executable `-O0`/`-O2` before/after regression:
 - [`cxx-ada-concrete-multiple-inheritance`](../../bundles/cxx-ada-concrete-multiple-inheritance/README.md): additional concrete bases are emitted as illegal Ada progenitors instead of nested ABI storage;
 - [`cxx-ada-visible-type-method-names`](../../bundles/cxx-ada-visible-type-method-names/README.md): a method hides a type made visible from another generated class package;
 - [`cxx-ada-derived-virtual-slots`](../../bundles/cxx-ada-derived-virtual-slots/README.md): class-specific destructor names shift later derived virtuals away from their C++ vtable slots.
+- [`cxx-ada-generated-name-identity`](../../bundles/cxx-ada-generated-name-identity/README.md): readable synthesized names collide with user-written methods, aliases, formals, layout helpers, class packages, and special members.
 
 The following list is only the work still open or intentionally bounded, not
 the complete defect history.
@@ -103,7 +105,9 @@ The remaining confirmed inventory is deliberately explicit:
   `others` handler. GNAT's internal API for recovering the foreign language
   identity varies by runtime version and is not claimed as portable behavior;
   Linux AArch64 `long double` interoperability on affected GNAT releases is a
-  compiler call-ABI boundary, not a mapper-spelling success.
+  compiler call-ABI boundary, not a mapper-spelling success. Direct Ada
+  dispatch to vector-bearing C++ methods likewise requires a C++ wrapper,
+  because tested GNAT versions do not classify that method ABI consistently.
 
 Run the complete current panel against a compiler root:
 

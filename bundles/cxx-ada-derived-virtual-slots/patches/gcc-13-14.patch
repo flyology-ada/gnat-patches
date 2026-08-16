@@ -1,6 +1,31 @@
 diff --git a/gcc/c-family/c-ada-spec.cc b/gcc/c-family/c-ada-spec.cc
 --- a/gcc/c-family/c-ada-spec.cc
 +++ b/gcc/c-family/c-ada-spec.cc
+@@ -1591,6 +1591,18 @@ dump_ada_function_declaration (pretty_printer *buffer, tree func,
+   tree t;
+   char buf[18];
+   int num, num_args = 0, have_args = true, have_ellipsis = false;
++  bool is_derived_destructor = false;
++
++  if (is_destructor)
++    for (tree field = TYPE_FIELDS (DECL_CONTEXT (func));
++         field;
++         field = TREE_CHAIN (field))
++      if (cpp_check && cpp_check (field, IS_PRIMARY_BASE_FIELD)
++          && is_tagged_type (TREE_TYPE (field)))
++        {
++          is_derived_destructor = true;
++          break;
++        }
+ 
+   /* Compute number of arguments.  */
+   if (arg)
+@@ -1686,2 +1698,4 @@ dump_ada_function_declaration (pretty_printer *buffer, tree func,
+-	  && !(num == 1 && is_method && (DECL_VINDEX (func) || is_constructor)))
++	  && !(num == 1 && is_method
++	       && (DECL_VINDEX (func) || is_constructor)
++	       && !is_derived_destructor))
+ 	pp_string (buffer, "'Class");
 @@ -3591,14 +3591,12 @@
  /* Dump in BUFFER destructor spec corresponding to T.  */
  
@@ -62,11 +87,11 @@ diff --git a/gcc/testsuite/g++.dg/ada-spec/derived-virtual-slots.C b/gcc/testsui
 new file mode 100644
 --- /dev/null
 +++ b/gcc/testsuite/g++.dg/ada-spec/derived-virtual-slots.C
-@@ -0,0 +1,39 @@
+@@ -0,0 +1,40 @@
 +/* { dg-do compile } */
 +/* { dg-options "-fdump-ada-spec-slim" } */
-+/* { dg-final { scan-file derived_virtual_slots_c.ads "procedure Delete \(this : access Derived\)" } } */
-+/* { dg-final { scan-file derived_virtual_slots_c.ads "procedure Delete_And_Free \(this : access Derived\)" } } */
++/* { dg-final { scan-file derived_virtual_slots_c.ads "procedure Delete \(this : access Derived'Class\)" } } */
++/* { dg-final { scan-file derived_virtual_slots_c.ads "procedure Delete_And_Free \(this : access Derived'Class\)" } } */
 +/* { dg-final { scan-file derived_virtual_slots_c.ads "function Delete_Method \(this : access Base'Class\)" } } */
 +
 +class Base
@@ -77,6 +102,7 @@ new file mode 100644
 +  virtual int inherited_slot () { return base; }
 +  int Delete () { return base; }
 +  int base;
++  int reserved;
 +};
 +
 +class Derived : public Base
@@ -89,7 +115,7 @@ new file mode 100644
 +  int own;
 +};
 +
-+Base::Base (int base_value) : base (base_value) {}
++Base::Base (int base_value) : base (base_value), reserved (0) {}
 +Derived::Derived (int base_value, int own_value)
 +  : Base (base_value), own (own_value) {}
 +
@@ -102,4 +128,3 @@ new file mode 100644
 +extern "C" int cpp_call_added (Derived *object) { return object->added_slot (); }
 +
 +/* { dg-final { cleanup-ada-spec } } */
-

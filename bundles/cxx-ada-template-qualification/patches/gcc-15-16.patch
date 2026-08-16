@@ -26,11 +26,11 @@ index c7ae03223..bb091930f 100644
 +
 +  if (current_template_instance
 +      && TYPE_MAIN_VARIANT (node)
-+         == TYPE_MAIN_VARIANT (current_template_instance))
++	 == TYPE_MAIN_VARIANT (current_template_instance))
 +    {
 +      package_prefix = false;
 +      dump_ada_node (pp, current_template_instance, current_template,
-+                     spc, false, true);
++		     spc, false, true);
 +      package_prefix = true;
 +      return true;
 +    }

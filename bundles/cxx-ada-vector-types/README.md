@@ -44,16 +44,47 @@ with Import => True,
      External_Name => "_Z15vector_identityDv4_i";
 ```
 
-The `Ada` convention is intentional for a direct vector parameter or result.
-GNAT's foreign conventions classify an Ada array as a reference parameter even
-after `vector_type` changes its machine mode. Native Ada convention passes the
-machine vector directly, matching the C++ target ABI, while `External_Name`
-still selects the C++ symbol. A compile-only correction using `Convention =>
-CPP` would silently corrupt calls and is rejected by the runtime oracle.
+Free and C-wrapper vector profiles use `Convention => Ada`, whose native
+machine-vector mode matches the target C++ vector ABI without first treating
+the representative Ada array as a foreign aggregate.
+
+Vector-bearing C++ methods are a separate ABI boundary. They must retain
+`Convention => CPP` so GNAT preserves C++ method and dispatch-table identity,
+but direct class-wide calls are not portable: GNAT releases and targets differ
+on whether the Ada array is classified before or after `vector_type` changes
+its machine mode. Both conventions have produced wrong values in the tested
+GCC 13 and 14 matrix. The portable binding is a C++ wrapper:
+
+```c++
+extern "C" Int_Vector
+cpp_transform_vector (Vector_Object *object, Int_Vector value)
+{
+  return object->transform (value);
+}
+```
+
+```ada
+function cpp_transform_vector
+  (object : access Class_Vector_Object.Vector_Object;
+   value : Int_Vector) return Int_Vector
+with Import => True,
+     Convention => Ada,
+     External_Name => "cpp_transform_vector";
+```
+
+The wrapper still executes the real C++ virtual call; only the unstable
+cross-language method-call sequence stays on the C++ side.
+
+Scalable SVE/RVV vectors do not have a compile-time lane count and cannot be
+described by an Ada fixed array. The mapper checks `TYPE_VECTOR_SUBPARTS`
+before reading it and emits the explicit `<scalable_vector>` unsupported marker
+instead of asserting or silently using the minimum runtime lane count.
 
 The executable regression round-trips signed integer and double vectors through
-C++ at `-O0` and `-O2`, so it checks generated syntax, alignment, register
-classification, parameter passing, and return values.
+free functions and a C wrapper around a virtual C++ call at `-O0` and `-O2`, so
+it checks generated syntax, alignment, register classification, parameter
+passing, return values, and preserved C++ method identity. A target-specific
+GCC test covers the scalable-vector guard.
 
 Run it against an unpatched or patched compiler root:
 

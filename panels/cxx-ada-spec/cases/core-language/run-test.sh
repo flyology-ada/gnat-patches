@@ -29,7 +29,7 @@ for optimization in 0 2; do
     cd "$case_dir"
     "${REGRESSION_ENV[@]}" "$gxx" -c "-O$optimization" -fdump-ada-spec-slim panel_api.C
     consumer=panel_core.adb
-    if grep -Fq "package Class_bridge_panel_Base" panel_api_c.ads; then
+    if grep -Fq "package bridge_panel is" panel_api_c.ads; then
       consumer=panel_core_namespaced.adb
     fi
     "${REGRESSION_ENV[@]}" "$REGRESSION_GNATMAKE" -q -f "-O$optimization" \

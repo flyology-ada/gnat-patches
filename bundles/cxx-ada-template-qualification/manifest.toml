@@ -25,11 +25,11 @@ id = "gcc-13-14"
 versions = ["13.2.0", "14.2.0"]
 source_flavors = ["linux", "darwin_arm64"]
 patch = "bundles/cxx-ada-template-qualification/patches/gcc-13-14.patch"
-sha256 = "87fdd81ca208a971cf329cb27bffce5f53c5475d998c84feed1473c3ae7a4e69"
+sha256 = "06137cd0c8d608c964402803ef0ae788afd944d43a791387f7866d168d28295a"
 
 [[variants]]
 id = "gcc-15-16"
 versions = ["15.3.0", "16.1.0", "16.2.0"]
 source_flavors = ["linux", "darwin_arm64"]
 patch = "bundles/cxx-ada-template-qualification/patches/gcc-15-16.patch"
-sha256 = "3dee03d60540b1d1f72bb5b018b2c258c829790b22bdfd759e8e0c4e91fb9395"
+sha256 = "f6dad26d76a5ef450e8294175ed65f2e337fbaf6e9998372fa4e65fe81512873"

@@ -42,7 +42,9 @@ for optimization in 0 2; do
   (
     cd "$case_dir"
     "${REGRESSION_ENV[@]}" "$REGRESSION_GNATMAKE" -q -f \
-      "-O$optimization" -c namespace_identity_consumer.adb
+      "-O$optimization" namespace_identity_consumer.adb \
+      -largs namespace-identity.o -lstdc++
+    "${REGRESSION_ENV[@]}" ./namespace_identity_consumer
   ) >"$case_dir/build.log" 2>&1
   build_status=$?
   set -e
@@ -65,11 +67,16 @@ for optimization in 0 2; do
     cat "$case_dir/build.log"
     exit 1
   }
-  grep -F "type first_inner_Item" "$spec"
-  grep -F "type second_inner_Item" "$spec"
-  grep -F "function first_inner_transform" "$spec"
-  grep -F "function second_inner_transform" "$spec"
-  grep -F "package Class_first_inner_Object" "$spec"
-  grep -F "package Class_second_inner_Object" "$spec"
+  grep -F "package first is" "$spec"
+  grep -F "package inner is" "$spec"
+  grep -F "function transform (value : Item) return Item" "$spec"
+  grep -F "package Class_Object is" "$spec"
+  grep -F "package a_b is" "$spec"
+  grep -F "package a is" "$spec"
+  grep -F "type Again is record" "$spec"
+  if grep -Fq "package :: is" "$spec"; then
+    echo "error: global C++ namespace was emitted as an Ada package" >&2
+    exit 1
+  fi
   echo "cxx-ada-namespace-identity -O$optimization: patched (GCC $version)"
 done

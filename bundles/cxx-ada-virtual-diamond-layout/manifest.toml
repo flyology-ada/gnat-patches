@@ -25,11 +25,11 @@ id = "gcc-13-14"
 versions = ["13.2.0", "14.2.0"]
 source_flavors = ["linux", "darwin_arm64"]
 patch = "bundles/cxx-ada-virtual-diamond-layout/patches/gcc-13-14.patch"
-sha256 = "7636e69d8240a14233ce4fef4b62457947b8dab93502b328fc856a0b6be1c7a9"
+sha256 = "6d7f7ef1f3010926319a3c312e7c3a5bb59a9a64870415d03cd72a12efcdfc64"
 
 [[variants]]
 id = "gcc-15-16"
 versions = ["15.3.0", "16.1.0", "16.2.0"]
 source_flavors = ["linux", "darwin_arm64"]
 patch = "bundles/cxx-ada-virtual-diamond-layout/patches/gcc-15-16.patch"
-sha256 = "da58bd531611e6ef9241841bc10f46da1cbb88220283d73fd655ad638a903c4a"
+sha256 = "d07a4f5152b50054991ce469f43e5afe2a09f6a9d777b19e0e3935d0ae6a7e08"

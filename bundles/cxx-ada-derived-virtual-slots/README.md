@@ -13,6 +13,9 @@ class Base
 public:
   virtual ~Base () = default;
   virtual int inherited_slot ();
+protected:
+  int base;
+  int reserved;
 };
 
 class Derived : public Base
@@ -21,8 +24,14 @@ public:
   ~Derived () override = default;
   int inherited_slot () override;
   virtual int added_slot ();
+private:
+  int own;
 };
 ```
+
+The reserved field makes the base consume its complete-object storage, keeping
+this regression focused on virtual-slot identity rather than the separate
+tail-padding representation problem.
 
 The unpatched mapper produces class-specific Ada destructor names:
 
@@ -57,12 +66,19 @@ package Class_Base is
 end;
 
 package Class_Derived is
-   procedure Delete (this : access Derived);
-   procedure Delete_And_Free (this : access Derived);
+   procedure Delete (this : access Derived'Class);
+   procedure Delete_And_Free (this : access Derived'Class);
    function inherited_slot (this : access Derived) return int;
    function added_slot (this : access Derived) return int;
 end;
 ```
+
+The class-wide derived destructor form deliberately keeps those direct imports
+out of the derived type's primitive set. The two root destructor primitives
+already reserve the C++ destructor slots; dispatch through those inherited
+slots reaches the derived functions in the object's real C++ vtable. This
+leaves `added_slot` at the next C++ slot on every target instead of relying on
+Ada override recognition for compiler-generated destructor declarations.
 
 A user method named `Delete` or `Delete_And_Free` would then collide with the
 generated name. The patch gives only such a method a `_Method` suffix while
@@ -75,8 +91,13 @@ with Import => True,
      External_Name => "_ZN4Base6DeleteEv";
 ```
 
-The executable regression proves inherited and newly introduced class-wide
-dispatch at `-O0` and `-O2`. The feature panel separately nests a concrete
+The executable regression reinterprets the C++ object pointer as an Ada
+class-wide access value, then proves inherited and newly introduced dispatch
+at `-O0` and `-O2`. The unchecked pointer view is intentional: C++ RTTI is not
+an Ada tag descriptor and therefore cannot support Ada's checked class-membership
+conversion. The dispatch itself still reads the C++ object's real vtable.
+
+The feature panel separately nests a concrete
 secondary base that itself has primary and secondary concrete bases. That
 case demonstrates the representation strategy: primary bases use Ada
 inheritance, secondary bases use nested exact-layout components, and an

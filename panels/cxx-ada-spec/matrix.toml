@@ -9,7 +9,7 @@ atomic_cases = 63
 pairwise_cases = 16
 pairwise_value_pairs = 88
 grammar_cases = 32
-runtime_suites = 29
+runtime_suites = 30
 dump_modes = ["full", "slim"]
 
 [[features]]
@@ -62,7 +62,7 @@ id = "empty-class-object-size"
 category = "data-layout"
 state = "patched"
 evidence = "bundles/cxx-ada-empty-class-storage"
-note = "Patchset 1.2.0 separates a zero-size empty value from its nonzero complete-object allocation and omits ABI-overlapping empty bases and no_unique_address members without hiding ordinary members."
+note = "Patchset 1.2.0 separates a zero-size empty value from its nonzero complete-object allocation. It omits artificial empty bases and only a no_unique_address selector that actually overlaps another field; naming that omitted C++ subobject requires an accessor wrapper."
 
 [[features]]
 id = "explicit-template-instantiations"
@@ -224,6 +224,13 @@ evidence = "bundles/cxx-ada-casefold-identity"
 note = "Patchset 1.2.0 assigns stable scope-local suffixes to later case variants and all of their references."
 
 [[features]]
+id = "generated-name-collisions"
+category = "name-lookup"
+state = "patched"
+evidence = "bundles/cxx-ada-generated-name-identity"
+note = "Patchset 1.2.0 reserves source spellings and gives only colliding synthesized declarations readable scope-local suffixes."
+
+[[features]]
 id = "method-cv-overloads"
 category = "function"
 state = "patched"
@@ -266,9 +273,9 @@ note = "Patchset 1.2.0 maps C++20 char8_t to ABI-equivalent Interfaces.C.unsigne
 [[features]]
 id = "complex-vector-types"
 category = "type-system"
-state = "patched"
+state = "patched-with-method-wrapper-boundary"
 evidence = "bundles/cxx-ada-vector-types,generated/catalog.py:complex_and_vector"
-note = "Complex float types already mapped to Ada.Numerics complex units. Patchset 1.2.0 replaces vector placeholders with aligned GNAT machine-vector arrays and a direct vector calling convention."
+note = "Complex float types already mapped to Ada.Numerics complex units. Patchset 1.2.0 replaces vector placeholders with aligned GNAT machine-vector arrays. Free and C-wrapper profiles use the direct vector calling convention; direct Ada dispatch to a vector-bearing C++ method is not portable across the tested compiler/target matrix."
 
 [[features]]
 id = "anonymous-enum-constants"

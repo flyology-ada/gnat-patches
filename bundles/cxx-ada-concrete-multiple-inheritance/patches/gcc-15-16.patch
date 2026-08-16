@@ -1,8 +1,16 @@
 diff --git a/gcc/c-family/c-ada-spec.cc b/gcc/c-family/c-ada-spec.cc
-index fc7d95d..c325cbf 100644
+index 4812cd8ee39397eb9b9ecfd4438b74ef47dc38c3..dee419524c18ca72c62600756eed607cb495fdb3 100644
 --- a/gcc/c-family/c-ada-spec.cc
 +++ b/gcc/c-family/c-ada-spec.cc
-@@ -1128,6 +1128,35 @@ is_tagged_type (const_tree type)
+@@ -40,6 +40,7 @@ static void dump_ada_structure (pretty_printer *, tree, tree, bool, int);
+ static void dump_nested_types (pretty_printer *, tree, int);
+ static char *to_ada_name (const char *, bool *);
+ static bool needs_empty_class_layout (tree);
++static bool maps_to_ada_tagged_type (tree);
+ 
+ #define INDENT(SPACE) \
+   do { int i; for (i = 0; i<SPACE; i++) pp_space (pp); } while (0)
+@@ -1283,6 +1284,35 @@ is_tagged_type (const_tree type)
    return false;
  }
  
@@ -38,8 +46,30 @@ index fc7d95d..c325cbf 100644
  /* Return whether TYPE has non-trivial methods, i.e. methods that do something
     for the objects of TYPE.  In C++, all classes have implicit special methods,
     e.g. constructors and destructors, but they can be trivial if the type is
-@@ -2855,26 +2884,34 @@ dump_ada_node (pretty_printer *pp, tree node, tree type, int spc,
- 	  if (is_tagged_type (TREE_TYPE (node)))
+@@ -2137,7 +2167,7 @@ dump_ada_function_declaration (pretty_printer *pp, tree func,
+ 	 slot in the virtual table or is a constructor.  */
+       if (TREE_TYPE (arg)
+ 	  && POINTER_TYPE_P (TREE_TYPE (arg))
+-	  && is_tagged_type (TREE_TYPE (TREE_TYPE (arg)))
++	  && maps_to_ada_tagged_type (TREE_TYPE (TREE_TYPE (arg)))
+ 	  && !(num == 1 && is_method && (DECL_VINDEX (func) || is_constructor)))
+ 	pp_string (pp, "'Class");
+ 
+@@ -2416,7 +2446,7 @@ dump_ada_template (pretty_printer *pp, tree t, int spc)
+       dump_ada_node (pp, instance, t, spc, false, true);
+       package_prefix = true;
+ 
+-      if (is_tagged_type (instance))
++      if (maps_to_ada_tagged_type (instance))
+ 	pp_string (pp, " is tagged limited ");
+       else
+ 	pp_string (pp, " is limited ");
+@@ -3081,29 +3111,37 @@ dump_ada_node (pretty_printer *pp, tree node, tree type, int spc,
+ 	dump_ada_decl_name (pp, node, limited_access);
+       else
+ 	{
+-	  if (is_tagged_type (TREE_TYPE (node)))
++	  if (maps_to_ada_tagged_type (TREE_TYPE (node)))
  	    {
  	      int first = true;
 +	      tree node_type = TREE_TYPE (node);
@@ -89,26 +119,72 @@ index fc7d95d..c325cbf 100644
  
  	      pp_string (pp, first ? "tagged limited " : " with ");
  	    }
-@@ -2971,29 +3008,72 @@ is_abi_ignored_empty_field (tree field)
- 	  && cpp_check (TREE_TYPE (field), GET_AS_BASE_SIZE) == 0);
+@@ -3244,29 +3282,117 @@ is_abi_ignored_empty_field (tree node, tree field)
+   return false;
  }
  
 -/* Return true if FIELD is represented as a component in the generated Ada
 -   record.  Keep this in step with dump_ada_structure.  */
++/* Return true when NODE places another field in FIELD's complete-object tail
++   padding.  Ada extensions cannot reproduce that overlap with their parent.  */
++
++static bool
++primary_base_tail_reused (tree node, tree field)
++{
++  const HOST_WIDE_INT object_size = int_size_in_bytes (TREE_TYPE (field));
++  if (object_size <= 0)
++    return false;
++
++  for (tree other = TYPE_FIELDS (node); other; other = TREE_CHAIN (other))
++    if (other != field && TREE_CODE (other) == FIELD_DECL
++	&& !DECL_VIRTUAL_P (other) && DECL_FIELD_OFFSET (other)
++	&& DECL_FIELD_BIT_OFFSET (other)
++	&& tree_fits_uhwi_p (DECL_FIELD_OFFSET (other))
++	&& tree_fits_uhwi_p (DECL_FIELD_BIT_OFFSET (other)))
++      {
++	const unsigned HOST_WIDE_INT bitpos
++	  = tree_to_uhwi (DECL_FIELD_OFFSET (other)) * BITS_PER_UNIT
++	    + tree_to_uhwi (DECL_FIELD_BIT_OFFSET (other));
++	if (bitpos > 0
++	    && bitpos < ((unsigned HOST_WIDE_INT) object_size
++			 * BITS_PER_UNIT))
++	  return true;
++      }
++
++  return false;
++}
++
 +/* Return true if FIELD is a concrete C++ base that NODE must represent as a
 +   component.  Ada inheritance can represent the primary base only when NODE
-+   itself declares a virtual primitive and therefore maps to a tagged type.  */
++   maps to a tagged type without overlapping the primary base's tail.  */
  
  static bool
--is_ada_record_field (tree field)
+-is_ada_record_field (tree node, tree field)
 +is_concrete_nested_base_field (tree node, tree field)
 +{
 +  return (cpp_check && TREE_CODE (field) == FIELD_DECL
 +	  && cpp_check (field, IS_BASE_FIELD)
 +	  && (!is_tagged_type (node)
-+	      || !cpp_check (field, IS_PRIMARY_BASE_FIELD))
++	      || !cpp_check (field, IS_PRIMARY_BASE_FIELD)
++	      || primary_base_tail_reused (node, field))
 +	  && !is_ada_interface_type (TREE_TYPE (field))
 +	  && is_tagged_type (TREE_TYPE (field)));
++}
++
++/* Return true if NODE can use Ada tagged inheritance without losing a C++
++   primary base's reused tail padding.  */
++
++static bool
++maps_to_ada_tagged_type (tree node)
++{
++  if (!is_tagged_type (node))
++    return false;
++
++  for (tree field = TYPE_FIELDS (node); field; field = TREE_CHAIN (field))
++    if (cpp_check && cpp_check (field, IS_PRIMARY_BASE_FIELD)
++	&& is_concrete_nested_base_field (node, field))
++      return false;
++  return true;
 +}
 +
 +/* Return true if NODE has a tagged C++ primary base represented by Ada
@@ -117,7 +193,7 @@ index fc7d95d..c325cbf 100644
 +static bool
 +has_tagged_primary_base (tree node)
 +{
-+  if (!is_tagged_type (node))
++  if (!maps_to_ada_tagged_type (node))
 +    return false;
 +
 +  for (tree field = TYPE_FIELDS (node); field; field = TREE_CHAIN (field))
@@ -146,7 +222,7 @@ index fc7d95d..c325cbf 100644
  {
    if (TREE_CODE (field) != FIELD_DECL
        || DECL_VIRTUAL_P (field)
-       || is_abi_ignored_empty_field (field))
+       || is_abi_ignored_empty_field (node, field))
      return false;
  
 -  return DECL_NAME (field) || !is_tagged_type (TREE_TYPE (field));
@@ -166,12 +242,11 @@ index fc7d95d..c325cbf 100644
  {
 -  if (!cpp_check || !RECORD_OR_UNION_TYPE_P (node) || is_tagged_type (node)
 -      || !cpp_check (node, HAS_VIRTUAL_BASE))
-+  if (!cpp_check || !RECORD_OR_UNION_TYPE_P (node)
-+      || (!is_tagged_type (node) && !cpp_check (node, HAS_VIRTUAL_BASE)))
++  if (!cpp_check || !RECORD_OR_UNION_TYPE_P (node))
      return false;
  
    const int data_size = cpp_check (node, GET_AS_BASE_SIZE);
-@@ -3006,10 +3086,10 @@ needs_virtual_as_base_type (tree node)
+@@ -3245,10 +3371,10 @@ needs_virtual_as_base_type (tree node)
     for this component.  */
  
  static bool
@@ -184,7 +259,7 @@ index fc7d95d..c325cbf 100644
        || !DECL_SIZE (field) || !tree_fits_uhwi_p (DECL_SIZE (field)))
      return false;
  
-@@ -3026,7 +3106,7 @@ static void
+@@ -3265,7 +3391,7 @@ static void
  dump_ada_record_field_type (pretty_printer *pp, tree field)
  {
    dump_ada_decl_name (pp, TYPE_NAME (TREE_TYPE (field)), false);
@@ -193,16 +268,16 @@ index fc7d95d..c325cbf 100644
      pp_string (pp, "_As_Base");
  }
  
-@@ -3036,7 +3116,7 @@ static bool
+@@ -3275,7 +3401,7 @@ static bool
  field_fits_as_base (tree node, tree field)
  {
    const int data_size = cpp_check (node, GET_AS_BASE_SIZE);
--  if (data_size < 0 || !is_ada_record_field (field)
+-  if (data_size < 0 || !is_ada_record_field (node, field)
 +  if (data_size < 0 || !is_ada_record_field (node, field)
        || !DECL_FIELD_OFFSET (field) || !DECL_FIELD_BIT_OFFSET (field)
        || !DECL_SIZE (field)
        || !tree_fits_uhwi_p (DECL_FIELD_OFFSET (field))
-@@ -3057,7 +3137,7 @@ field_fits_as_base (tree node, tree field)
+@@ -3296,7 +3422,7 @@ field_fits_as_base (tree node, tree field)
     padding is not part of a base subobject.  */
  
  static unsigned int
@@ -211,14 +286,14 @@ index fc7d95d..c325cbf 100644
  {
    unsigned int alignment = TYPE_ALIGN (node) / BITS_PER_UNIT;
    while (alignment > 1 && data_size % alignment != 0)
-@@ -3069,11 +3149,11 @@ virtual_as_base_alignment (tree node, unsigned int data_size)
+@@ -3308,11 +3434,11 @@ virtual_as_base_alignment (tree node, unsigned int data_size)
     keeps each direct field addressable while excluding shared virtual bases.  */
  
  static void
 -dump_ada_virtual_as_base_type (pretty_printer *pp, tree node, tree type,
 -			       int spc)
 +dump_ada_as_base_storage_type (pretty_printer *pp, tree node, tree type,
-+			        int spc)
++			int spc)
  {
    const unsigned int data_size = cpp_check (node, GET_AS_BASE_SIZE);
 -  int field_num = 0;
@@ -226,7 +301,23 @@ index fc7d95d..c325cbf 100644
  
    pp_newline (pp);
    newline_and_indent (pp, spc);
-@@ -3141,7 +3221,7 @@ dump_ada_virtual_as_base_type (pretty_printer *pp, tree node, tree type,
+@@ -3368,6 +3494,15 @@ dump_ada_virtual_as_base_type (pretty_printer *pp, tree node, tree type,
+   newline_and_indent (pp, spc);
+   pp_string (pp, "with Convention => C_Pass_By_Copy;");
+ 
++  if (as_base_alignment (node, data_size)
++	< TYPE_ALIGN (node) / BITS_PER_UNIT)
++    {
++      newline_and_indent (pp, spc);
++      pp_string (pp, "pragma Component_Alignment (Storage_Unit, ");
++      dump_ada_node (pp, TYPE_NAME (node), type, spc, false, true);
++      pp_string (pp, "_As_Base);");
++    }
++
+   newline_and_indent (pp, spc);
+   pp_string (pp, "for ");
+   dump_ada_node (pp, TYPE_NAME (node), type, spc, false, true);
+@@ -3386,7 +3521,7 @@ dump_ada_virtual_as_base_type (pretty_printer *pp, tree node, tree type,
    pp_string (pp, "for ");
    dump_ada_node (pp, TYPE_NAME (node), type, spc, false, true);
    pp_string (pp, "_As_Base'Alignment use ");
@@ -235,28 +326,28 @@ index fc7d95d..c325cbf 100644
    pp_semicolon (pp);
  
    newline_and_indent (pp, spc);
-@@ -3220,7 +3300,7 @@ static bool
+@@ -3465,7 +3600,7 @@ static bool
  has_constant_field_layout (tree node)
  {
    for (tree field = TYPE_FIELDS (node); field; field = TREE_CHAIN (field))
--    if (is_ada_record_field (field)
+-    if (is_ada_record_field (node, field)
 +    if (is_ada_record_field (node, field)
  	&& (!DECL_FIELD_OFFSET (field)
  	    || !DECL_FIELD_BIT_OFFSET (field)
  	    || !DECL_SIZE (field)
-@@ -3278,9 +3358,9 @@ dump_ada_cpp_layout (pretty_printer *pp, tree node, tree type, int spc,
+@@ -3523,9 +3658,9 @@ dump_ada_cpp_layout (pretty_printer *pp, tree node, tree type, int spc,
    dump_ada_node (pp, TYPE_NAME (node), type, spc, false, true);
    pp_string (pp, " use record");
  
 -  int field_num = 0;
 +  int field_num = has_tagged_primary_base (node) ? 1 : 0;
    for (tree field = TYPE_FIELDS (node); field; field = TREE_CHAIN (field))
--    if (is_ada_record_field (field))
+-    if (is_ada_record_field (node, field))
 +    if (is_ada_record_field (node, field))
        {
  	field_num++;
  	const unsigned HOST_WIDE_INT bitpos
-@@ -4230,6 +4310,7 @@ dump_ada_structure (pretty_printer *pp, tree node, tree type, bool nested,
+@@ -4469,6 +4604,7 @@ dump_ada_structure (pretty_printer *pp, tree node, tree type, bool nested,
    const bool is_union = (TREE_CODE (node) == UNION_TYPE);
    char buf[32];
    int field_num = 0;
@@ -264,12 +355,12 @@ index fc7d95d..c325cbf 100644
    int field_spc = spc + INDENT_INCR;
    int need_semicolon;
  
-@@ -4256,7 +4337,12 @@ dump_ada_structure (pretty_printer *pp, tree node, tree type, bool nested,
+@@ -4495,7 +4631,12 @@ dump_ada_structure (pretty_printer *pp, tree node, tree type, bool nested,
        /* Add parent field if needed.  */
        if (!DECL_NAME (tmp))
  	{
 -	  if (!is_tagged_type (TREE_TYPE (tmp)))
-+	  if (is_tagged_type (node) && cpp_check
++	  if (maps_to_ada_tagged_type (node) && cpp_check
 +	      && cpp_check (tmp, IS_PRIMARY_BASE_FIELD)
 +	      && is_tagged_type (TREE_TYPE (tmp)))
 +	    field_num++;
@@ -278,7 +369,7 @@ index fc7d95d..c325cbf 100644
  	    {
  	      if (!TYPE_NAME (TREE_TYPE (tmp)))
  		dump_ada_declaration (pp, tmp, type, field_spc);
-@@ -4277,6 +4363,7 @@ dump_ada_structure (pretty_printer *pp, tree node, tree type, bool nested,
+@@ -4516,6 +4657,7 @@ dump_ada_structure (pretty_printer *pp, tree node, tree type, bool nested,
  
  	      pp_newline (pp);
  	      field_num++;
@@ -286,7 +377,7 @@ index fc7d95d..c325cbf 100644
  	    }
  	}
        else if (TREE_CODE (tmp) == FIELD_DECL)
-@@ -4302,6 +4389,7 @@ dump_ada_structure (pretty_printer *pp, tree node, tree type, bool nested,
+@@ -4541,6 +4683,7 @@ dump_ada_structure (pretty_printer *pp, tree node, tree type, bool nested,
  		{
  		  pp_newline (pp);
  		  field_num++;
@@ -294,7 +385,7 @@ index fc7d95d..c325cbf 100644
  		}
  	    }
  	}
-@@ -4314,7 +4402,7 @@ dump_ada_structure (pretty_printer *pp, tree node, tree type, bool nested,
+@@ -4553,7 +4696,7 @@ dump_ada_structure (pretty_printer *pp, tree node, tree type, bool nested,
        pp_newline (pp);
      }
  
@@ -303,7 +394,7 @@ index fc7d95d..c325cbf 100644
      {
        INDENT (spc + INDENT_INCR);
        pp_string (pp, "null;");
-@@ -4385,7 +4473,8 @@ dump_ada_structure (pretty_printer *pp, tree node, tree type, bool nested,
+@@ -4623,7 +4766,8 @@ dump_ada_structure (pretty_printer *pp, tree node, tree type, bool nested,
        dump_ada_empty_class_layout (pp, node, type, spc);
      }
    else if ((needs_tail_padding_layout (node)
@@ -313,7 +404,7 @@ index fc7d95d..c325cbf 100644
  	   && has_constant_field_layout (node))
      {
        if (need_semicolon)
-@@ -4398,8 +4487,8 @@ dump_ada_structure (pretty_printer *pp, tree node, tree type, bool nested,
+@@ -4636,8 +4780,8 @@ dump_ada_structure (pretty_printer *pp, tree node, tree type, bool nested,
        dump_ada_cpp_layout (pp, node, type, spc,
  			   cpp_check (node, HAS_VIRTUAL_BASE));
  
@@ -325,7 +416,7 @@ index fc7d95d..c325cbf 100644
  
    /* Print the static fields of the structure, if any.  */
 diff --git a/gcc/c-family/c-ada-spec.h b/gcc/c-family/c-ada-spec.h
-index fe9ae33..3348414 100644
+index fe9ae331c9fd7e269f03c433deee67f064cc2831..33484143f5b20bc7bc1df28f8daffc88783e0111 100644
 --- a/gcc/c-family/c-ada-spec.h
 +++ b/gcc/c-family/c-ada-spec.h
 @@ -31,10 +31,12 @@ enum cpp_operation {
@@ -342,7 +433,7 @@ index fe9ae33..3348414 100644
    IS_TRIVIAL,
    REUSES_BASE_TAIL_PADDING
 diff --git a/gcc/cp/decl2.cc b/gcc/cp/decl2.cc
-index 8c606bf..0da86c0 100644
+index 384e43b1e0bd1478eba537c51f080596f7e5668f..a102dda4ee9bd30df808809f94457cf9768a7302 100644
 --- a/gcc/cp/decl2.cc
 +++ b/gcc/cp/decl2.cc
 @@ -5305,6 +5305,8 @@ cpp_check (tree t, cpp_operation op)
@@ -379,7 +470,7 @@ index 8c606bf..0da86c0 100644
        case IS_TRIVIAL:
 diff --git a/gcc/testsuite/g++.dg/ada-spec/concrete-multiple-inheritance.C b/gcc/testsuite/g++.dg/ada-spec/concrete-multiple-inheritance.C
 new file mode 100644
-index 0000000..b7febae
+index 0000000000000000000000000000000000000000..b7febaecd3858500d0fbbc935eb1f30a1ccf7766
 --- /dev/null
 +++ b/gcc/testsuite/g++.dg/ada-spec/concrete-multiple-inheritance.C
 @@ -0,0 +1,64 @@
@@ -447,4 +538,3 @@ index 0000000..b7febae
 +extern "C" int cpp_read_both (Both *object) { return object->both; }
 +
 +/* { dg-final { cleanup-ada-spec } } */
-

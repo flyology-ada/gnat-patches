@@ -44,8 +44,8 @@ for optimization in 0 2; do
     }
     echo "cxx-ada-derived-virtual-slots -O$optimization: expected bad dispatch (GCC $version)"
   else
-    grep -F "procedure Delete (this : access Derived)" "$dir/derived_virtual_slots_c.ads"
-    grep -F "procedure Delete_And_Free (this : access Derived)" "$dir/derived_virtual_slots_c.ads"
+    grep -F "procedure Delete (this : access Derived'Class)" "$dir/derived_virtual_slots_c.ads"
+    grep -F "procedure Delete_And_Free (this : access Derived'Class)" "$dir/derived_virtual_slots_c.ads"
     grep -F "function Delete_Method (this : access Base'Class)" "$dir/derived_virtual_slots_c.ads"
     (cd "$dir"; "${REGRESSION_ENV[@]}" ./derived_virtual_slots_consumer) \
       >"$dir/output.log" 2>&1 || { cat "$dir/output.log"; exit 1; }

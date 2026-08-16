@@ -75,6 +75,7 @@ for optimization in 0 2; do
   grep -Eq 'type Int_Vector is array \(0 \.\. 3\) of int;' "$spec"
   grep -Eq 'type Double_Vector is array \(0 \.\. 1\) of double;' "$spec"
   grep -Eq 'pragma Machine_Attribute \(Int_Vector, "vector_type"\);' "$spec"
-  grep -Eq 'Convention => Ada' "$spec"
+  [[ $(grep -Fc 'Convention => Ada' "$spec") -eq 3 ]]
+  grep -Eq 'function transform' "$spec"
   echo "cxx-ada-vector-types -O$optimization: patched (GCC $version)"
 done

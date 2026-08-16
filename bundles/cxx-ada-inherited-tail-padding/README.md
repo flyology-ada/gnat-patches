@@ -44,7 +44,9 @@ with Import => True,
 ```
 
 The corrected output records the C++ base data size separately from its
-complete-object size and fixes each visible field at its C++ position:
+complete-object size. Because an Ada extension cannot place a child component
+inside its parent's `Object_Size`, a derived class that actually reuses the
+tail maps its primary base to a nested as-base storage view:
 
 ```ada
 for Tail_Base'Size use 96;
@@ -53,20 +55,58 @@ for Tail_Base use record
    value_u at 8 range 0 .. 31;
 end record;
 
+type Tail_Base_As_Base is record
+   value_u : int;
+end record
+with Convention => C_Pass_By_Copy;
+pragma Component_Alignment (Storage_Unit, Tail_Base_As_Base);
+for Tail_Base_As_Base'Size use 96;
+for Tail_Base_As_Base'Object_Size use 96;
+for Tail_Base_As_Base'Alignment use 4;
+for Tail_Base_As_Base use record
+   value_u at 8 range 0 .. 31;
+end record;
+
+type Tail_Derived is limited record
+   parent : aliased Tail_Base_As_Base;
+   extra_u : aliased int;
+end record
+with Import => True,
+     Convention => CPP;
 for Tail_Derived'Size use 128;
 for Tail_Derived'Object_Size use 128;
 for Tail_Derived use record
+   parent at 0 range 0 .. 95;
    extra_u at 12 range 0 .. 31;
 end record;
 ```
 
-GNAT already expands assignments of fully represented tagged parents
-component by component so a child may safely occupy a parent gap. The patch
-permits that overlap without the internal `-gnatd.K` switch only when both
-types are imported C++ classes. Ordinary Ada extensions retain the existing
-overlap rejection.
+Tail reuse is not limited to polymorphic classes. For example:
 
-The executable regression runs at `-O0` and `-O2`. It compares both Ada object
-sizes with C++ `sizeof`, writes the inherited and derived fields through the
-Ada view, and reads them back through C++ methods. The compiler tests also
-check the emitted clauses and the narrowly permitted GNAT layout.
+```c++
+struct Plain_Base { short s; char c; Plain_Base (); };
+struct Plain_Derived : Plain_Base { char d; };
+```
+
+GCC gives `Plain_Base` four complete-object bytes but only three bytes as a
+base, places `d` at byte 3, and keeps `sizeof (Plain_Derived) == 4`. The
+corrected predicate therefore uses the C++ as-base size for every class and
+examines every direct non-virtual base, rather than requiring a tagged class
+with exactly one base.
+
+For a three-byte plain base the storage view also uses
+`pragma Component_Alignment (Storage_Unit, Plain_Base_As_Base)`, `Size` and
+`Object_Size` of 24 bits, and alignment 1. That keeps the base component
+addressable without forcing Ada to round its object size back to four bytes.
+
+The nested view deliberately models static C++ storage, not native Ada
+inheritance. Operations on the complete derived object still use its imported
+C++ profiles; code that needs a typed base view may take the nested component's
+address and perform the same explicit access-view conversion described by the
+concrete multiple-inheritance bundle.
+
+The executable regression runs at `-O0` and `-O2`. It covers polymorphic,
+ordinary single-base, and ordinary multiple-base reuse, compares Ada object
+sizes with C++ `sizeof`, writes fields through the Ada view, and reads them
+back through C++ methods. The compiler tests also check the exact nested
+as-base clauses and reduced component alignment.
