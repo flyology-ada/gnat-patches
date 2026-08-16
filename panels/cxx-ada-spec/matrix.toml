@@ -58,6 +58,13 @@ evidence = "panels/cxx-ada-spec/cases/known-defects/inherited_tail_padding.C"
 note = "C++ reuses a non-POD base's tail padding for a derived member, while the Ada extension appends it after the base Object_Size; the emitted layouts differ."
 
 [[features]]
+id = "empty-class-object-size"
+category = "data-layout"
+state = "confirmed-defect"
+evidence = "panels/cxx-ada-spec/cases/known-defects/empty_class_size.C"
+note = "A standalone C++ empty class has size one, but the generated Ada null record has Object_Size zero. The same runtime probe verifies that empty-base optimization still matches."
+
+[[features]]
 id = "explicit-template-instantiations"
 category = "template"
 state = "verified-working"

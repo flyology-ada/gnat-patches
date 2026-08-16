@@ -72,5 +72,7 @@ check_runtime_defect() {
 
 check_runtime_defect inherited_tail_padding \
   "PASS expected inherited tail-padding mismatch"
+check_runtime_defect empty_class_size \
+  "PASS expected standalone empty-class mismatch with matching EBO"
 check_runtime_defect virtual_inheritance_layout \
   "PASS expected virtual-inheritance mismatch"
