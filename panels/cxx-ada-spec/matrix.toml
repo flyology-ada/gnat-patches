@@ -9,7 +9,7 @@ atomic_cases = 63
 pairwise_cases = 16
 pairwise_value_pairs = 88
 grammar_cases = 32
-runtime_suites = 20
+runtime_suites = 21
 dump_modes = ["full", "slim"]
 
 [[features]]
@@ -103,8 +103,8 @@ note = "The dumper maps a pure abstract, data-free secondary base to a limited i
 id = "multiple-inheritance-concrete-secondary"
 category = "inheritance"
 state = "facade-required"
-evidence = "generated/catalog.py:concrete_multiple_inheritance,bundles/cxx-ada-enclosing-type-method-names"
-note = "The generated declaration compiles after the enclosing-type method-name fix, but Ada cannot mirror concrete secondary-base pointer adjustment. A C++-compiled facade must perform that conversion."
+evidence = "generated/catalog.py:concrete_multiple_inheritance,bundles/cxx-ada-enclosing-type-method-names,bundles/cxx-ada-virtual-diamond-layout"
+note = "Nested as-base record views can mirror non-polymorphic storage, as the virtual-diamond suite proves. When an API needs a derived-to-secondary-base conversion or virtual dispatch, a C++-compiled accessor or facade must perform the ABI pointer adjustment."
 
 [[features]]
 id = "enclosing-type-method-name-collisions"
@@ -178,6 +178,13 @@ category = "inheritance"
 state = "patched"
 evidence = "bundles/cxx-ada-virtual-inheritance-layout"
 note = "Patchset 1.2.0 preserves complete size, alignment, direct-member position, and virtual-base position while leaving the hidden ABI pointer as an opaque gap."
+
+[[features]]
+id = "virtual-diamond-as-base-layout"
+category = "inheritance"
+state = "patched"
+evidence = "bundles/cxx-ada-virtual-diamond-layout"
+note = "Patchset 1.2.0 emits shortened storage types for non-polymorphic direct bases that omit their shared virtual base, preserving all visible diamond fields without duplicating the root."
 
 [[features]]
 id = "ada-casefold-collisions"

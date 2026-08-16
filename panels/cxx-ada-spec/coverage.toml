@@ -29,6 +29,7 @@ suites = [
   "bundles/cxx-ada-empty-class-storage",
   "bundles/cxx-ada-virtual-inheritance-layout",
   "bundles/cxx-ada-enclosing-type-method-names",
+  "bundles/cxx-ada-virtual-diamond-layout",
 ]
 oracles = [
   "generated Ada compiles",

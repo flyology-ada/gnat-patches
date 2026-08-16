@@ -29,7 +29,7 @@ The executable panel currently has four layers:
   translation unit, with periodic inheritance and overload clusters. They
   exercise higher-order interactions in the currently representable subset and
   alternate full and slim dump modes.
-- Twenty runtime suites link C++ and Ada at `-O0` and `-O2`. They check scalar,
+- Twenty-one runtime suites link C++ and Ada at `-O0` and `-O2`. They check scalar,
   enum, record, union, pointer, reference, and callback calling conventions;
   object size, alignment, and field offsets; ordinary and interface virtual
   dispatch; template qualification, record termination, nested types, explicit
@@ -41,8 +41,9 @@ The executable panel currently has four layers:
 The accepted defect regressions reproduce malformed template records before
 patching, anonymous nested template types before patching, anonymous enum
 omissions before patching, pointer-to-member syntax failures, standalone
-empty-class storage drift, inherited tail-padding drift, explicit alignment
-before patching, virtual-inheritance layout drift, unsigned 128-bit integer
+  empty-class storage drift, inherited tail-padding drift, explicit alignment
+  before patching, virtual-inheritance and virtual-diamond layout drift,
+  unsigned 128-bit integer
 failures on GCC 13 and 14 before
 patching, and several version- or type-specific omissions. Independent
 problems must become independent patch bundles.
@@ -51,7 +52,7 @@ The coverage summary reports both baselines. After the currently accepted
 patches, all 63 atomic cases pass on every supported major.
 
 The confirmed-history ledger is larger than that residual atomic count:
-sixteen independent C++ mapper defects now have accepted 1.2.0 bundles, no
+seventeen independent C++ mapper defects now have accepted 1.2.0 bundles, no
 confirmed runtime layout defects remain, and one concrete-inheritance form is a
 direct-representation boundary. The following list is only the work still open
 or intentionally bounded, not the complete defect history.

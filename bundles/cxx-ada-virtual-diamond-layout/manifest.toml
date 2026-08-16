@@ -1,0 +1,35 @@
+schema = 1
+id = "cxx-ada-virtual-diamond-layout"
+status = "accepted"
+introduced_in_patchset = "1.2.0"
+problem = "The C++ Ada mapper uses complete virtual-base class types for shortened direct base subobjects in a virtual diamond."
+upstream_issue = "Pending GCC Bugzilla filing."
+affected_versions = ["13.2.0", "14.2.0", "15.3.0", "16.1.0"]
+known_good_versions = []
+source_provenance = "Repository-authored GCC patch and executable regression; exact application verified locally against the pinned Darwin patchset inputs. Pinned FSF release application is required by Linux CI."
+files_modified = ["gcc/c-family/c-ada-spec.cc", "gcc/testsuite/g++.dg/ada-spec/virtual-diamond-layout.C"]
+regression_tests = ["gcc/testsuite/g++.dg/ada-spec/virtual-diamond-layout.C"]
+repository_fixture = "bundles/cxx-ada-virtual-diamond-layout/tests/virtual-diamond-layout.C"
+fixture_sha256 = "7184d760ac39122366a2cf12ec337b417244147ac5303de2bc413aa344c9148e"
+repository_test_runner = "bundles/cxx-ada-virtual-diamond-layout/run-test.sh"
+application_command = "patch --fuzz=0 -p1 -i bundles/cxx-ada-virtual-diamond-layout/patches/VARIANT.patch"
+build_command = "PATH=/path/to/bootstrap/bin:$PATH ./scripts/build-gnat.sh SOURCE BUILD INSTALL"
+test_command = "./scripts/run-regressions.sh INSTALL 1.2.0 GCC_MAJOR patched"
+expected_failure_before_patch = "Ada's complete base component types duplicate the virtual root and disagree with the C++ diamond size and visible field offsets."
+expected_success_after_patch = "Shortened as-base storage types omit the shared virtual root while preserving both direct-base fields, and Ada and C++ agree at -O0 and -O2."
+upstream_submission_state = "Not yet filed or submitted upstream."
+licensing = "GCC-derived compiler hunks remain GPL-3.0-or-later. The new test is proposed for the GCC testsuite under GCC project terms."
+
+[[variants]]
+id = "gcc-13-14"
+versions = ["13.2.0", "14.2.0"]
+source_flavors = ["linux", "darwin_arm64"]
+patch = "bundles/cxx-ada-virtual-diamond-layout/patches/gcc-13-14.patch"
+sha256 = "7636e69d8240a14233ce4fef4b62457947b8dab93502b328fc856a0b6be1c7a9"
+
+[[variants]]
+id = "gcc-15-16"
+versions = ["15.3.0", "16.1.0"]
+source_flavors = ["linux", "darwin_arm64"]
+patch = "bundles/cxx-ada-virtual-diamond-layout/patches/gcc-15-16.patch"
+sha256 = "da58bd531611e6ef9241841bc10f46da1cbb88220283d73fd655ad638a903c4a"
