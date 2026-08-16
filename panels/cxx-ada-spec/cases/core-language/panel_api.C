@@ -26,6 +26,7 @@ private:
 };
 
 int call_value(const Base *object);
+void destroy_derived(Derived *object);
 int base_size();
 int derived_size();
 
@@ -44,6 +45,7 @@ int Derived::value() const { return value_ * scale_; }
 int Derived::scale() const { return scale_; }
 
 int call_value(const Base *object) { return object->value(); }
+void destroy_derived(Derived *object) { object->~Derived(); }
 int base_size() { return sizeof(Base); }
 int derived_size() { return sizeof(Derived); }
 

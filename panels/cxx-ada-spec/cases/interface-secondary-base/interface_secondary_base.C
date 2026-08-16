@@ -25,6 +25,7 @@ public:
 };
 
 int fire(Callback *callback, int value);
+void destroy_combined(Combined *object);
 
 Primary::Primary(int value) : value_(value) {}
 Primary::~Primary() = default;
@@ -36,3 +37,4 @@ int Combined::value() const { return value_ * 2; }
 int Combined::invoke(int value) { return value_ + value; }
 
 int fire(Callback *callback, int value) { return callback->invoke(value); }
+void destroy_combined(Combined *object) { object->~Combined(); }

@@ -207,7 +207,7 @@ double f_double(double v); long double f_long_double(long double v);
     ),
     "abstract_virtual_destructor": (
         "struct Abstract { virtual ~Abstract(); virtual int value() const = 0; };\n",
-        (r"type c_Abstract", r"Delete_c_Abstract", r"function value"),
+        (r"type c_Abstract", r"procedure Delete(?:_c_Abstract)? ", r"function value"),
     ),
     "covariant_return": (
         "struct Base { virtual Base* clone() const; }; "

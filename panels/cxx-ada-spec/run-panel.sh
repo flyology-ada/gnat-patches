@@ -19,6 +19,7 @@ state=$3
 "$root/panels/cxx-ada-spec/cases/abi-layout/run-test.sh" "$toolchain" "$version"
 "$root/panels/cxx-ada-spec/cases/call-abi/run-test.sh" "$toolchain" "$version"
 "$root/panels/cxx-ada-spec/cases/interface-secondary-base/run-test.sh" "$toolchain" "$version"
+"$root/panels/cxx-ada-spec/cases/recursive-secondary-base/run-test.sh" "$toolchain" "$version" "$state"
 "$root/panels/cxx-ada-spec/cases/exception-interoperability/run-test.sh" "$toolchain" "$version"
 "$root/panels/cxx-ada-spec/cases/uninstantiated-templates/run-test.sh" "$toolchain" "$version"
 "$root/panels/cxx-ada-spec/cases/stdlib-value-facade/run-test.sh" "$toolchain" "$version"
@@ -60,6 +61,8 @@ state=$3
 "$root/bundles/cxx-ada-concrete-multiple-inheritance/run-test.sh" \
   "$toolchain" "$version" "$state"
 "$root/bundles/cxx-ada-visible-type-method-names/run-test.sh" \
+  "$toolchain" "$version" "$state"
+"$root/bundles/cxx-ada-derived-virtual-slots/run-test.sh" \
   "$toolchain" "$version" "$state"
 "$root/panels/cxx-ada-spec/generated/run-test.sh" "$toolchain" "$version" "$state"
 

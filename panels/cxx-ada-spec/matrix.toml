@@ -9,7 +9,7 @@ atomic_cases = 63
 pairwise_cases = 16
 pairwise_value_pairs = 88
 grammar_cases = 32
-runtime_suites = 27
+runtime_suites = 29
 dump_modes = ["full", "slim"]
 
 [[features]]
@@ -103,8 +103,8 @@ note = "The dumper maps a pure abstract, data-free secondary base to a limited i
 id = "multiple-inheritance-concrete-secondary"
 category = "inheritance"
 state = "patched-with-access-view"
-evidence = "generated/catalog.py:concrete_multiple_inheritance,bundles/cxx-ada-concrete-multiple-inheritance,bundles/cxx-ada-virtual-diamond-layout"
-note = "Patchset 1.2.0 maps the C++ primary base to Ada inheritance and each additional concrete base to exact nested as-base storage. An access-view conversion at the nested component address supports secondary virtual dispatch; dynamic virtual-base conversions remain an ABI boundary."
+evidence = "generated/catalog.py:concrete_multiple_inheritance,bundles/cxx-ada-concrete-multiple-inheritance,bundles/cxx-ada-virtual-diamond-layout,panels/cxx-ada-spec/cases/recursive-secondary-base"
+note = "Patchset 1.2.0 maps the C++ primary base to Ada inheritance and each additional concrete base to exact nested as-base storage. Access-view conversions at nested component addresses support secondary virtual dispatch, including a secondary base that itself has concrete primary and secondary bases; dynamic virtual-base conversions remain an ABI boundary."
 
 [[features]]
 id = "enclosing-type-method-name-collisions"
@@ -126,6 +126,13 @@ category = "name-lookup"
 state = "patched"
 evidence = "bundles/cxx-ada-visible-type-method-names"
 note = "Patchset 1.2.0 gives a method a stable Method suffix when its identifier collides with a type made visible from another generated class package."
+
+[[features]]
+id = "derived-class-new-virtual-slots"
+category = "dispatch"
+state = "patched"
+evidence = "bundles/cxx-ada-derived-virtual-slots"
+note = "Patchset 1.2.0 gives complete and deleting destructors hierarchy-stable Ada names so they override their inherited slots. Virtuals introduced later in a derived class then retain the C++ vtable indices, including through recursively nested concrete secondary bases."
 
 [[features]]
 id = "uninstantiated-templates"

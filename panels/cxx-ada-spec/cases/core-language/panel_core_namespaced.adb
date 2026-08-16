@@ -47,7 +47,7 @@ begin
       raise Program_Error with "inheritance, overload, or field mapping failed";
    end if;
 
-   Bindings.Class_bridge_panel_Derived.Delete_Derived (Object'Access);
+   Bindings.bridge_panel_destroy_derived (Object'Access);
    if Bindings.Class_bridge_panel_Base.live_objects /= 0 then
       raise Program_Error with "destructor mapping failed";
    end if;

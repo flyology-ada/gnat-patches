@@ -26,5 +26,5 @@ begin
       raise Program_Error with "secondary-base pointer adjustment failed";
    end if;
 
-   Bindings.Class_Combined.Delete_Combined (Object'Access);
+   Bindings.destroy_combined (Object'Access);
 end Interface_Secondary_Base_Consumer;

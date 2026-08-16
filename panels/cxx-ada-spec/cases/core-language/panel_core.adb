@@ -44,7 +44,7 @@ begin
       raise Program_Error with "inheritance, overload, or field mapping failed";
    end if;
 
-   Bindings.Class_Derived.Delete_Derived (Object'Access);
+   Bindings.destroy_derived (Object'Access);
    if Bindings.Class_Base.live_objects /= 0 then
       raise Program_Error with "destructor mapping failed";
    end if;

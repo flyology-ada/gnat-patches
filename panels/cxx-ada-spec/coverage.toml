@@ -13,6 +13,7 @@ suites = [
   "panels/cxx-ada-spec/cases/abi-layout",
   "panels/cxx-ada-spec/cases/call-abi",
   "panels/cxx-ada-spec/cases/interface-secondary-base",
+  "panels/cxx-ada-spec/cases/recursive-secondary-base",
   "panels/cxx-ada-spec/cases/exception-interoperability",
   "panels/cxx-ada-spec/cases/uninstantiated-templates",
   "panels/cxx-ada-spec/cases/stdlib-value-facade",
@@ -36,6 +37,7 @@ suites = [
   "bundles/cxx-ada-profile-formal-type-names",
   "bundles/cxx-ada-concrete-multiple-inheritance",
   "bundles/cxx-ada-visible-type-method-names",
+  "bundles/cxx-ada-derived-virtual-slots",
 ]
 oracles = [
   "generated Ada compiles",
