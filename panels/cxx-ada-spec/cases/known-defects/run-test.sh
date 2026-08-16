@@ -70,7 +70,5 @@ check_runtime_defect() {
   echo "cxx-ada known defect $id: expected layout mismatch (GCC $version)"
 }
 
-check_runtime_defect empty_class_size \
-  "PASS expected standalone empty-class mismatch with matching EBO"
 check_runtime_defect virtual_inheritance_layout \
   "PASS expected virtual-inheritance mismatch"

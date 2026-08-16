@@ -1,0 +1,35 @@
+schema = 1
+id = "cxx-ada-empty-class-storage"
+status = "accepted"
+introduced_in_patchset = "1.2.0"
+problem = "The C++ Ada mapper gives complete empty-class objects zero storage and cannot distinguish ordinary empty members from ABI-overlapping empty subobjects."
+upstream_issue = "Pending GCC Bugzilla filing."
+affected_versions = ["13.2.0", "14.2.0", "15.3.0", "16.1.0"]
+known_good_versions = []
+source_provenance = "Repository-authored GCC patch and executable regression; exact application verified locally against the pinned Darwin release identities. Pinned FSF release application is required by Linux CI."
+files_modified = ["gcc/c-family/c-ada-spec.cc", "gcc/testsuite/g++.dg/ada-spec/empty-class-storage.C"]
+regression_tests = ["gcc/testsuite/g++.dg/ada-spec/empty-class-storage.C"]
+repository_fixture = "bundles/cxx-ada-empty-class-storage/tests/empty-class-storage.C"
+fixture_sha256 = "9b27e92be415bce5a102a697e4c834edfdce042d87a2ac80e61129cab49518b9"
+repository_test_runner = "bundles/cxx-ada-empty-class-storage/run-test.sh"
+application_command = "patch --fuzz=0 -p1 -i bundles/cxx-ada-empty-class-storage/patches/VARIANT.patch"
+build_command = "PATH=/path/to/bootstrap/bin:$PATH ./scripts/build-gnat.sh SOURCE BUILD INSTALL"
+test_command = "./scripts/run-regressions.sh INSTALL 1.2.0 GCC_MAJOR patched"
+expected_failure_before_patch = "Complete empty objects and ordinary empty members have insufficient Ada storage even though arrays, empty-base optimization, and no_unique_address overlap happen to match."
+expected_success_after_patch = "Ada and C++ agree on empty complete objects, ordinary members and arrays, empty-base optimization, and no_unique_address storage at -O0 and -O2."
+upstream_submission_state = "Not yet filed or submitted upstream."
+licensing = "GCC-derived compiler hunks remain GPL-3.0-or-later. The new test is proposed for the GCC testsuite under GCC project terms."
+
+[[variants]]
+id = "gcc-13-14"
+versions = ["13.2.0", "14.2.0"]
+source_flavors = ["linux", "darwin_arm64"]
+patch = "bundles/cxx-ada-empty-class-storage/patches/gcc-13-14.patch"
+sha256 = "7913ea3aeec56c8c342b9ef313e73183f84a6830483df72b157ff3dbb644c31b"
+
+[[variants]]
+id = "gcc-15-16"
+versions = ["15.3.0", "16.1.0"]
+source_flavors = ["linux", "darwin_arm64"]
+patch = "bundles/cxx-ada-empty-class-storage/patches/gcc-15-16.patch"
+sha256 = "9da1303cc6a20935cc74546ed3536f1b90745237a77c37db4804b84fa86f4356"

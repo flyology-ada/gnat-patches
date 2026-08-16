@@ -26,6 +26,7 @@ suites = [
   "bundles/cxx-ada-vector-types",
   "bundles/cxx-ada-member-pointers",
   "bundles/cxx-ada-inherited-tail-padding",
+  "bundles/cxx-ada-empty-class-storage",
   "panels/cxx-ada-spec/cases/known-defects",
 ]
 oracles = [

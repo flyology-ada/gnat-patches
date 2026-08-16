@@ -29,7 +29,7 @@ The executable panel currently has four layers:
   translation unit, with periodic inheritance and overload clusters. They
   exercise higher-order interactions in the currently representable subset and
   alternate full and slim dump modes.
-- Eighteen runtime suites link C++ and Ada at `-O0` and `-O2`. They check scalar,
+- Nineteen runtime suites link C++ and Ada at `-O0` and `-O2`. They check scalar,
   enum, record, union, pointer, reference, and callback calling conventions;
   object size, alignment, and field offsets; ordinary and interface virtual
   dispatch; template qualification, record termination, nested types, explicit
@@ -40,9 +40,9 @@ The executable panel currently has four layers:
 The known-defect layer currently reproduces malformed template records before
 patching, anonymous nested template types before patching, anonymous enum
 omissions before patching, pointer-to-member syntax failures, standalone
-empty-class size drift, inherited tail-padding drift, explicit alignment before
-patching, virtual-inheritance
-layout drift, unsigned 128-bit integer failures on GCC 13 and 14 before
+empty-class storage drift, inherited tail-padding drift, explicit alignment
+before patching, virtual-inheritance layout drift, unsigned 128-bit integer
+failures on GCC 13 and 14 before
 patching, and several version- or type-specific omissions. Independent
 problems must become independent patch bundles.
 
@@ -50,8 +50,8 @@ The coverage summary reports both baselines. After the currently accepted
 patches, one atomic case remains non-passing on every supported major.
 
 The confirmed-history ledger is larger than that residual atomic count:
-thirteen independent C++ mapper defects now have accepted 1.2.0 bundles, two
-runtime layout defects remain, and one concrete-inheritance form is a
+fourteen independent C++ mapper defects now have accepted 1.2.0 bundles, one
+runtime layout defect remains, and one concrete-inheritance form is a
 direct-representation boundary. The following list is only the work still open
 or intentionally bounded, not the complete defect history.
 
@@ -59,8 +59,7 @@ The remaining confirmed inventory is deliberately explicit:
 
 - a generated-spec failure on every tested major: concrete secondary multiple
   inheritance;
-- runtime layout defects on every tested major: standalone empty-class size
-  and virtual inheritance;
+- a runtime layout defect on every tested major: virtual inheritance;
 - tested semantic boundaries rather than hidden mapper successes:
   uninstantiated templates are not emitted, nontrivial standard-library values
   require a facade, and C++ exceptions must not cross the language boundary.

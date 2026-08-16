@@ -9,7 +9,7 @@ atomic_cases = 63
 pairwise_cases = 16
 pairwise_value_pairs = 88
 grammar_cases = 32
-runtime_suites = 18
+runtime_suites = 19
 dump_modes = ["full", "slim"]
 
 [[features]]
@@ -60,9 +60,9 @@ note = "Patchset 1.2.0 preserves the base subobject data size separately from it
 [[features]]
 id = "empty-class-object-size"
 category = "data-layout"
-state = "confirmed-defect"
-evidence = "panels/cxx-ada-spec/cases/known-defects/empty_class_size.C"
-note = "A standalone C++ empty class has size one, but the generated Ada null record has Object_Size zero. The same runtime probe verifies that empty-base optimization still matches."
+state = "patched"
+evidence = "bundles/cxx-ada-empty-class-storage"
+note = "Patchset 1.2.0 separates a zero-size empty value from its nonzero complete-object allocation and omits ABI-overlapping empty bases and no_unique_address members without hiding ordinary members."
 
 [[features]]
 id = "explicit-template-instantiations"
