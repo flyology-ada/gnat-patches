@@ -50,7 +50,7 @@ def main() -> int:
     toolchains = pathlib.Path(toolchains_arg).resolve()
     output = pathlib.Path(output_arg).resolve()
     crate_version = f"{source_version}-patchset.{patchset}"
-    tag = f"patchset-{patchset}-gcc-{major}"
+    tag = f"patchset-{patchset}-gcc-{source_version}"
     base_url = f"https://github.com/flyology-ada/gnat-patches/releases/download/{tag}"
 
     origins: list[tuple[str, str, str, str]] = []

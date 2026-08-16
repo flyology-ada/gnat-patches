@@ -4,7 +4,7 @@ status = "accepted"
 introduced_in_patchset = "1.2.0"
 problem = "Top-level C++ anonymous enumerations lose their constants and appear as incomplete internal types in generated Ada specifications."
 upstream_issue = "Pending GCC Bugzilla filing."
-affected_versions = ["13.2.0", "14.2.0", "15.3.0", "16.1.0"]
+affected_versions = ["13.2.0", "14.2.0", "15.3.0", "16.1.0", "16.2.0"]
 known_good_versions = []
 source_provenance = "Repository-authored GCC patch and executable regression; exact application verified locally against the pinned Darwin release identities. Pinned FSF release application is required by Linux CI."
 files_modified = ["gcc/c-family/c-ada-spec.cc", "gcc/testsuite/g++.dg/ada-spec/anonymous-enums.C"]
@@ -29,7 +29,7 @@ sha256 = "1e4c06ecf86505a90044a2608ced35cbad55a024391019953bb4b182c63d9a11"
 
 [[variants]]
 id = "gcc-15-16"
-versions = ["15.3.0", "16.1.0"]
+versions = ["15.3.0", "16.1.0", "16.2.0"]
 source_flavors = ["linux", "darwin_arm64"]
 patch = "bundles/cxx-ada-anonymous-enums/patches/gcc-15-16.patch"
 sha256 = "80c81930d3d2a5217bdd0137747cad2fd5110afec71eac849c56facb2a47c39d"

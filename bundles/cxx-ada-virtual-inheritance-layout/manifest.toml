@@ -4,7 +4,7 @@ status = "accepted"
 introduced_in_patchset = "1.2.0"
 problem = "The C++ Ada mapper drops the size, alignment, and component positions of classes with virtual bases."
 upstream_issue = "Pending GCC Bugzilla filing."
-affected_versions = ["13.2.0", "14.2.0", "15.3.0", "16.1.0"]
+affected_versions = ["13.2.0", "14.2.0", "15.3.0", "16.1.0", "16.2.0"]
 known_good_versions = []
 source_provenance = "Repository-authored GCC patch and executable regression; exact application verified locally against the pinned Darwin patchset inputs. Pinned FSF release application is required by Linux CI."
 files_modified = ["gcc/c-family/c-ada-spec.cc", "gcc/c-family/c-ada-spec.h", "gcc/cp/decl2.cc", "gcc/testsuite/g++.dg/ada-spec/virtual-inheritance-layout.C"]
@@ -36,7 +36,7 @@ sha256 = "6ba96fa828c1904f56896bf7d17f496e06cc90212367a393f974f70aac1c8049"
 
 [[variants]]
 id = "gcc-15-16"
-versions = ["15.3.0", "16.1.0"]
+versions = ["15.3.0", "16.1.0", "16.2.0"]
 source_flavors = ["linux", "darwin_arm64"]
 patch = "bundles/cxx-ada-virtual-inheritance-layout/patches/gcc-15-16.patch"
 sha256 = "41b68968c3ef388f24dc4c294adbd59306f98c0a729584eba7e7321a24c2efc6"

@@ -4,7 +4,7 @@ status = "accepted"
 introduced_in_patchset = "1.2.0"
 problem = "The C++ Ada spec dumper drops the generated package qualifier from references to concrete template instances, making specs with multiple instantiations ambiguous."
 upstream_issue = "Pending GCC Bugzilla filing."
-affected_versions = ["13.2.0", "14.2.0", "15.3.0", "16.1.0"]
+affected_versions = ["13.2.0", "14.2.0", "15.3.0", "16.1.0", "16.2.0"]
 known_good_versions = []
 source_provenance = "Repository-authored GCC patch and executable regression; exact application verified locally against the pinned Darwin release identities. Pinned FSF release application is required by Linux CI."
 files_modified = ["gcc/c-family/c-ada-spec.cc", "gcc/testsuite/g++.dg/ada-spec/template-instantiation-qualification.C"]
@@ -29,7 +29,7 @@ sha256 = "6edb16c4e4dd4f443c02bdaae0a404bb0aefae61862a5952b3cb694190292e55"
 
 [[variants]]
 id = "gcc-15-16"
-versions = ["15.3.0", "16.1.0"]
+versions = ["15.3.0", "16.1.0", "16.2.0"]
 source_flavors = ["linux", "darwin_arm64"]
 patch = "bundles/cxx-ada-template-qualification/patches/gcc-15-16.patch"
 sha256 = "dd89746d56035db32f604a390dcc808329147be2ed2afea52eb1b35e504b879c"

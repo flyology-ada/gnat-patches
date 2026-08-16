@@ -80,7 +80,7 @@ regression. Patchset `1.1.0` remains the latest published release until the
 | 13.2.0 | known-good control | affected | affected | affected | affected | affected | affected | affected | affected | affected | affected | affected | affected | affected | patched toolchain |
 | 14.2.0 | affected | affected | affected | affected | affected | affected | affected | affected | affected | affected | affected | affected | affected | affected | patched toolchain |
 | 15.3.0 | affected | affected | affected | affected | affected | affected | affected | affected | affected | affected | affected | known-good control | affected | affected | patched toolchain |
-| 16.1.0 | affected | affected | affected | affected | affected | affected | affected | affected | affected | affected | affected | known-good control | affected | affected | patched toolchain |
+| 16.2.0 | affected | affected | affected | affected | affected | affected | affected | affected | affected | affected | affected | known-good control | affected | affected | validation candidate |
 
 GCC 13 was an unpatched control in patchset `1.0.1` because the only bundle at
 that time did not affect it. It carries a real code patch in `1.1.0`.
@@ -134,11 +134,15 @@ patched it requires success at both `-O0` and `-O2` everywhere.
 
 Linux uses [official FSF release tarballs](https://gcc.gnu.org/releases.html), verified by the
 published SHA-512 checksum and cross-checked against the release tag commit and
-tree. macOS arm64 uses [Iain Sandoe's public Darwin GCC release tags](https://github.com/iains), the same
-public source family used by [Alire's `GNAT-FSF-builds`](https://github.com/alire-project/GNAT-FSF-builds/blob/main/specs/gcc.anod). Those checkouts are
-verified by exact commit and tree IDs.
+tree. macOS arm64 uses pinned public Darwin GCC tags derived from
+[Iain Sandoe's branches](https://github.com/iains), the same public source
+family used by [Alire's `GNAT-FSF-builds`](https://github.com/alire-project/GNAT-FSF-builds/blob/main/specs/gcc.anod).
+The GCC 16.2 candidate preserves Iain's complete AArch64 Darwin history and
+merges the signed FSF 16.2 release in the public
+[`flyology-ada/gcc-16-branch`](https://github.com/flyology-ada/gcc-16-branch)
+fork. Every checkout is verified by an exact tag, commit, and tree identity.
 
-This split is required. FSF GCC 16.1 does not provide an
+This split is required. FSF GCC 16.1 and 16.2 do not provide an
 `aarch64-*-darwin` target in `gcc/config.gcc`; substituting the unmodified FSF
 tarball would create a lane that cannot build GNAT for Apple Silicon. The
 Darwin tags are public source, so the macOS arm64 lane is real and
@@ -165,7 +169,10 @@ working GNAT bootstrap compiler. Linux compiler builds also need the usual GCC
 development packages; macOS builds need Xcode command-line tools plus GMP,
 MPFR, and MPC from Homebrew.
 
-`fetch-bootstrap.sh` checksum-verifies the GNAT-FSF archive before extraction.
+`fetch-bootstrap.sh` checksum-verifies the bootstrap URL declared for each
+host before extraction. GCC 16.2 uses the published
+`16.1.0-patchset.1.1.0` Flyology compiler only as stage zero; CI builds a
+separate unpatched 16.2 compiler for the before-patch controls.
 On Darwin it then quarantines the archive's `include-fixed` directory: those
 headers are generated from the Xcode SDK used to build the bootstrap and are
 not valid inputs for a later runner SDK. The compiler build consequently reads
@@ -175,10 +182,10 @@ diagnostics; it is not searched by GCC.
 
 ```sh
 ./scripts/verify-repository.sh
-./scripts/fetch-source.sh 16.1.0 work/gcc-16.1.0
-./scripts/apply-patchset.sh 1.2.0 16 work/gcc-16.1.0
+./scripts/fetch-source.sh 16.2.0 work/gcc-16.2.0
+./scripts/apply-patchset.sh 1.2.0 16 work/gcc-16.2.0
 PATH=/path/to/bootstrap/bin:$PATH \
-  ./scripts/build-gnat.sh work/gcc-16.1.0 build/gcc-16 install/gcc-16
+  ./scripts/build-gnat.sh work/gcc-16.2.0 build/gcc-16 install/gcc-16
 ./scripts/run-regressions.sh install/gcc-16 1.2.0 16 patched
 ```
 
@@ -195,7 +202,7 @@ compiler, a freshly built compiler, and a relocated release archive:
 To apply exactly one bundle instead of an aggregate:
 
 ```sh
-./scripts/apply-bundle.sh protected-duration-validity 16.1.0 work/gcc-16.1.0
+./scripts/apply-bundle.sh protected-duration-validity 16.2.0 work/gcc-16.2.0
 ```
 
 All application paths use `patch --fuzz=0` and verify the recorded SHA-256
@@ -205,11 +212,14 @@ before touching a source tree.
 
 Validation builds GCC/GNAT from source on Linux x86_64, Linux arm64, and macOS
 arm64 for GCC 13 through 16, which is twelve independent source-build lanes.
-Each lane runs the unpatched controls with the bootstrap compiler, applies the
-complete `1.2.0` aggregate to the declared source baseline, builds the
-compiler, and runs every applicable bundle's executable regression at `-O0` and
-`-O2`. Source and bootstrap downloads are checksum-verified even when restored
-from cache. Failed jobs retain compact test and configuration logs.
+Each lane proves the unpatched controls, applies the complete `1.2.0`
+aggregate to the declared source baseline, builds the compiler, and runs every
+applicable bundle's executable regression at `-O0` and `-O2`. When the
+bootstrap already contains the patchset, as for GCC 16.2, CI first builds and
+tests a separate unpatched compiler from the pinned source, discards that
+control build, and then performs a fresh patched build. Source and bootstrap
+downloads are checksum-verified even when restored from cache. Failed jobs
+retain compact test and configuration logs.
 
 Each successful source-build lane also creates a relocatable native C, C++, and
 Ada compiler archive and reruns the same executable regression from a fresh extraction.
@@ -236,7 +246,7 @@ host libc.
 
 Release publication is a separate manual workflow. The operator supplies both
 `patchset_version` and `gcc_major` and explicitly confirms publication. Before
-creating `patchset-<version>-gcc-<major>`, the workflow proves that the
+creating `patchset-<version>-gcc-<gcc-version>`, the workflow proves that the
 aggregate lists every accepted applicable bundle, checks the source baseline,
 applies the aggregate with zero fuzz, and packages the series, manifests,
 patches, and tests with a SHA-256 inventory. Existing releases are never
@@ -263,10 +273,10 @@ alr index --add \
   git+https://github.com/flyology-ada/alire-index.git \
   --name flyology --before community
 alr -n toolchain --select --local \
-  gnat_flyology_native=16.1.0-patchset.1.1.0
+  gnat_flyology_native=16.2.0-patchset.1.1.0
 ```
 
-Patchset `1.1.0` publishes four compiler versions:
+Patchset `1.1.0` currently publishes four compiler versions:
 
 ```text
 gnat_flyology_native=13.2.0-patchset.1.1.0
@@ -274,6 +284,10 @@ gnat_flyology_native=14.2.0-patchset.1.1.0
 gnat_flyology_native=15.3.0-patchset.1.1.0
 gnat_flyology_native=16.1.0-patchset.1.1.0
 ```
+
+The GCC 16.2 validation candidate will add
+`gnat_flyology_native=16.2.0-patchset.1.1.0` without replacing the immutable
+16.1 release.
 
 The Alire crate configures `PATH` and the platform library paths. A project may
 select `gprbuild` separately through its usual Alire toolchain configuration.

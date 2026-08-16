@@ -1,6 +1,6 @@
 schema = 1
 patchset_version = "1.1.0"
 gcc_major = 16
-source_version = "16.1.0"
+source_version = "16.2.0"
 bundles = ["storage-model-actuals", "protected-duration-validity"]
 control_tests = []

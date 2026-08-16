@@ -28,8 +28,8 @@ line=$(awk -F '\t' -v v="$version" -v o="$os" -v a="$arch" \
     echo "error: no bootstrap compiler for $version/$os/$arch" >&2
     exit 1
   }
-IFS=$'\t' read -r _ _ _ release archive expected <<<"$line"
-url="https://github.com/alire-project/GNAT-FSF-builds/releases/download/gnat-$release/$archive"
+IFS=$'\t' read -r _ _ _ url expected <<<"$line"
+archive=${url##*/}
 cache=${GNAT_PATCHES_CACHE:-"$root/.cache"}
 mkdir -p "$cache/bootstrap"
 path="$cache/bootstrap/$archive"

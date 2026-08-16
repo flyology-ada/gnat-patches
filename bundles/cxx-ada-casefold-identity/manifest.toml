@@ -4,7 +4,7 @@ status = "accepted"
 introduced_in_patchset = "1.2.0"
 problem = "The C++ Ada spec dumper emits case-distinct C++ identifiers as duplicate Ada identifiers."
 upstream_issue = "Not yet filed."
-affected_versions = ["13.2.0", "14.2.0", "15.3.0", "16.1.0"]
+affected_versions = ["13.2.0", "14.2.0", "15.3.0", "16.1.0", "16.2.0"]
 known_good_versions = []
 source_provenance = "Repository-authored GCC patch and executable regression; exact application verified locally against the pinned Darwin release identities. Pinned FSF release application is required by Linux CI."
 files_modified = ["gcc/c-family/c-ada-spec.cc", "gcc/testsuite/g++.dg/ada-spec/casefold-identity.C"]
@@ -29,7 +29,7 @@ sha256 = "1e89baf1ff79f11b893903645f30f1a3456674cb5c6d2b5a1007b715fa860fd1"
 
 [[variants]]
 id = "gcc-15-16"
-versions = ["15.3.0", "16.1.0"]
+versions = ["15.3.0", "16.1.0", "16.2.0"]
 source_flavors = ["linux", "darwin_arm64"]
 patch = "bundles/cxx-ada-casefold-identity/patches/gcc-15-16.patch"
 sha256 = "7dcb4024a2f13f4b31c154bb4c76c16c5b54e0330456e7a8047e84ca19bbc6f2"

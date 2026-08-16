@@ -4,7 +4,7 @@ status = "accepted"
 introduced_in_patchset = "1.2.0"
 problem = "A C++ formal parameter can hide a type used later in the generated Ada subprogram profile, causing GNAT to reject the binding."
 upstream_issue = "Pending GCC Bugzilla filing."
-affected_versions = ["13.2.0", "14.2.0", "15.3.0", "16.1.0"]
+affected_versions = ["13.2.0", "14.2.0", "15.3.0", "16.1.0", "16.2.0"]
 known_good_versions = []
 source_provenance = "Repository-authored GCC patch and executable regression; exact application verified locally against the pinned Darwin patchset inputs. Pinned FSF release application is required by Linux CI."
 files_modified = ["gcc/c-family/c-ada-spec.cc", "gcc/testsuite/g++.dg/ada-spec/profile-formal-type-names.C"]
@@ -29,7 +29,7 @@ sha256 = "5b610371119c0263e5509fc35a66d05b2cf0379e6ae533c0e55befcdf7e06835"
 
 [[variants]]
 id = "gcc-15-16"
-versions = ["15.3.0", "16.1.0"]
+versions = ["15.3.0", "16.1.0", "16.2.0"]
 source_flavors = ["linux", "darwin_arm64"]
 patch = "bundles/cxx-ada-profile-formal-type-names/patches/gcc-15-16.patch"
 sha256 = "ee55fac0a61b8704e6286b09b0fae2f0a9c63cbf40e978759f715d0b25d376a5"

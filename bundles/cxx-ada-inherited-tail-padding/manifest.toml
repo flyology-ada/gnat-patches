@@ -4,7 +4,7 @@ status = "accepted"
 introduced_in_patchset = "1.2.0"
 problem = "The C++ Ada mapper loses a base class's reusable tail padding, so an Ada extension can have a larger size and different field offsets than the C++ derived class."
 upstream_issue = "Pending GCC Bugzilla filing."
-affected_versions = ["13.2.0", "14.2.0", "15.3.0", "16.1.0"]
+affected_versions = ["13.2.0", "14.2.0", "15.3.0", "16.1.0", "16.2.0"]
 known_good_versions = []
 source_provenance = "Repository-authored GCC patch and executable regression; exact application verified locally against the pinned Darwin release identities. Pinned FSF release application is required by Linux CI."
 files_modified = ["gcc/ada/gcc-interface/decl.cc", "gcc/c-family/c-ada-spec.cc", "gcc/c-family/c-ada-spec.h", "gcc/cp/decl2.cc", "gcc/testsuite/g++.dg/ada-spec/inherited-tail-padding.C", "gcc/testsuite/gnat.dg/cpp_tail_padding.adb"]
@@ -29,7 +29,7 @@ sha256 = "0867358897d486461f6728fe0680d94cec3b9695a3c20be977df51f08544c95b"
 
 [[variants]]
 id = "gcc-15-16"
-versions = ["15.3.0", "16.1.0"]
+versions = ["15.3.0", "16.1.0", "16.2.0"]
 source_flavors = ["linux", "darwin_arm64"]
 patch = "bundles/cxx-ada-inherited-tail-padding/patches/gcc-15-16.patch"
 sha256 = "928f8a13be7290fdbb83ebebcdcd51437cf3212169ed4668d782a58d6ac2d42d"

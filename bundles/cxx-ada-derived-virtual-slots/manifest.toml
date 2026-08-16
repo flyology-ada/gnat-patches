@@ -4,7 +4,7 @@ status = "accepted"
 introduced_in_patchset = "1.2.0"
 problem = "Class-specific Ada destructor names consume new dispatch slots in derived classes and displace virtual methods introduced after them from their C++ vtable indices."
 upstream_issue = "Pending GCC Bugzilla filing."
-affected_versions = ["13.2.0", "14.2.0", "15.3.0", "16.1.0"]
+affected_versions = ["13.2.0", "14.2.0", "15.3.0", "16.1.0", "16.2.0"]
 known_good_versions = []
 source_provenance = "Repository-authored GCC patch and executable regression; exact application verified locally against the pinned Darwin patchset inputs. Pinned FSF release application is required by Linux CI."
 files_modified = ["gcc/c-family/c-ada-spec.cc", "gcc/testsuite/g++.dg/ada-spec/derived-virtual-slots.C"]
@@ -29,7 +29,7 @@ sha256 = "9081c402fbab5eb4ee5eacb66088addb8708a3254ea4039f1ed1504cda1247d7"
 
 [[variants]]
 id = "gcc-15-16"
-versions = ["15.3.0", "16.1.0"]
+versions = ["15.3.0", "16.1.0", "16.2.0"]
 source_flavors = ["linux", "darwin_arm64"]
 patch = "bundles/cxx-ada-derived-virtual-slots/patches/gcc-15-16.patch"
 sha256 = "59ad3763010ad327d855af0ba87ceab0304ad39999163e6232bf6d9807ea9b55"

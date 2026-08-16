@@ -4,7 +4,7 @@ status = "accepted"
 introduced_in_patchset = "1.2.0"
 problem = "The C++ Ada mapper emits multiple concrete tagged bases as illegal Ada progenitors and omits their secondary subobject storage."
 upstream_issue = "Pending GCC Bugzilla filing."
-affected_versions = ["13.2.0", "14.2.0", "15.3.0", "16.1.0"]
+affected_versions = ["13.2.0", "14.2.0", "15.3.0", "16.1.0", "16.2.0"]
 known_good_versions = []
 source_provenance = "Repository-authored GCC patch and executable regression; exact application verified locally against the pinned Darwin patchset inputs. Pinned FSF release application is required by Linux CI."
 files_modified = ["gcc/c-family/c-ada-spec.cc", "gcc/c-family/c-ada-spec.h", "gcc/cp/decl2.cc", "gcc/testsuite/g++.dg/ada-spec/concrete-multiple-inheritance.C"]
@@ -29,7 +29,7 @@ sha256 = "200351c54c82d34c5cc5f314b2524d8c1ec170156f1207b95398d629c06b9e49"
 
 [[variants]]
 id = "gcc-15-16"
-versions = ["15.3.0", "16.1.0"]
+versions = ["15.3.0", "16.1.0", "16.2.0"]
 source_flavors = ["linux", "darwin_arm64"]
 patch = "bundles/cxx-ada-concrete-multiple-inheritance/patches/gcc-15-16.patch"
 sha256 = "3a596d709033a7772aa7bfc433309cc5c4429c4e4d8404c4e2eced5c3b9762e5"

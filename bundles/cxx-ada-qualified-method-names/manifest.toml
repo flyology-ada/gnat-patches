@@ -4,7 +4,7 @@ status = "accepted"
 introduced_in_patchset = "1.2.0"
 problem = "The C++ Ada spec dumper emits colliding names for cv/ref-qualified methods and for copy/move assignment operators."
 upstream_issue = "Not yet filed."
-affected_versions = ["13.2.0", "14.2.0", "15.3.0", "16.1.0"]
+affected_versions = ["13.2.0", "14.2.0", "15.3.0", "16.1.0", "16.2.0"]
 known_good_versions = []
 source_provenance = "Repository-authored GCC patch and executable regression; exact application verified locally against the pinned Darwin release identities. Pinned FSF release application is required by Linux CI."
 files_modified = ["gcc/c-family/c-ada-spec.h", "gcc/c-family/c-ada-spec.cc", "gcc/cp/decl2.cc", "gcc/testsuite/g++.dg/ada-spec/qualified-method-names.C"]
@@ -29,7 +29,7 @@ sha256 = "d06449cb1c9eafacb3de478c1b5e0ef0404af6d4068b3f3bf46392d97c31eb15"
 
 [[variants]]
 id = "gcc-15-16"
-versions = ["15.3.0", "16.1.0"]
+versions = ["15.3.0", "16.1.0", "16.2.0"]
 source_flavors = ["linux", "darwin_arm64"]
 patch = "bundles/cxx-ada-qualified-method-names/patches/gcc-15-16.patch"
 sha256 = "af23fec81ce3ada9bc5d4ae61c0ce3c11c8981646d28175b88a56981411810bc"

@@ -1,7 +1,7 @@
 schema = 2
 panel = "cxx-ada-spec"
 driver_options = ["-fdump-ada-spec", "-fdump-ada-spec-slim"]
-gcc_versions = ["13.2.0", "14.2.0", "15.3.0", "16.1.0"]
+gcc_versions = ["13.2.0", "14.2.0", "15.3.0", "16.2.0"]
 
 [coverage]
 manifest = "panels/cxx-ada-spec/coverage.toml"

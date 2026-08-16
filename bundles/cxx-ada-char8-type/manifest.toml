@@ -4,7 +4,7 @@ status = "accepted"
 introduced_in_patchset = "1.2.0"
 problem = "The C++ Ada spec dumper emits char8_t references even though GNAT's Interfaces.C has no such Ada type."
 upstream_issue = "Pending GCC Bugzilla filing."
-affected_versions = ["13.2.0", "14.2.0", "15.3.0", "16.1.0"]
+affected_versions = ["13.2.0", "14.2.0", "15.3.0", "16.1.0", "16.2.0"]
 known_good_versions = []
 source_provenance = "Repository-authored GCC patch and executable regression; exact application verified locally against the pinned Darwin release identities. Pinned FSF release application is required by Linux CI."
 files_modified = ["gcc/c-family/c-ada-spec.cc", "gcc/testsuite/g++.dg/ada-spec/char8-type.C"]
@@ -29,7 +29,7 @@ sha256 = "7167ebbb4862a00b75e69f3d2496892a71e768659740fbb1ae0cd2038daeae4f"
 
 [[variants]]
 id = "gcc-15-16"
-versions = ["15.3.0", "16.1.0"]
+versions = ["15.3.0", "16.1.0", "16.2.0"]
 source_flavors = ["linux", "darwin_arm64"]
 patch = "bundles/cxx-ada-char8-type/patches/gcc-15-16.patch"
 sha256 = "398e5d2774547c0f45d17c7253839ebe13e7c8b9b2868ecd06edff1c31196aeb"

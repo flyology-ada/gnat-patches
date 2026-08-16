@@ -4,7 +4,7 @@ status = "accepted"
 introduced_in_patchset = "1.2.0"
 problem = "The C++ Ada spec dumper omits user-specified record alignment unless the layout is also packed or contains bit fields."
 upstream_issue = "Pending GCC Bugzilla filing."
-affected_versions = ["13.2.0", "14.2.0", "15.3.0", "16.1.0"]
+affected_versions = ["13.2.0", "14.2.0", "15.3.0", "16.1.0", "16.2.0"]
 known_good_versions = []
 source_provenance = "Repository-authored GCC patch and executable regression; exact application verified locally against the pinned Darwin release identities. Pinned FSF release application is required by Linux CI."
 files_modified = ["gcc/c-family/c-ada-spec.cc", "gcc/testsuite/g++.dg/ada-spec/explicit-alignment.C"]
@@ -29,7 +29,7 @@ sha256 = "aa50ec3ed9c2ca4f5f03f406add2d9480e9052908e0316d388a1e713574d14bb"
 
 [[variants]]
 id = "gcc-15-16"
-versions = ["15.3.0", "16.1.0"]
+versions = ["15.3.0", "16.1.0", "16.2.0"]
 source_flavors = ["linux", "darwin_arm64"]
 patch = "bundles/cxx-ada-explicit-alignment/patches/gcc-15-16.patch"
 sha256 = "ce99dbd96103e0cf6b4303cc5a4ab694135b28faca7d5e631bc9aca5a15206ad"

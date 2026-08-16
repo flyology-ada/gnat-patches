@@ -54,6 +54,6 @@ requires all four qualified forms and prints
 `PASS C++ Ada template qualification` at `-O0` and `-O2`.
 
 The defect was recovered from a local exploratory transcript and independently
-reproduced with the pinned GCC 13.2.0, 14.2.0, 15.3.0, and 16.1.0 toolchains.
+reproduced with the pinned GCC 13.2.0, 14.2.0, 15.3.0, 16.1.0, and 16.2.0 toolchains.
 `patches/gcc-13-14.patch` and `patches/gcc-15-16.patch` differ only where
 the mapper's pretty-printer parameter changed from `buffer` to `pp`.
