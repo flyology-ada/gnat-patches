@@ -40,7 +40,8 @@ The executable panel currently has four layers:
   enumeration values, and
   `char8_t`, 128-bit integers, machine vectors, and opaque pointer-to-member
   values; uninstantiated-template emission, a nontrivial standard-library value
-  facade, C++ exception propagation; and the exact behavior of known defects.
+  facade, C++ exception propagation into an Ada handler; and the exact behavior
+  of known defects.
 
 The accepted defect regressions reproduce malformed template records before
 patching, anonymous nested template types before patching, anonymous enum
@@ -90,8 +91,9 @@ The remaining confirmed inventory is deliberately explicit:
 - tested semantic boundaries rather than hidden mapper successes:
   uninstantiated templates are not emitted, nontrivial standard-library values
   require a facade, and dynamic virtual-base conversions remain ABI operations.
-  C++ exception propagation is tested and supported: Ada observes a foreign
-  exception whose language identity is C++.
+  C++ exception propagation is tested and supported through Ada's portable
+  `others` handler. GNAT's internal API for recovering the foreign language
+  identity varies by runtime version and is not claimed as portable behavior.
 
 Run the complete current panel against a compiler root:
 

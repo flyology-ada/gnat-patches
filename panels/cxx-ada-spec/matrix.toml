@@ -153,7 +153,7 @@ id = "exceptions"
 category = "runtime"
 state = "verified-runtime-interoperability"
 evidence = "generated/catalog.py:exception_throw,panels/cxx-ada-spec/cases/exception-interoperability"
-note = "A C++ throw propagates into Ada as a foreign exception with EL_Cpp language identity at both optimization levels. A status-returning C facade is also verified for APIs that choose not to expose exceptions."
+note = "A C++ throw propagates into an Ada others handler at both optimization levels. A status-returning C facade is also verified for APIs that choose not to expose exceptions. GNAT's internal foreign-language identity API is version-dependent and is not part of this portable claim."
 
 [[features]]
 id = "operators-conversions"

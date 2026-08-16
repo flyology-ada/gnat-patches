@@ -15,15 +15,34 @@ procedure Call_Abi_Consumer is
 begin
    if Bindings.invert_bool (Interfaces.C.Extensions.bool'(False)) /=
         Interfaces.C.Extensions.bool'(True)
-     or else Bindings.add_schar (-5, 8) /= 3
-     or else Bindings.mix_ull (Original) /=
-       (Original xor 16#55aa_55aa_55aa_55aa#)
-     or else Bindings.add_float (1.25, 2.5) /= 3.75
-     or else Bindings.add_double (1.25, 2.5) /= 3.75
-     or else Bindings.add_long_double (1.25, 2.5) /= 3.75
-     or else Bindings.next_color (Bindings.Color_Green) /= Bindings.Color_Blue
    then
-      raise Program_Error with "scalar calling convention mismatch";
+      raise Program_Error with "bool calling convention mismatch";
+   end if;
+
+   if Bindings.add_schar (-5, 8) /= 3 then
+      raise Program_Error with "signed char calling convention mismatch";
+   end if;
+
+   if Bindings.mix_ull (Original) /=
+        (Original xor 16#55aa_55aa_55aa_55aa#)
+   then
+      raise Program_Error with "unsigned long long calling convention mismatch";
+   end if;
+
+   if Bindings.add_float (1.25, 2.5) /= 3.75 then
+      raise Program_Error with "float calling convention mismatch";
+   end if;
+
+   if Bindings.add_double (1.25, 2.5) /= 3.75 then
+      raise Program_Error with "double calling convention mismatch";
+   end if;
+
+   if Bindings.add_long_double (1.25, 2.5) /= 3.75 then
+      raise Program_Error with "long double calling convention mismatch";
+   end if;
+
+   if Bindings.next_color (Bindings.Color_Green) /= Bindings.Color_Blue then
+      raise Program_Error with "enum calling convention mismatch";
    end if;
 
    Pair_Value := Bindings.reverse_pair (Pair_Value);
