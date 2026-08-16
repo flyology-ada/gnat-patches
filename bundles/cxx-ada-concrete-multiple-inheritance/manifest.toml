@@ -1,0 +1,35 @@
+schema = 1
+id = "cxx-ada-concrete-multiple-inheritance"
+status = "accepted"
+introduced_in_patchset = "1.2.0"
+problem = "The C++ Ada mapper emits multiple concrete tagged bases as illegal Ada progenitors and omits their secondary subobject storage."
+upstream_issue = "Pending GCC Bugzilla filing."
+affected_versions = ["13.2.0", "14.2.0", "15.3.0", "16.1.0"]
+known_good_versions = []
+source_provenance = "Repository-authored GCC patch and executable regression; exact application verified locally against the pinned Darwin patchset inputs. Pinned FSF release application is required by Linux CI."
+files_modified = ["gcc/c-family/c-ada-spec.cc", "gcc/c-family/c-ada-spec.h", "gcc/cp/decl2.cc", "gcc/testsuite/g++.dg/ada-spec/concrete-multiple-inheritance.C"]
+regression_tests = ["gcc/testsuite/g++.dg/ada-spec/concrete-multiple-inheritance.C"]
+repository_fixture = "bundles/cxx-ada-concrete-multiple-inheritance/tests/concrete-multiple-inheritance.C"
+fixture_sha256 = "d4b4692761c4d597897ff6240ab3b84d2a568e89623ae364221752622f2a3c70"
+repository_test_runner = "bundles/cxx-ada-concrete-multiple-inheritance/run-test.sh"
+application_command = "patch --fuzz=0 -p1 -i bundles/cxx-ada-concrete-multiple-inheritance/patches/VARIANT.patch"
+build_command = "PATH=/path/to/bootstrap/bin:$PATH ./scripts/build-gnat.sh SOURCE BUILD INSTALL"
+test_command = "./scripts/run-regressions.sh INSTALL 1.2.0 GCC_MAJOR patched"
+expected_failure_before_patch = "GNAT rejects a concrete secondary base as an Ada interface progenitor, and the generated record has no usable secondary-base storage."
+expected_success_after_patch = "The primary base uses Ada inheritance, each concrete secondary base uses exact nested as-base storage, and primary and secondary dispatch and storage agree at -O0 and -O2."
+upstream_submission_state = "Not yet filed or submitted upstream."
+licensing = "GCC-derived compiler hunks remain GPL-3.0-or-later. The new test is proposed for the GCC testsuite under GCC project terms."
+
+[[variants]]
+id = "gcc-13-14"
+versions = ["13.2.0", "14.2.0"]
+source_flavors = ["linux", "darwin_arm64"]
+patch = "bundles/cxx-ada-concrete-multiple-inheritance/patches/gcc-13-14.patch"
+sha256 = "200351c54c82d34c5cc5f314b2524d8c1ec170156f1207b95398d629c06b9e49"
+
+[[variants]]
+id = "gcc-15-16"
+versions = ["15.3.0", "16.1.0"]
+source_flavors = ["linux", "darwin_arm64"]
+patch = "bundles/cxx-ada-concrete-multiple-inheritance/patches/gcc-15-16.patch"
+sha256 = "3a596d709033a7772aa7bfc433309cc5c4429c4e4d8404c4e2eced5c3b9762e5"

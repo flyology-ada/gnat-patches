@@ -29,10 +29,11 @@ The executable panel currently has four layers:
   translation unit, with periodic inheritance and overload clusters. They
   exercise higher-order interactions in the currently representable subset and
   alternate full and slim dump modes.
-- Twenty-two runtime suites link C++ and Ada at `-O0` and `-O2`. They check scalar,
+- Twenty-three runtime suites link C++ and Ada at `-O0` and `-O2`. They check scalar,
   enum, record, union, pointer, reference, and callback calling conventions;
-  object size, alignment, and field offsets; ordinary and interface virtual
-  dispatch; template qualification, record termination, nested types, explicit
+  object size, alignment, and field offsets; ordinary, interface, and concrete
+  secondary-base virtual dispatch; template qualification, record termination,
+  nested types, explicit
   alignment, namespace and method identity—including enclosing-type and
   subprogram-profile collisions—anonymous enumeration values, and
   `char8_t`, 128-bit integers, machine vectors, and opaque pointer-to-member
@@ -41,28 +42,26 @@ The executable panel currently has four layers:
 The accepted defect regressions reproduce malformed template records before
 patching, anonymous nested template types before patching, anonymous enum
 omissions before patching, pointer-to-member syntax failures, standalone
-  empty-class storage drift, inherited tail-padding drift, explicit alignment
-  before patching, virtual-inheritance and virtual-diamond layout drift,
-  unsigned 128-bit integer
-failures on GCC 13 and 14 before
-patching, and several version- or type-specific omissions. Independent
-problems must become independent patch bundles.
+empty-class storage drift, inherited tail-padding drift, explicit alignment
+before patching, virtual-inheritance, virtual-diamond, and concrete
+multiple-inheritance layout drift, unsigned 128-bit integer failures on GCC 13
+and 14 before patching, and several version- or type-specific omissions.
+Independent problems must become independent patch bundles.
 
 The coverage summary reports both baselines. After the currently accepted
 patches, all 63 atomic cases pass on every supported major.
 
 The confirmed-history ledger is larger than that residual atomic count:
-eighteen independent C++ mapper defects now have accepted 1.2.0 bundles, no
-confirmed runtime layout defects remain, and one concrete-inheritance form is a
-direct-representation boundary. The following list is only the work still open
-or intentionally bounded, not the complete defect history.
+nineteen independent C++ mapper defects now have accepted 1.2.0 bundles and no
+confirmed fixed-layout runtime defect remains. The following list is only the
+work still open or intentionally bounded, not the complete defect history.
 
 The remaining confirmed inventory is deliberately explicit:
 
-- tested semantic boundaries rather than hidden mapper successes: concrete
-  secondary multiple inheritance requires a C++ pointer-adjustment facade,
+- tested semantic boundaries rather than hidden mapper successes:
   uninstantiated templates are not emitted, nontrivial standard-library values
-  require a facade, and C++ exceptions must not cross the language boundary.
+  require a facade, dynamic virtual-base conversions remain ABI operations,
+  and C++ exceptions must not cross the language boundary.
 
 Run the complete current panel against a compiler root:
 

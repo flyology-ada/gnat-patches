@@ -1,0 +1,452 @@
+diff --git a/gcc/c-family/c-ada-spec.cc b/gcc/c-family/c-ada-spec.cc
+index fc7d95d..c325cbf 100644
+--- a/gcc/c-family/c-ada-spec.cc
++++ b/gcc/c-family/c-ada-spec.cc
+@@ -1128,6 +1128,35 @@ is_tagged_type (const_tree type)
+   return false;
+ }
+ 
++/* Return whether TYPE maps to an Ada interface: it contains only a virtual
++   table field and abstract methods.  */
++
++static bool
++is_ada_interface_type (tree type)
++{
++  if (!cpp_check || !RECORD_OR_UNION_TYPE_P (type))
++    return false;
++
++  bool has_fields = false;
++  bool is_interface = false;
++  for (tree fld = TYPE_FIELDS (type); fld; fld = TREE_CHAIN (fld))
++    {
++      if (TREE_CODE (fld) == FIELD_DECL)
++	{
++	  if (!has_fields && DECL_VIRTUAL_P (fld))
++	    is_interface = true;
++	  else
++	    is_interface = false;
++	  has_fields = true;
++	}
++      else if (TREE_CODE (fld) == FUNCTION_DECL && !DECL_ARTIFICIAL (fld)
++	       && !cpp_check (fld, IS_ABSTRACT))
++	is_interface = false;
++    }
++
++  return is_interface;
++}
++
+ /* Return whether TYPE has non-trivial methods, i.e. methods that do something
+    for the objects of TYPE.  In C++, all classes have implicit special methods,
+    e.g. constructors and destructors, but they can be trivial if the type is
+@@ -2855,26 +2884,34 @@ dump_ada_node (pretty_printer *buffer, tree node, tree type, int spc,
+ 	  if (is_tagged_type (TREE_TYPE (node)))
+ 	    {
+ 	      int first = true;
++	      tree node_type = TREE_TYPE (node);
+ 
+-	      /* Look for ancestors.  */
+-	      for (tree fld = TYPE_FIELDS (TREE_TYPE (node));
++	      /* Ada supports one concrete tagged parent.  Use the C++ primary
++		 base, whose address is the complete object's address.  */
++	      for (tree fld = TYPE_FIELDS (node_type);
+ 		   fld;
+ 		   fld = TREE_CHAIN (fld))
+-		{
+-		  if (!DECL_NAME (fld) && is_tagged_type (TREE_TYPE (fld)))
+-		    {
+-		      if (first)
+-			{
+-			  pp_string (buffer, "limited new ");
+-			  first = false;
+-			}
+-		      else
+-			pp_string (buffer, " and ");
++		if (cpp_check (fld, IS_PRIMARY_BASE_FIELD)
++		    && is_tagged_type (TREE_TYPE (fld)))
++		  {
++		    pp_string (buffer, "limited new ");
++		    dump_ada_decl_name (buffer, TYPE_NAME (TREE_TYPE (fld)), false);
++		    first = false;
++		    break;
++		  }
+ 
+-		      dump_ada_decl_name (buffer, TYPE_NAME (TREE_TYPE (fld)),
+-					  false);
+-		    }
+-		}
++	      /* Data-free abstract secondary bases map to Ada interfaces.  */
++	      for (tree fld = TYPE_FIELDS (node_type);
++		   fld;
++		   fld = TREE_CHAIN (fld))
++		if (cpp_check (fld, IS_BASE_FIELD)
++		    && !cpp_check (fld, IS_PRIMARY_BASE_FIELD)
++		    && is_ada_interface_type (TREE_TYPE (fld)))
++		  {
++		    pp_string (buffer, first ? "limited new " : " and ");
++		    dump_ada_decl_name (buffer, TYPE_NAME (TREE_TYPE (fld)), false);
++		    first = false;
++		  }
+ 
+ 	      pp_string (buffer, first ? "tagged limited " : " with ");
+ 	    }
+@@ -2971,29 +3008,72 @@ is_abi_ignored_empty_field (tree field)
+ 	  && cpp_check (TREE_TYPE (field), GET_AS_BASE_SIZE) == 0);
+ }
+ 
+-/* Return true if FIELD is represented as a component in the generated Ada
+-   record.  Keep this in step with dump_ada_structure.  */
++/* Return true if FIELD is a concrete C++ base that NODE must represent as a
++   component.  Ada inheritance can represent the primary base only when NODE
++   itself declares a virtual primitive and therefore maps to a tagged type.  */
+ 
+ static bool
+-is_ada_record_field (tree field)
++is_concrete_nested_base_field (tree node, tree field)
++{
++  return (cpp_check && TREE_CODE (field) == FIELD_DECL
++	  && cpp_check (field, IS_BASE_FIELD)
++	  && (!is_tagged_type (node)
++	      || !cpp_check (field, IS_PRIMARY_BASE_FIELD))
++	  && !is_ada_interface_type (TREE_TYPE (field))
++	  && is_tagged_type (TREE_TYPE (field)));
++}
++
++/* Return true if NODE has a tagged C++ primary base represented by Ada
++   inheritance rather than an explicit record component.  */
++
++static bool
++has_tagged_primary_base (tree node)
++{
++  if (!is_tagged_type (node))
++    return false;
++
++  for (tree field = TYPE_FIELDS (node); field; field = TREE_CHAIN (field))
++    if (cpp_check && cpp_check (field, IS_PRIMARY_BASE_FIELD)
++	&& is_tagged_type (TREE_TYPE (field)))
++      return true;
++  return false;
++}
++
++/* Return true if NODE has a concrete C++ base that needs a component.  */
++
++static bool
++has_concrete_nested_base (tree node)
++{
++  for (tree field = TYPE_FIELDS (node); field; field = TREE_CHAIN (field))
++    if (is_concrete_nested_base_field (node, field))
++      return true;
++  return false;
++}
++
++/* Return true if FIELD is represented as a component in NODE's generated
++   Ada record.  Keep this in step with dump_ada_structure.  */
++
++static bool
++is_ada_record_field (tree node, tree field)
+ {
+   if (TREE_CODE (field) != FIELD_DECL
+       || DECL_VIRTUAL_P (field)
+       || is_abi_ignored_empty_field (field))
+     return false;
+ 
+-  return DECL_NAME (field) || !is_tagged_type (TREE_TYPE (field));
++  return (DECL_NAME (field) || !is_tagged_type (TREE_TYPE (field))
++	  || is_concrete_nested_base_field (node, field));
+ }
+ 
+ /* Return true if NODE needs a distinct storage type when used as a base
+-   subobject.  A non-polymorphic class with virtual bases contains those bases
+-   as a complete object, but excludes them from its as-base size.  */
++   subobject.  A class can exclude virtual bases or complete-object tail
++   padding from its as-base size.  */
+ 
+ static bool
+-needs_virtual_as_base_type (tree node)
++needs_as_base_storage_type (tree node)
+ {
+-  if (!cpp_check || !RECORD_OR_UNION_TYPE_P (node) || is_tagged_type (node)
+-      || !cpp_check (node, HAS_VIRTUAL_BASE))
++  if (!cpp_check || !RECORD_OR_UNION_TYPE_P (node)
++      || (!is_tagged_type (node) && !cpp_check (node, HAS_VIRTUAL_BASE)))
+     return false;
+ 
+   const int data_size = cpp_check (node, GET_AS_BASE_SIZE);
+@@ -3006,10 +3086,10 @@ needs_virtual_as_base_type (tree node)
+    for this component.  */
+ 
+ static bool
+-is_shortened_virtual_base_field (tree field)
++is_shortened_base_field (tree field)
+ {
+   if (TREE_CODE (field) != FIELD_DECL || DECL_NAME (field)
+-      || !needs_virtual_as_base_type (TREE_TYPE (field))
++      || !needs_as_base_storage_type (TREE_TYPE (field))
+       || !DECL_SIZE (field) || !tree_fits_uhwi_p (DECL_SIZE (field)))
+     return false;
+ 
+@@ -3026,7 +3106,7 @@ static void
+ dump_ada_record_field_type (pretty_printer *buffer, tree field)
+ {
+   dump_ada_decl_name (buffer, TYPE_NAME (TREE_TYPE (field)), false);
+-  if (is_shortened_virtual_base_field (field))
++  if (is_shortened_base_field (field))
+     pp_string (buffer, "_As_Base");
+ }
+ 
+@@ -3036,7 +3116,7 @@ static bool
+ field_fits_as_base (tree node, tree field)
+ {
+   const int data_size = cpp_check (node, GET_AS_BASE_SIZE);
+-  if (data_size < 0 || !is_ada_record_field (field)
++  if (data_size < 0 || !is_ada_record_field (node, field)
+       || !DECL_FIELD_OFFSET (field) || !DECL_FIELD_BIT_OFFSET (field)
+       || !DECL_SIZE (field)
+       || !tree_fits_uhwi_p (DECL_FIELD_OFFSET (field))
+@@ -3057,7 +3137,7 @@ field_fits_as_base (tree node, tree field)
+    padding is not part of a base subobject.  */
+ 
+ static unsigned int
+-virtual_as_base_alignment (tree node, unsigned int data_size)
++as_base_alignment (tree node, unsigned int data_size)
+ {
+   unsigned int alignment = TYPE_ALIGN (node) / BITS_PER_UNIT;
+   while (alignment > 1 && data_size % alignment != 0)
+@@ -3069,11 +3149,11 @@ virtual_as_base_alignment (tree node, unsigned int data_size)
+    keeps each direct field addressable while excluding shared virtual bases.  */
+ 
+ static void
+-dump_ada_virtual_as_base_type (pretty_printer *buffer, tree node, tree type,
+-			       int spc)
++dump_ada_as_base_storage_type (pretty_printer *buffer, tree node, tree type,
++			        int spc)
+ {
+   const unsigned int data_size = cpp_check (node, GET_AS_BASE_SIZE);
+-  int field_num = 0;
++  int field_num = has_tagged_primary_base (node) ? 1 : 0;
+ 
+   pp_newline (buffer);
+   newline_and_indent (buffer, spc);
+@@ -3141,7 +3221,7 @@ dump_ada_virtual_as_base_type (pretty_printer *buffer, tree node, tree type,
+   pp_string (buffer, "for ");
+   dump_ada_node (buffer, TYPE_NAME (node), type, spc, false, true);
+   pp_string (buffer, "_As_Base'Alignment use ");
+-  pp_decimal_int (buffer, virtual_as_base_alignment (node, data_size));
++  pp_decimal_int (buffer, as_base_alignment (node, data_size));
+   pp_semicolon (buffer);
+ 
+   newline_and_indent (buffer, spc);
+@@ -3220,7 +3300,7 @@ static bool
+ has_constant_field_layout (tree node)
+ {
+   for (tree field = TYPE_FIELDS (node); field; field = TREE_CHAIN (field))
+-    if (is_ada_record_field (field)
++    if (is_ada_record_field (node, field)
+ 	&& (!DECL_FIELD_OFFSET (field)
+ 	    || !DECL_FIELD_BIT_OFFSET (field)
+ 	    || !DECL_SIZE (field)
+@@ -3278,9 +3358,9 @@ dump_ada_cpp_layout (pretty_printer *buffer, tree node, tree type, int spc,
+   dump_ada_node (buffer, TYPE_NAME (node), type, spc, false, true);
+   pp_string (buffer, " use record");
+ 
+-  int field_num = 0;
++  int field_num = has_tagged_primary_base (node) ? 1 : 0;
+   for (tree field = TYPE_FIELDS (node); field; field = TREE_CHAIN (field))
+-    if (is_ada_record_field (field))
++    if (is_ada_record_field (node, field))
+       {
+ 	field_num++;
+ 	const unsigned HOST_WIDE_INT bitpos
+@@ -4230,6 +4310,7 @@ dump_ada_structure (pretty_printer *buffer, tree node, tree type, bool nested,
+   const bool is_union = (TREE_CODE (node) == UNION_TYPE);
+   char buf[32];
+   int field_num = 0;
++  int fields_emitted = 0;
+   int field_spc = spc + INDENT_INCR;
+   int need_semicolon;
+ 
+@@ -4256,7 +4337,12 @@ dump_ada_structure (pretty_printer *buffer, tree node, tree type, bool nested,
+       /* Add parent field if needed.  */
+       if (!DECL_NAME (tmp))
+ 	{
+-	  if (!is_tagged_type (TREE_TYPE (tmp)))
++	  if (is_tagged_type (node) && cpp_check
++	      && cpp_check (tmp, IS_PRIMARY_BASE_FIELD)
++	      && is_tagged_type (TREE_TYPE (tmp)))
++	    field_num++;
++	  else if (!is_tagged_type (TREE_TYPE (tmp))
++		   || is_concrete_nested_base_field (node, tmp))
+ 	    {
+ 	      if (!TYPE_NAME (TREE_TYPE (tmp)))
+ 		dump_ada_declaration (buffer, tmp, type, field_spc);
+@@ -4277,6 +4363,7 @@ dump_ada_structure (pretty_printer *buffer, tree node, tree type, bool nested,
+ 
+ 	      pp_newline (buffer);
+ 	      field_num++;
++	      fields_emitted++;
+ 	    }
+ 	}
+       else if (TREE_CODE (tmp) == FIELD_DECL)
+@@ -4302,6 +4389,7 @@ dump_ada_structure (pretty_printer *buffer, tree node, tree type, bool nested,
+ 		{
+ 		  pp_newline (buffer);
+ 		  field_num++;
++		  fields_emitted++;
+ 		}
+ 	    }
+ 	}
+@@ -4314,7 +4402,7 @@ dump_ada_structure (pretty_printer *buffer, tree node, tree type, bool nested,
+       pp_newline (buffer);
+     }
+ 
+-  if (field_num == 0)
++  if (fields_emitted == 0)
+     {
+       INDENT (spc + INDENT_INCR);
+       pp_string (buffer, "null;");
+@@ -4385,7 +4473,8 @@ dump_ada_structure (pretty_printer *buffer, tree node, tree type, bool nested,
+       dump_ada_empty_class_layout (buffer, node, type, spc);
+     }
+   else if ((needs_tail_padding_layout (node)
+-	    || (cpp_check && cpp_check (node, HAS_VIRTUAL_BASE)))
++	    || (cpp_check && cpp_check (node, HAS_VIRTUAL_BASE))
++	    || has_concrete_nested_base (node))
+ 	   && has_constant_field_layout (node))
+     {
+       if (need_semicolon)
+@@ -4398,8 +4487,8 @@ dump_ada_structure (pretty_printer *buffer, tree node, tree type, bool nested,
+       dump_ada_cpp_layout (buffer, node, type, spc,
+ 			   cpp_check (node, HAS_VIRTUAL_BASE));
+ 
+-      if (needs_virtual_as_base_type (node))
+-	dump_ada_virtual_as_base_type (buffer, node, type, spc);
++      if (needs_as_base_storage_type (node))
++	dump_ada_as_base_storage_type (buffer, node, type, spc);
+     }
+ 
+   /* Print the static fields of the structure, if any.  */
+diff --git a/gcc/c-family/c-ada-spec.h b/gcc/c-family/c-ada-spec.h
+index fe9ae33..3348414 100644
+--- a/gcc/c-family/c-ada-spec.h
++++ b/gcc/c-family/c-ada-spec.h
+@@ -31,10 +31,12 @@ enum cpp_operation {
+   HAS_DEPENDENT_TEMPLATE_ARGS,
+   IS_ABSTRACT,
+   IS_ASSIGNMENT_OPERATOR,
++  IS_BASE_FIELD,
+   IS_CONSTRUCTOR,
+   IS_DESTRUCTOR,
+   IS_COPY_CONSTRUCTOR,
+   IS_MOVE_CONSTRUCTOR,
++  IS_PRIMARY_BASE_FIELD,
+   IS_TEMPLATE,
+   IS_TRIVIAL,
+   REUSES_BASE_TAIL_PADDING
+diff --git a/gcc/cp/decl2.cc b/gcc/cp/decl2.cc
+index 8c606bf..0da86c0 100644
+--- a/gcc/cp/decl2.cc
++++ b/gcc/cp/decl2.cc
+@@ -5305,6 +5305,8 @@ cpp_check (tree t, cpp_operation op)
+ 	return DECL_PURE_VIRTUAL_P (t);
+       case IS_ASSIGNMENT_OPERATOR:
+ 	return DECL_ASSIGNMENT_OPERATOR_P (t);
++      case IS_BASE_FIELD:
++	return (TREE_CODE (t) == FIELD_DECL && DECL_FIELD_IS_BASE (t));
+       case IS_CONSTRUCTOR:
+ 	return DECL_CONSTRUCTOR_P (t);
+       case IS_DESTRUCTOR:
+@@ -5313,6 +5315,22 @@ cpp_check (tree t, cpp_operation op)
+ 	return DECL_COPY_CONSTRUCTOR_P (t);
+       case IS_MOVE_CONSTRUCTOR:
+ 	return DECL_MOVE_CONSTRUCTOR_P (t);
++      case IS_PRIMARY_BASE_FIELD:
++	{
++	  if (TREE_CODE (t) != FIELD_DECL || !DECL_FIELD_IS_BASE (t)
++	      || !CLASS_TYPE_P (DECL_CONTEXT (t)))
++	    return 0;
++
++	  tree binfo;
++	  unsigned int i = 0;
++	  vec<tree, va_gc> *vbases =
++	    CLASSTYPE_VBASECLASSES (DECL_CONTEXT (t));
++	  for (; vec_safe_iterate (vbases, i, &binfo); i++)
++	    if (TREE_TYPE (t) == CLASSTYPE_AS_BASE (BINFO_TYPE (binfo)))
++	      return 0;
++
++	  return tree_int_cst_equal (bit_position (t), bitsize_zero_node);
++	}
+       case IS_TEMPLATE:
+ 	return TREE_CODE (t) == TEMPLATE_DECL;
+       case IS_TRIVIAL:
+diff --git a/gcc/testsuite/g++.dg/ada-spec/concrete-multiple-inheritance.C b/gcc/testsuite/g++.dg/ada-spec/concrete-multiple-inheritance.C
+new file mode 100644
+index 0000000..b7febae
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/ada-spec/concrete-multiple-inheritance.C
+@@ -0,0 +1,64 @@
++/* { dg-do compile } */
++/* { dg-require-effective-target lp64 } */
++/* { dg-options "-fdump-ada-spec-slim" } */
++/* { dg-final { scan-file concrete_multiple_inheritance_c.ads "type Both is limited new Left with record" } } */
++/* { dg-final { scan-file concrete_multiple_inheritance_c.ads "field_2 : aliased Right_As_Base;" } } */
++/* { dg-final { scan-file concrete_multiple_inheritance_c.ads "for Right_As_Base'Object_Size use 96;" } } */
++/* { dg-final { scan-file concrete_multiple_inheritance_c.ads "field_2 at 16 range 0 .. 95;" } } */
++
++class Left
++{
++public:
++  virtual ~Left () = default;
++  virtual int left_value () { return l; }
++  int l;
++};
++
++class Right
++{
++public:
++  virtual ~Right () = default;
++  virtual int right_value () { return r; }
++  int r;
++};
++
++class Both : public Left, public Right
++{
++public:
++  Both (int l_value, int r_value, int both_value);
++  ~Both () override = default;
++  int left_value () override { return l + both; }
++  int right_value () override { return r + both; }
++  int both;
++};
++
++Both::Both (int l_value, int r_value, int both_value)
++{
++  l = l_value;
++  r = r_value;
++  both = both_value;
++}
++
++extern "C" Both *cpp_create_both (int l, int r, int both_value)
++{
++  return new Both (l, r, both_value);
++}
++
++extern "C" void cpp_delete_both (Both *object) { delete object; }
++extern "C" unsigned long cpp_both_size () { return sizeof (Both); }
++extern "C" unsigned long cpp_right_offset (Both *object)
++{
++  return reinterpret_cast<char *> (static_cast<Right *> (object))
++    - reinterpret_cast<char *> (object);
++}
++extern "C" int cpp_call_left (Both *object) { return object->left_value (); }
++extern "C" int cpp_call_right (Right *object) { return object->right_value (); }
++extern "C" int cpp_call_right_from_both (Both *object)
++{
++  return static_cast<Right *> (object)->right_value ();
++}
++extern "C" int cpp_read_left (Both *object) { return object->l; }
++extern "C" int cpp_read_right (Both *object) { return object->r; }
++extern "C" int cpp_read_both (Both *object) { return object->both; }
++
++/* { dg-final { cleanup-ada-spec } } */
+
+
+

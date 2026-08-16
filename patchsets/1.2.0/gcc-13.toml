@@ -2,5 +2,5 @@ schema = 1
 patchset_version = "1.2.0"
 gcc_major = 13
 source_version = "13.2.0"
-bundles = ["protected-duration-validity", "cxx-ada-template-qualification", "cxx-ada-template-record-termination", "cxx-ada-explicit-alignment", "cxx-ada-namespace-identity", "cxx-ada-qualified-method-names", "cxx-ada-casefold-identity", "cxx-ada-template-nested-types", "cxx-ada-anonymous-enums", "cxx-ada-char8-type", "cxx-ada-int128-types", "cxx-ada-member-pointers", "cxx-ada-vector-types", "cxx-ada-inherited-tail-padding", "cxx-ada-empty-class-storage", "cxx-ada-virtual-inheritance-layout", "cxx-ada-enclosing-type-method-names", "cxx-ada-virtual-diamond-layout", "cxx-ada-profile-formal-type-names"]
+bundles = ["protected-duration-validity", "cxx-ada-template-qualification", "cxx-ada-template-record-termination", "cxx-ada-explicit-alignment", "cxx-ada-namespace-identity", "cxx-ada-qualified-method-names", "cxx-ada-casefold-identity", "cxx-ada-template-nested-types", "cxx-ada-anonymous-enums", "cxx-ada-char8-type", "cxx-ada-int128-types", "cxx-ada-member-pointers", "cxx-ada-vector-types", "cxx-ada-inherited-tail-padding", "cxx-ada-empty-class-storage", "cxx-ada-virtual-inheritance-layout", "cxx-ada-enclosing-type-method-names", "cxx-ada-virtual-diamond-layout", "cxx-ada-profile-formal-type-names", "cxx-ada-concrete-multiple-inheritance"]
 control_tests = ["storage-model-actuals"]
