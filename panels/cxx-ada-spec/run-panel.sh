@@ -42,6 +42,8 @@ state=$3
   "$toolchain" "$version" "$state"
 "$root/bundles/cxx-ada-member-pointers/run-test.sh" \
   "$toolchain" "$version" "$state"
+"$root/bundles/cxx-ada-inherited-tail-padding/run-test.sh" \
+  "$toolchain" "$version" "$state"
 "$root/panels/cxx-ada-spec/cases/known-defects/run-test.sh" "$toolchain" "$version"
 "$root/panels/cxx-ada-spec/generated/run-test.sh" "$toolchain" "$version" "$state"
 

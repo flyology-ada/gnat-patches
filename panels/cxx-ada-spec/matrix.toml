@@ -9,7 +9,7 @@ atomic_cases = 63
 pairwise_cases = 16
 pairwise_value_pairs = 88
 grammar_cases = 32
-runtime_suites = 17
+runtime_suites = 18
 dump_modes = ["full", "slim"]
 
 [[features]]
@@ -53,9 +53,9 @@ note = "The positive case avoids inherited tail-padding reuse and checks both Ad
 [[features]]
 id = "inherited-tail-padding-layout"
 category = "data-layout"
-state = "confirmed-defect"
-evidence = "panels/cxx-ada-spec/cases/known-defects/inherited_tail_padding.C"
-note = "C++ reuses a non-POD base's tail padding for a derived member, while the Ada extension appends it after the base Object_Size; the emitted layouts differ."
+state = "patched"
+evidence = "bundles/cxx-ada-inherited-tail-padding"
+note = "Patchset 1.2.0 preserves the base subobject data size separately from its complete-object size and emits exact component positions for C++ tail-padding reuse."
 
 [[features]]
 id = "empty-class-object-size"

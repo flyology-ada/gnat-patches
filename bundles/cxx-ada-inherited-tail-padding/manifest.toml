@@ -1,0 +1,35 @@
+schema = 1
+id = "cxx-ada-inherited-tail-padding"
+status = "accepted"
+introduced_in_patchset = "1.2.0"
+problem = "The C++ Ada mapper loses a base class's reusable tail padding, so an Ada extension can have a larger size and different field offsets than the C++ derived class."
+upstream_issue = "Pending GCC Bugzilla filing."
+affected_versions = ["13.2.0", "14.2.0", "15.3.0", "16.1.0"]
+known_good_versions = []
+source_provenance = "Repository-authored GCC patch and executable regression; exact application verified locally against the pinned Darwin release identities. Pinned FSF release application is required by Linux CI."
+files_modified = ["gcc/ada/gcc-interface/decl.cc", "gcc/c-family/c-ada-spec.cc", "gcc/c-family/c-ada-spec.h", "gcc/cp/decl2.cc", "gcc/testsuite/g++.dg/ada-spec/inherited-tail-padding.C", "gcc/testsuite/gnat.dg/cpp_tail_padding.adb"]
+regression_tests = ["gcc/testsuite/g++.dg/ada-spec/inherited-tail-padding.C", "gcc/testsuite/gnat.dg/cpp_tail_padding.adb"]
+repository_fixture = "bundles/cxx-ada-inherited-tail-padding/tests/inherited-tail-padding.C"
+fixture_sha256 = "a90b1833adfe983b1c3cb4d3e72ae6925964c2cd1212a4f164c3f86315dc9bf6"
+repository_test_runner = "bundles/cxx-ada-inherited-tail-padding/run-test.sh"
+application_command = "patch --fuzz=0 -p1 -i bundles/cxx-ada-inherited-tail-padding/patches/VARIANT.patch"
+build_command = "PATH=/path/to/bootstrap/bin:$PATH ./scripts/build-gnat.sh SOURCE BUILD INSTALL"
+test_command = "./scripts/run-regressions.sh INSTALL 1.2.0 GCC_MAJOR patched"
+expected_failure_before_patch = "The generated Ada derived type is larger than its C++ class and writes a derived field at the wrong offset."
+expected_success_after_patch = "Ada and C++ agree on complete-object sizes and inherited and derived field values at -O0 and -O2."
+upstream_submission_state = "Not yet filed or submitted upstream."
+licensing = "GCC-derived compiler hunks remain GPL-3.0-or-later. The new tests are proposed for the GCC testsuite under GCC project terms."
+
+[[variants]]
+id = "gcc-13-14"
+versions = ["13.2.0", "14.2.0"]
+source_flavors = ["linux", "darwin_arm64"]
+patch = "bundles/cxx-ada-inherited-tail-padding/patches/gcc-13-14.patch"
+sha256 = "0867358897d486461f6728fe0680d94cec3b9695a3c20be977df51f08544c95b"
+
+[[variants]]
+id = "gcc-15-16"
+versions = ["15.3.0", "16.1.0"]
+source_flavors = ["linux", "darwin_arm64"]
+patch = "bundles/cxx-ada-inherited-tail-padding/patches/gcc-15-16.patch"
+sha256 = "928f8a13be7290fdbb83ebebcdcd51437cf3212169ed4668d782a58d6ac2d42d"

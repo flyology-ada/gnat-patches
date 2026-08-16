@@ -29,7 +29,7 @@ The executable panel currently has four layers:
   translation unit, with periodic inheritance and overload clusters. They
   exercise higher-order interactions in the currently representable subset and
   alternate full and slim dump modes.
-- Seventeen runtime suites link C++ and Ada at `-O0` and `-O2`. They check scalar,
+- Eighteen runtime suites link C++ and Ada at `-O0` and `-O2`. They check scalar,
   enum, record, union, pointer, reference, and callback calling conventions;
   object size, alignment, and field offsets; ordinary and interface virtual
   dispatch; template qualification, record termination, nested types, explicit
@@ -50,7 +50,7 @@ The coverage summary reports both baselines. After the currently accepted
 patches, one atomic case remains non-passing on every supported major.
 
 The confirmed-history ledger is larger than that residual atomic count:
-twelve independent C++ mapper defects now have accepted 1.2.0 bundles, three
+thirteen independent C++ mapper defects now have accepted 1.2.0 bundles, two
 runtime layout defects remain, and one concrete-inheritance form is a
 direct-representation boundary. The following list is only the work still open
 or intentionally bounded, not the complete defect history.
@@ -59,8 +59,8 @@ The remaining confirmed inventory is deliberately explicit:
 
 - a generated-spec failure on every tested major: concrete secondary multiple
   inheritance;
-- runtime layout defects on every tested major: standalone empty-class size,
-  inherited tail-padding reuse, and virtual inheritance;
+- runtime layout defects on every tested major: standalone empty-class size
+  and virtual inheritance;
 - tested semantic boundaries rather than hidden mapper successes:
   uninstantiated templates are not emitted, nontrivial standard-library values
   require a facade, and C++ exceptions must not cross the language boundary.
