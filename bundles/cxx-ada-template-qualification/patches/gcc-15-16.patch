@@ -2,27 +2,38 @@ diff --git a/gcc/c-family/c-ada-spec.cc b/gcc/c-family/c-ada-spec.cc
 index c7ae03223..bb091930f 100644
 --- a/gcc/c-family/c-ada-spec.cc
 +++ b/gcc/c-family/c-ada-spec.cc
-@@ -1381,6 +1381,7 @@ separate_class_package (tree decl)
+@@ -1381,6 +1381,8 @@ separate_class_package (tree decl)
  }
  
  static bool package_prefix = true;
++static tree current_template = NULL_TREE;
 +static tree current_template_instance = NULL_TREE;
  
  /* Dump in PP the name of an identifier NODE of type TYPE, following Ada
     syntax.  LIMITED_ACCESS indicates whether NODE can be accessed through a
-@@ -1902,6 +1903,48 @@ dump_template_types (pretty_printer *pp, tree types, int spc)
+@@ -1902,6 +1904,58 @@ dump_template_types (pretty_printer *pp, tree types, int spc)
      }
  }
  
 +/* If NODE is a concrete template instance emitted in a nested package,
-+   qualify references to its type with that package.  */
++   dump the type name owned by that package.  */
 +
 +static bool
-+dump_template_package_prefix (pretty_printer *pp, tree node, int spc)
++dump_template_type_name (pretty_printer *pp, tree node, int spc)
 +{
-+  if (!package_prefix || !cpp_check
-+      || TYPE_MAIN_VARIANT (node) == current_template_instance)
++  if (!package_prefix || !cpp_check)
 +    return false;
++
++  if (current_template_instance
++      && TYPE_MAIN_VARIANT (node)
++         == TYPE_MAIN_VARIANT (current_template_instance))
++    {
++      package_prefix = false;
++      dump_ada_node (pp, current_template_instance, current_template,
++                     spc, false, true);
++      package_prefix = true;
++      return true;
++    }
 +
 +  for (int i = 0; i < to_dump_count; i++)
 +    {
@@ -59,31 +70,34 @@ index c7ae03223..bb091930f 100644
  /* Dump in PP the contents of all class instantiations associated with
     a given template T.  SPC is the indentation level.  */
  
-@@ -1953,6 +1996,8 @@ dump_ada_template (pretty_printer *pp, tree t, int spc)
+@@ -1953,6 +2007,10 @@ dump_ada_template (pretty_printer *pp, tree t, int spc)
        spc += INDENT_INCR;
        newline_and_indent (pp, spc);
  
++      tree previous_template = current_template;
 +      tree previous_template_instance = current_template_instance;
-+      current_template_instance = TYPE_MAIN_VARIANT (instance);
++      current_template = t;
++      current_template_instance = instance;
        TREE_VISITED (get_underlying_decl (instance)) = 1;
        pp_string (pp, "type ");
        dump_ada_node (pp, instance, t, spc, false, true);
-@@ -1975,6 +2020,7 @@ dump_ada_template (pretty_printer *pp, tree t, int spc)
+@@ -1975,6 +2033,8 @@ dump_ada_template (pretty_printer *pp, tree t, int spc)
        dump_ada_node (pp, instance, t, spc, false, true);
        dump_template_types (pp, types, spc);
        package_prefix = true;
++      current_template = previous_template;
 +      current_template_instance = previous_template_instance;
        pp_semicolon (pp);
        pp_newline (pp);
        pp_newline (pp);
-@@ -2460,8 +2506,11 @@ dump_ada_node (pretty_printer *pp, tree node, tree type, int spc,
+@@ -2460,8 +2520,11 @@ dump_ada_node (pretty_printer *pp, tree node, tree type, int spc,
      case RECORD_TYPE:
      case UNION_TYPE:
        if (name_only)
 -	dump_ada_node (pp, TYPE_NAME (node), node, spc, limited_access,
 -		       true);
 +	{
-+	  if (!dump_template_package_prefix (pp, node, spc))
++	  if (!dump_template_type_name (pp, node, spc))
 +	    dump_ada_node (pp, TYPE_NAME (node), node, spc, limited_access,
 +			   true);
 +	}
@@ -92,7 +106,7 @@ index c7ae03223..bb091930f 100644
        break;
 diff --git a/gcc/testsuite/g++.dg/ada-spec/template-instantiation-qualification.C b/gcc/testsuite/g++.dg/ada-spec/template-instantiation-qualification.C
 new file mode 100644
-index 000000000..30ca55dd6
+index 000000000..45b595ab8
 --- /dev/null
 +++ b/gcc/testsuite/g++.dg/ada-spec/template-instantiation-qualification.C
 @@ -0,0 +1,35 @@

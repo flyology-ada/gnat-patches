@@ -1,10 +1,8 @@
 diff --git a/gcc/c-family/c-ada-spec.cc b/gcc/c-family/c-ada-spec.cc
 --- a/gcc/c-family/c-ada-spec.cc
 +++ b/gcc/c-family/c-ada-spec.cc
-@@ -1406,6 +1406,89 @@
- static bool package_prefix = true;
- static tree current_template_instance = NULL_TREE;
- 
+@@ -1410 +1410,84 @@
+-/* Dump in PP the name of an identifier NODE of type TYPE, following Ada
 +struct casefold_identifier
 +{
 +  tree name;
@@ -88,9 +86,7 @@ diff --git a/gcc/c-family/c-ada-spec.cc b/gcc/c-family/c-ada-spec.cc
 +  return suffix;
 +}
 +
- /* Dump in PP the name of an identifier NODE of type TYPE, following Ada
-    syntax.  LIMITED_ACCESS indicates whether NODE can be accessed through a
-    limited 'with' clause rather than a regular 'with' clause.  */
++/* Dump in PP the name of an identifier NODE of type TYPE, following Ada
 @@ -1418,6 +1501,7 @@ pp_ada_tree_identifier (pretty_printer *pp, tree node, tree type,
    bool space_found = false;
    char *s = to_ada_name (name, &space_found);

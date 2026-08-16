@@ -72,6 +72,9 @@ for optimization in 0 2; do
   grep -F "item : aliased Box_int.Box;" "$spec"
   grep -F "function identity (value : Box_double.Box) return Box_double.Box" "$spec"
   grep -F "subtype Alias_Int_Box is Box_int.Box;" "$spec"
+  if grep -Fq "function New_Alias_Box" "$spec"; then
+    grep -F "function New_Alias_Box return Alias_Box;" "$spec"
+  fi
   "${REGRESSION_ENV[@]}" "$case_dir/template_instantiation_qualification" >"$case_dir/output.log" 2>&1 || {
     cat "$case_dir/output.log"
     exit 1
