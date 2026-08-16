@@ -9,7 +9,7 @@ atomic_cases = 63
 pairwise_cases = 16
 pairwise_value_pairs = 88
 grammar_cases = 32
-runtime_suites = 24
+runtime_suites = 27
 dump_modes = ["full", "slim"]
 
 [[features]]
@@ -131,20 +131,22 @@ note = "Patchset 1.2.0 gives a method a stable Method suffix when its identifier
 id = "uninstantiated-templates"
 category = "template"
 state = "not-emitted"
-note = "The dumper emits no declaration until the C++ template is instantiated."
+evidence = "panels/cxx-ada-spec/cases/uninstantiated-templates"
+note = "The dumper emits no declaration until the C++ template is explicitly instantiated; the executable case proves that the explicit instance is then emitted and usable."
 
 [[features]]
 id = "standard-library-nontrivial-values"
 category = "library"
 state = "facade-required"
-note = "Slim dumps omit required units; full dumps expand transitively, and nontrivial C++ values such as std::string cannot safely cross this binding by value."
+evidence = "panels/cxx-ada-spec/cases/stdlib-value-facade"
+note = "A slim std::string-by-value dump references missing transitive Ada units. The executable case keeps std::string ownership in C++ and crosses a C-compatible data-and-length facade instead."
 
 [[features]]
 id = "exceptions"
 category = "runtime"
-state = "binding-compiles-runtime-boundary"
-evidence = "generated/catalog.py:exception_throw"
-note = "The declaration maps and compiles, but exception propagation across the language boundary remains unsupported and untested."
+state = "verified-runtime-interoperability"
+evidence = "generated/catalog.py:exception_throw,panels/cxx-ada-spec/cases/exception-interoperability"
+note = "A C++ throw propagates into Ada as a foreign exception with EL_Cpp language identity at both optimization levels. A status-returning C facade is also verified for APIs that choose not to expose exceptions."
 
 [[features]]
 id = "operators-conversions"

@@ -19,6 +19,9 @@ state=$3
 "$root/panels/cxx-ada-spec/cases/abi-layout/run-test.sh" "$toolchain" "$version"
 "$root/panels/cxx-ada-spec/cases/call-abi/run-test.sh" "$toolchain" "$version"
 "$root/panels/cxx-ada-spec/cases/interface-secondary-base/run-test.sh" "$toolchain" "$version"
+"$root/panels/cxx-ada-spec/cases/exception-interoperability/run-test.sh" "$toolchain" "$version"
+"$root/panels/cxx-ada-spec/cases/uninstantiated-templates/run-test.sh" "$toolchain" "$version"
+"$root/panels/cxx-ada-spec/cases/stdlib-value-facade/run-test.sh" "$toolchain" "$version"
 "$root/bundles/cxx-ada-template-qualification/run-test.sh" "$toolchain" "$version" "$state"
 "$root/bundles/cxx-ada-template-record-termination/run-test.sh" \
   "$toolchain" "$version" "$state"

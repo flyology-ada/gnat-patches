@@ -29,7 +29,7 @@ The executable panel currently has four layers:
   translation unit, with periodic inheritance and overload clusters. They
   exercise higher-order interactions in the currently representable subset and
   alternate full and slim dump modes.
-- Twenty-four runtime suites link C++ and Ada at `-O0` and `-O2`. They check scalar,
+- Twenty-seven runtime suites link C++ and Ada at `-O0` and `-O2`. They check scalar,
   enum, record, union, pointer, reference, and callback calling conventions;
   object size, alignment, and field offsets; ordinary, interface, and concrete
   secondary-base virtual dispatch; template qualification, record termination,
@@ -38,7 +38,8 @@ The executable panel currently has four layers:
   use-visible type/method, and subprogram-profile collisions—anonymous
   enumeration values, and
   `char8_t`, 128-bit integers, machine vectors, and opaque pointer-to-member
-  values; and the exact behavior of known defects.
+  values; uninstantiated-template emission, a nontrivial standard-library value
+  facade, C++ exception propagation; and the exact behavior of known defects.
 
 The accepted defect regressions reproduce malformed template records before
 patching, anonymous nested template types before patching, anonymous enum
@@ -61,8 +62,9 @@ The remaining confirmed inventory is deliberately explicit:
 
 - tested semantic boundaries rather than hidden mapper successes:
   uninstantiated templates are not emitted, nontrivial standard-library values
-  require a facade, dynamic virtual-base conversions remain ABI operations,
-  and C++ exceptions must not cross the language boundary.
+  require a facade, and dynamic virtual-base conversions remain ABI operations.
+  C++ exception propagation is tested and supported: Ada observes a foreign
+  exception whose language identity is C++.
 
 Run the complete current panel against a compiler root:
 
