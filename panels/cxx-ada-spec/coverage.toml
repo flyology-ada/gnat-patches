@@ -28,6 +28,7 @@ suites = [
   "bundles/cxx-ada-inherited-tail-padding",
   "bundles/cxx-ada-empty-class-storage",
   "bundles/cxx-ada-virtual-inheritance-layout",
+  "bundles/cxx-ada-enclosing-type-method-names",
 ]
 oracles = [
   "generated Ada compiles",

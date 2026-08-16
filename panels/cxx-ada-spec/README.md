@@ -29,11 +29,12 @@ The executable panel currently has four layers:
   translation unit, with periodic inheritance and overload clusters. They
   exercise higher-order interactions in the currently representable subset and
   alternate full and slim dump modes.
-- Nineteen runtime suites link C++ and Ada at `-O0` and `-O2`. They check scalar,
+- Twenty runtime suites link C++ and Ada at `-O0` and `-O2`. They check scalar,
   enum, record, union, pointer, reference, and callback calling conventions;
   object size, alignment, and field offsets; ordinary and interface virtual
   dispatch; template qualification, record termination, nested types, explicit
-  alignment, namespace and method identity, anonymous enumeration values, and
+  alignment, namespace and method identity—including enclosing-type
+  collisions—anonymous enumeration values, and
   `char8_t`, 128-bit integers, machine vectors, and opaque pointer-to-member
   values; and the exact behavior of known defects.
 
@@ -47,19 +48,18 @@ patching, and several version- or type-specific omissions. Independent
 problems must become independent patch bundles.
 
 The coverage summary reports both baselines. After the currently accepted
-patches, one atomic case remains non-passing on every supported major.
+patches, all 63 atomic cases pass on every supported major.
 
 The confirmed-history ledger is larger than that residual atomic count:
-fifteen independent C++ mapper defects now have accepted 1.2.0 bundles, no
+sixteen independent C++ mapper defects now have accepted 1.2.0 bundles, no
 confirmed runtime layout defects remain, and one concrete-inheritance form is a
 direct-representation boundary. The following list is only the work still open
 or intentionally bounded, not the complete defect history.
 
 The remaining confirmed inventory is deliberately explicit:
 
-- a generated-spec failure on every tested major: concrete secondary multiple
-  inheritance;
-- tested semantic boundaries rather than hidden mapper successes:
+- tested semantic boundaries rather than hidden mapper successes: concrete
+  secondary multiple inheritance requires a C++ pointer-adjustment facade,
   uninstantiated templates are not emitted, nontrivial standard-library values
   require a facade, and C++ exceptions must not cross the language boundary.
 

@@ -9,7 +9,7 @@ atomic_cases = 63
 pairwise_cases = 16
 pairwise_value_pairs = 88
 grammar_cases = 32
-runtime_suites = 19
+runtime_suites = 20
 dump_modes = ["full", "slim"]
 
 [[features]]
@@ -103,7 +103,15 @@ note = "The dumper maps a pure abstract, data-free secondary base to a limited i
 id = "multiple-inheritance-concrete-secondary"
 category = "inheritance"
 state = "facade-required"
-note = "Ada cannot mirror the concrete secondary-base layout. A C++-compiled facade must perform base-subobject pointer adjustment."
+evidence = "generated/catalog.py:concrete_multiple_inheritance,bundles/cxx-ada-enclosing-type-method-names"
+note = "The generated declaration compiles after the enclosing-type method-name fix, but Ada cannot mirror concrete secondary-base pointer adjustment. A C++-compiled facade must perform that conversion."
+
+[[features]]
+id = "enclosing-type-method-name-collisions"
+category = "name-lookup"
+state = "patched"
+evidence = "bundles/cxx-ada-enclosing-type-method-names"
+note = "Patchset 1.2.0 gives only a method that collides case-insensitively with its enclosing type a stable Method suffix while retaining the C++ external symbol."
 
 [[features]]
 id = "uninstantiated-templates"
