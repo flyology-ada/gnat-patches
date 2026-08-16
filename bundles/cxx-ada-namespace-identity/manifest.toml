@@ -25,11 +25,11 @@ id = "gcc-13-14"
 versions = ["13.2.0", "14.2.0"]
 source_flavors = ["linux", "darwin_arm64"]
 patch = "bundles/cxx-ada-namespace-identity/patches/gcc-13-14.patch"
-sha256 = "f3f767b8cfa8c57a16a6a293bb73f3c33aee25d071649fec8de93176c9418dbb"
+sha256 = "55834857cdc107730093987b55aaa3cba8bfd3d2a3f39bdfd87b2874641d3e35"
 
 [[variants]]
 id = "gcc-15-16"
 versions = ["15.3.0", "16.1.0", "16.2.0"]
 source_flavors = ["linux", "darwin_arm64"]
 patch = "bundles/cxx-ada-namespace-identity/patches/gcc-15-16.patch"
-sha256 = "934cb2a7e718d738125be7de742fd116c0fea10924586b1ef2906a67fc2731f1"
+sha256 = "12499018be993cc202081c84d7bafbab204fa9a17f8b046107b92a1915f77239"

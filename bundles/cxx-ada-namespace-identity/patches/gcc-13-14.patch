@@ -1,7 +1,8 @@
 diff --git a/gcc/c-family/c-ada-spec.cc b/gcc/c-family/c-ada-spec.cc
 --- a/gcc/c-family/c-ada-spec.cc
 +++ b/gcc/c-family/c-ada-spec.cc
-@@ -1327,3 +1327,26 @@ separate_class_package (tree decl)
+@@ -1316,6 +1316,29 @@ to_ada_name (const char *name, bool *space_found)
+   return s;
  }
  
 +/* Dump the named C++ namespace path containing DECL, using underscores as
@@ -27,7 +28,9 @@ diff --git a/gcc/c-family/c-ada-spec.cc b/gcc/c-family/c-ada-spec.cc
 +  free (name);
 +}
 +
- static bool package_prefix = true;
+ /* Return true if DECL refers to a C++ class type for which a
+    separate enclosing package has been or should be generated.  */
+ 
 @@ -1356,12 +1379,15 @@ pp_ada_tree_identifier (pretty_printer *buffer, tree node, tree type,
  	  if (separate_class_package (decl))
  	    {

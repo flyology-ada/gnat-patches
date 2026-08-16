@@ -108,13 +108,14 @@ diff --git a/gcc/c-family/c-ada-spec.cc b/gcc/c-family/c-ada-spec.cc
 +
    free (s);
  }
-@@ -3695,5 +3785,6 @@ dump_ada_specs (void (*collect_all_refs)(const char *),
+@@ -3706,6 +3796,7 @@ dump_ada_specs (void (*collect_all_refs)(const char *),
    bitmap_obstack_initialize (NULL);
  
    overloaded_names = init_overloaded_names ();
 +  casefold_names = new casefold_htable_t (64);
  
    /* Iterate over the list of files to dump specs for.  */
+   for (int i = 0; i < source_refs_used; i++)
 @@ -3707,6 +3798,7 @@ dump_ada_specs (void (*collect_all_refs)(const char *),
    /* Free various tables.  */
    free (source_refs);
