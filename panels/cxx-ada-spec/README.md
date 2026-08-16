@@ -37,7 +37,7 @@ The executable panel currently has four layers:
   `char8_t`, 128-bit integers, machine vectors, and opaque pointer-to-member
   values; and the exact behavior of known defects.
 
-The known-defect layer currently reproduces malformed template records before
+The accepted defect regressions reproduce malformed template records before
 patching, anonymous nested template types before patching, anonymous enum
 omissions before patching, pointer-to-member syntax failures, standalone
 empty-class storage drift, inherited tail-padding drift, explicit alignment
@@ -50,8 +50,8 @@ The coverage summary reports both baselines. After the currently accepted
 patches, one atomic case remains non-passing on every supported major.
 
 The confirmed-history ledger is larger than that residual atomic count:
-fourteen independent C++ mapper defects now have accepted 1.2.0 bundles, one
-runtime layout defect remains, and one concrete-inheritance form is a
+fifteen independent C++ mapper defects now have accepted 1.2.0 bundles, no
+confirmed runtime layout defects remain, and one concrete-inheritance form is a
 direct-representation boundary. The following list is only the work still open
 or intentionally bounded, not the complete defect history.
 
@@ -59,7 +59,6 @@ The remaining confirmed inventory is deliberately explicit:
 
 - a generated-spec failure on every tested major: concrete secondary multiple
   inheritance;
-- a runtime layout defect on every tested major: virtual inheritance;
 - tested semantic boundaries rather than hidden mapper successes:
   uninstantiated templates are not emitted, nontrivial standard-library values
   require a facade, and C++ exceptions must not cross the language boundary.

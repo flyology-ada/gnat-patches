@@ -167,9 +167,9 @@ note = "Patchset 1.2.0 emits the user-specified alignment independently of packe
 [[features]]
 id = "virtual-inheritance-layout"
 category = "inheritance"
-state = "confirmed-layout-defect"
-evidence = "cases/known-defects/virtual_inheritance_layout.C"
-note = "The generated Ada type compiles but does not match the virtual-base object size or alignment."
+state = "patched"
+evidence = "bundles/cxx-ada-virtual-inheritance-layout"
+note = "Patchset 1.2.0 preserves complete size, alignment, direct-member position, and virtual-base position while leaving the hidden ABI pointer as an opaque gap."
 
 [[features]]
 id = "ada-casefold-collisions"

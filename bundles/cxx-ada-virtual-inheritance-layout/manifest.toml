@@ -1,0 +1,42 @@
+schema = 1
+id = "cxx-ada-virtual-inheritance-layout"
+status = "accepted"
+introduced_in_patchset = "1.2.0"
+problem = "The C++ Ada mapper drops the size, alignment, and component positions of classes with virtual bases."
+upstream_issue = "Pending GCC Bugzilla filing."
+affected_versions = ["13.2.0", "14.2.0", "15.3.0", "16.1.0"]
+known_good_versions = []
+source_provenance = "Repository-authored GCC patch and executable regression; exact application verified locally against the pinned Darwin patchset inputs. Pinned FSF release application is required by Linux CI."
+files_modified = ["gcc/c-family/c-ada-spec.cc", "gcc/c-family/c-ada-spec.h", "gcc/cp/decl2.cc", "gcc/testsuite/g++.dg/ada-spec/virtual-inheritance-layout.C"]
+regression_tests = ["gcc/testsuite/g++.dg/ada-spec/virtual-inheritance-layout.C"]
+repository_fixture = "bundles/cxx-ada-virtual-inheritance-layout/tests/virtual-inheritance-layout.C"
+fixture_sha256 = "dd918bb69e1685c3080f20e8f5b0933ac5499009e14536543e4c4ad2b9fa7943"
+repository_test_runner = "bundles/cxx-ada-virtual-inheritance-layout/run-test.sh"
+application_command = "patch --fuzz=0 -p1 -i bundles/cxx-ada-virtual-inheritance-layout/patches/VARIANT.patch"
+build_command = "PATH=/path/to/bootstrap/bin:$PATH ./scripts/build-gnat.sh SOURCE BUILD INSTALL"
+test_command = "./scripts/run-regressions.sh INSTALL 1.2.0 GCC_MAJOR patched"
+expected_failure_before_patch = "The generated Ada object is too small and under-aligned, and both visible components have incorrect positions."
+expected_success_after_patch = "Ada and C++ agree on complete size, alignment, direct-member position, virtual-base position, and cross-language field values at -O0 and -O2."
+upstream_submission_state = "Not yet filed or submitted upstream."
+licensing = "GCC-derived compiler hunks remain GPL-3.0-or-later. The new test is proposed for the GCC testsuite under GCC project terms."
+
+[[variants]]
+id = "gcc-13"
+versions = ["13.2.0"]
+source_flavors = ["linux", "darwin_arm64"]
+patch = "bundles/cxx-ada-virtual-inheritance-layout/patches/gcc-13.patch"
+sha256 = "8c9eaf9d9df6c2898f58974f316828f35404356e8bbc186102ed6461a4e87439"
+
+[[variants]]
+id = "gcc-14"
+versions = ["14.2.0"]
+source_flavors = ["linux", "darwin_arm64"]
+patch = "bundles/cxx-ada-virtual-inheritance-layout/patches/gcc-14.patch"
+sha256 = "7f351af2961bf9c0445fd5244761105f0fc512c42904020805db6a340e4e7116"
+
+[[variants]]
+id = "gcc-15-16"
+versions = ["15.3.0", "16.1.0"]
+source_flavors = ["linux", "darwin_arm64"]
+patch = "bundles/cxx-ada-virtual-inheritance-layout/patches/gcc-15-16.patch"
+sha256 = "41b68968c3ef388f24dc4c294adbd59306f98c0a729584eba7e7321a24c2efc6"

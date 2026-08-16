@@ -27,7 +27,7 @@ suites = [
   "bundles/cxx-ada-member-pointers",
   "bundles/cxx-ada-inherited-tail-padding",
   "bundles/cxx-ada-empty-class-storage",
-  "panels/cxx-ada-spec/cases/known-defects",
+  "bundles/cxx-ada-virtual-inheritance-layout",
 ]
 oracles = [
   "generated Ada compiles",
@@ -38,7 +38,7 @@ oracles = [
   "sizeof and Object_Size agree",
   "alignof and Alignment agree",
   "public field offsets agree",
-  "known defects fail for the classified reason",
+  "accepted defects fail before and pass after their patches",
 ]
 
 [mapper_tree_codes]
