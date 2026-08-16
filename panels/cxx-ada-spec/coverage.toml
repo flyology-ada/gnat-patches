@@ -30,6 +30,7 @@ suites = [
   "bundles/cxx-ada-virtual-inheritance-layout",
   "bundles/cxx-ada-enclosing-type-method-names",
   "bundles/cxx-ada-virtual-diamond-layout",
+  "bundles/cxx-ada-profile-formal-type-names",
 ]
 oracles = [
   "generated Ada compiles",

@@ -1,0 +1,123 @@
+diff --git a/gcc/c-family/c-ada-spec.cc b/gcc/c-family/c-ada-spec.cc
+index 22f1761..6014ac4 100644
+--- a/gcc/c-family/c-ada-spec.cc
++++ b/gcc/c-family/c-ada-spec.cc
+@@ -1734,6 +1734,38 @@ dump_ada_import (pretty_printer *pp, tree t, int spc)
+   pp_string (pp, "\";");
+ }
+ 
++/* Return true if NAME and TYPE use the same Ada identifier.  Strip anonymous
++   pointer and reference layers because the generated profile names their
++   designated type directly.  */
++
++static bool
++identifier_matches_type (tree name, tree type)
++{
++  if (!name || !type || type == error_mark_node)
++    return false;
++
++  while ((TREE_CODE (type) == POINTER_TYPE
++	  || TREE_CODE (type) == REFERENCE_TYPE)
++	 && !TYPE_NAME (type))
++    type = TREE_TYPE (type);
++
++  if (TREE_CODE (type) == FUNCTION_TYPE || !TYPE_NAME (type))
++    return false;
++
++  tree type_name_node = TYPE_NAME (type);
++  if (TREE_CODE (type_name_node) == TYPE_DECL)
++    type_name_node = DECL_NAME (type_name_node);
++  if (!type_name_node || TREE_CODE (type_name_node) != IDENTIFIER_NODE)
++    return false;
++
++  char *decl_ada = to_ada_name (IDENTIFIER_POINTER (name), NULL);
++  char *type_ada = to_ada_name (IDENTIFIER_POINTER (type_name_node), NULL);
++  const bool matches = !strcasecmp (decl_ada, type_ada);
++  free (decl_ada);
++  free (type_ada);
++  return matches;
++}
++
+ /* Check whether T and its type have different names, and append "the_"
+    otherwise in PP.  */
+ 
+@@ -1765,6 +1797,27 @@ check_type_name_conflict (pretty_printer *pp, tree t)
+     }
+ }
+ 
++/* Return true if PARAMETER would hide a type used by its own or a later
++   profile element.  Ada formal parameters are visible through the remainder
++   of the profile, including its return type.  */
++
++static bool
++parameter_name_conflicts_with_profile (tree parameter, tree func,
++				       bool is_constructor)
++{
++  tree name = DECL_NAME (parameter);
++  if (!name)
++    return false;
++
++  for (tree arg = parameter; arg; arg = DECL_CHAIN (arg))
++    if (identifier_matches_type (name, TREE_TYPE (arg)))
++      return true;
++
++  tree return_type = is_constructor
++    ? DECL_CONTEXT (func) : TREE_TYPE (TREE_TYPE (func));
++  return identifier_matches_type (name, return_type);
++}
++
+ /* Dump in PP a function declaration FUNC in Ada syntax.
+    IS_METHOD indicates whether FUNC is a C++ method.
+    IS_CONSTRUCTOR whether FUNC is a C++ constructor.
+@@ -1842,7 +1895,9 @@ dump_ada_function_declaration (pretty_printer *pp, tree func,
+ 	{
+ 	  if (DECL_NAME (arg))
+ 	    {
+-	      check_type_name_conflict (pp, arg);
++	      if (parameter_name_conflicts_with_profile (arg, func,
++						  is_constructor))
++		pp_string (pp, "the_");
+ 	      pp_ada_tree_identifier (pp, DECL_NAME (arg), NULL_TREE,
+ 				      false);
+ 	      pp_string (pp, " : ");
+diff --git a/gcc/testsuite/g++.dg/ada-spec/profile-formal-type-names.C b/gcc/testsuite/g++.dg/ada-spec/profile-formal-type-names.C
+new file mode 100644
+index 0000000..7271ab4
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/ada-spec/profile-formal-type-names.C
+@@ -0,0 +1,35 @@
++/* { dg-do compile } */
++/* { dg-options "-fdump-ada-spec-slim" } */
++/* { dg-final { scan-file profile_formal_type_names_c.ads "function New_Widget \(the_widget : int\)" } } */
++/* { dg-final { scan-file profile_formal_type_names_c.ads "function make_result \(the_result : int\)" } } */
++/* { dg-final { scan-file profile_formal_type_names_c.ads "function inspect \(the_result : int; item : access Result\)" } } */
++
++struct Result
++{
++  int value;
++};
++
++struct Widget
++{
++  Widget (int widget);
++  int value;
++};
++
++Widget::Widget (int widget) : value (widget) {}
++
++extern "C" Result *make_result (int result)
++{
++  return new Result { result };
++}
++
++extern "C" int inspect (int result, Result *item)
++{
++  return result + item->value;
++}
++
++extern "C" void delete_result (Result *item)
++{
++  delete item;
++}
++
++/* { dg-final { cleanup-ada-spec } } */

@@ -9,7 +9,7 @@ atomic_cases = 63
 pairwise_cases = 16
 pairwise_value_pairs = 88
 grammar_cases = 32
-runtime_suites = 21
+runtime_suites = 22
 dump_modes = ["full", "slim"]
 
 [[features]]
@@ -112,6 +112,13 @@ category = "name-lookup"
 state = "patched"
 evidence = "bundles/cxx-ada-enclosing-type-method-names"
 note = "Patchset 1.2.0 gives only a method that collides case-insensitively with its enclosing type a stable Method suffix while retaining the C++ external symbol."
+
+[[features]]
+id = "profile-formal-type-name-collisions"
+category = "name-lookup"
+state = "patched"
+evidence = "bundles/cxx-ada-profile-formal-type-names"
+note = "Patchset 1.2.0 prefixes a formal when its Ada identifier would hide its own type, a later formal's type, or the result type."
 
 [[features]]
 id = "uninstantiated-templates"

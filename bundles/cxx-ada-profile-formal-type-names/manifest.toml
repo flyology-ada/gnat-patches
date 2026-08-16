@@ -1,0 +1,35 @@
+schema = 1
+id = "cxx-ada-profile-formal-type-names"
+status = "accepted"
+introduced_in_patchset = "1.2.0"
+problem = "A C++ formal parameter can hide a type used later in the generated Ada subprogram profile, causing GNAT to reject the binding."
+upstream_issue = "Pending GCC Bugzilla filing."
+affected_versions = ["13.2.0", "14.2.0", "15.3.0", "16.1.0"]
+known_good_versions = []
+source_provenance = "Repository-authored GCC patch and executable regression; exact application verified locally against the pinned Darwin patchset inputs. Pinned FSF release application is required by Linux CI."
+files_modified = ["gcc/c-family/c-ada-spec.cc", "gcc/testsuite/g++.dg/ada-spec/profile-formal-type-names.C"]
+regression_tests = ["gcc/testsuite/g++.dg/ada-spec/profile-formal-type-names.C"]
+repository_fixture = "bundles/cxx-ada-profile-formal-type-names/tests/profile-formal-type-names.C"
+fixture_sha256 = "f8384a7b9c1d6edbf03e0c12c4a27bc6009a93f16696f2ef6e3b8d941d968576"
+repository_test_runner = "bundles/cxx-ada-profile-formal-type-names/run-test.sh"
+application_command = "patch --fuzz=0 -p1 -i bundles/cxx-ada-profile-formal-type-names/patches/VARIANT.patch"
+build_command = "PATH=/path/to/bootstrap/bin:$PATH ./scripts/build-gnat.sh SOURCE BUILD INSTALL"
+test_command = "./scripts/run-regressions.sh INSTALL 1.2.0 GCC_MAJOR patched"
+expected_failure_before_patch = "GNAT rejects a constructor, result-returning function, and later-formal profile because an earlier formal hides an Ada type name."
+expected_success_after_patch = "Only formals that hide their own or a later profile type receive a stable the_ prefix, and the generated binding compiles, links, and executes at -O0 and -O2."
+upstream_submission_state = "Not yet filed or submitted upstream."
+licensing = "GCC-derived compiler hunks remain GPL-3.0-or-later. The new test is proposed for the GCC testsuite under GCC project terms."
+
+[[variants]]
+id = "gcc-13-14"
+versions = ["13.2.0", "14.2.0"]
+source_flavors = ["linux", "darwin_arm64"]
+patch = "bundles/cxx-ada-profile-formal-type-names/patches/gcc-13-14.patch"
+sha256 = "5b610371119c0263e5509fc35a66d05b2cf0379e6ae533c0e55befcdf7e06835"
+
+[[variants]]
+id = "gcc-15-16"
+versions = ["15.3.0", "16.1.0"]
+source_flavors = ["linux", "darwin_arm64"]
+patch = "bundles/cxx-ada-profile-formal-type-names/patches/gcc-15-16.patch"
+sha256 = "ee55fac0a61b8704e6286b09b0fae2f0a9c63cbf40e978759f715d0b25d376a5"
