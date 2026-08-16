@@ -183,6 +183,7 @@ not_yet_covered = [
   "three-way and higher feature interactions beyond the pairwise generator",
   "runtime ABI execution for every compile-only atomic catalog entry",
   "portable recovery of a propagated exception's C++ language identity across GNAT runtime versions",
+  "Linux AArch64 long double call interoperability on GNAT releases whose Ada and C++ target conventions disagree",
   "instrumented branch coverage measurement for c-ada-spec.cc",
   "mutation testing that proves each mapper branch has a sensitive oracle",
   "coverage-guided grammar fuzzing with automatic failure minimization",

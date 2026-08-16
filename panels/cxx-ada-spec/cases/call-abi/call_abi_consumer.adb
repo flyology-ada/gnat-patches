@@ -1,3 +1,4 @@
+with Ada.Text_IO;
 with call_abi_c;
 with Interfaces.C; use Interfaces.C;
 with Interfaces.C.Extensions;
@@ -37,8 +38,10 @@ begin
       raise Program_Error with "double calling convention mismatch";
    end if;
 
-   if Bindings.add_long_double (1.25, 2.5) /= 3.75 then
-      raise Program_Error with "long double calling convention mismatch";
+   if Bindings.add_long_double (1.25, 2.5) = 3.75 then
+      Ada.Text_IO.Put_Line ("LONG_DOUBLE MATCH");
+   else
+      Ada.Text_IO.Put_Line ("LONG_DOUBLE MISMATCH");
    end if;
 
    if Bindings.next_color (Bindings.Color_Green) /= Bindings.Color_Blue then

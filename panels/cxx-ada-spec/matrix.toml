@@ -176,6 +176,13 @@ evidence = "bundles/cxx-ada-qualified-method-names,generated/catalog.py:noexcept
 note = "Patchset 1.2.0 preserves cv-qualified method identity in stable Ada suffixes; noexcept/default arguments compile."
 
 [[features]]
+id = "scalar-call-abi"
+category = "runtime"
+state = "verified-with-target-boundary"
+evidence = "panels/cxx-ada-spec/cases/call-abi"
+note = "Boolean, signed-char, unsigned-long-long, float, and double mappings execute at both optimization levels. Long double also executes and must match except on Linux AArch64 toolchains where GNAT and C++ use incompatible target calling conventions; that explicit boundary does not suppress the remaining ABI oracles."
+
+[[features]]
 id = "enums-bitfields-unions"
 category = "data-layout"
 state = "verified-runtime"

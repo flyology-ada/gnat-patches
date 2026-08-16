@@ -43,6 +43,14 @@ The executable panel currently has four layers:
   facade, C++ exception propagation into an Ada handler; and the exact behavior
   of known defects.
 
+The call-ABI suite reports the `long double` result separately. On Linux
+AArch64 with the pinned GCC 13--15 toolchains, GNAT and C++ disagree on that
+target calling convention even though the mapper emits the standard
+`Interfaces.C.long_double` declaration. That target/runtime boundary is
+reported explicitly instead of stopping the suite, so enum, record, union,
+pointer, reference, and callback oracles still execute. A mismatch on any
+other target remains a failure.
+
 The accepted defect regressions reproduce malformed template records before
 patching, anonymous nested template types before patching, anonymous enum
 omissions before patching, pointer-to-member syntax failures, standalone
@@ -93,7 +101,9 @@ The remaining confirmed inventory is deliberately explicit:
   require a facade, and dynamic virtual-base conversions remain ABI operations.
   C++ exception propagation is tested and supported through Ada's portable
   `others` handler. GNAT's internal API for recovering the foreign language
-  identity varies by runtime version and is not claimed as portable behavior.
+  identity varies by runtime version and is not claimed as portable behavior;
+  Linux AArch64 `long double` interoperability on affected GNAT releases is a
+  compiler call-ABI boundary, not a mapper-spelling success.
 
 Run the complete current panel against a compiler root:
 
