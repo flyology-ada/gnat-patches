@@ -52,7 +52,7 @@ jobs:
         with:
           python-version: '3.12'
       - name: Install build dependencies
-        timeout-minutes: 10
+        timeout-minutes: 25
         run: |
           ./ci/apt-get-update.sh
           sudo apt-get install -y build-essential flex bison texinfo zlib1g-dev
@@ -124,7 +124,7 @@ jobs:
 
       - name: Install Linux build dependencies
         if: runner.os == 'Linux'
-        timeout-minutes: 10
+        timeout-minutes: 25
         run: |
           ./ci/apt-get-update.sh
           sudo apt-get install -y build-essential flex bison gawk texinfo \
@@ -135,7 +135,7 @@ jobs:
 
       - name: Install macOS build dependencies
         if: runner.os == 'macOS'
-        timeout-minutes: 10
+        timeout-minutes: 25
         run: brew install gcc gmp mpfr libmpc
 
       - name: Select pinned Xcode
@@ -160,7 +160,7 @@ jobs:
           key: downloads-${{ runner.os }}-${{ runner.arch }}-${{ matrix.version }}-${{ hashFiles('sources/*.toml', 'ci/bootstrap.tsv') }}
 
       - name: Resolve bootstrap compiler
-        timeout-minutes: 10
+        timeout-minutes: 25
         run: |
           bootstrap=$(./scripts/fetch-bootstrap.sh "${{ matrix.version }}" work/bootstrap)
           echo "BOOTSTRAP_ROOT=$bootstrap" >> "$GITHUB_ENV"
@@ -173,7 +173,7 @@ jobs:
             1.1.0 "${{ matrix.major }}" unpatched
 
       - name: Fetch pinned GCC source
-        timeout-minutes: 10
+        timeout-minutes: 25
         run: ./scripts/fetch-source.sh "${{ matrix.version }}" work/source
 
       - name: Build unpatched GCC 16.2 control

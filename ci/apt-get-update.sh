@@ -5,8 +5,15 @@ set -euo pipefail
 # repository builds compilers: an unbounded stall is indistinguishable from slow
 # but legitimate progress. Bound every attempt so a hung mirror is reported as a
 # retryable failure, and retry a fixed number of times before giving up.
+#
+# The bound exists to catch a mirror that has stopped responding, not one that is
+# merely slow. A healthy update finishes in seconds, but a degraded mirror can
+# still be transferring indexes minutes later, so the per-attempt budget is set
+# far above the healthy case: 120s was observed cutting off an update that was
+# downloading normally. Every attempt plus its delay has to fit inside the
+# calling step's timeout-minutes alongside the install that follows.
 attempts=${APT_UPDATE_ATTEMPTS:-3}
-attempt_seconds=${APT_UPDATE_TIMEOUT:-120}
+attempt_seconds=${APT_UPDATE_TIMEOUT:-300}
 delay=${APT_UPDATE_DELAY:-15}
 
 attempt=1
