@@ -25,7 +25,7 @@ checksum-pinned upstream sources and proves them with source builds.
 ## Current patchset
 
 Patchset `1.2.0` is the current repository candidate for GCC 13, 14, 15, and
-16. It contains seventeen independent corrections, each with its own executable
+16. It contains eighteen independent corrections, each with its own executable
 regression. Patchset `1.1.0` remains the latest published release until the
 `1.2.0` validation and publication workflows complete.
 
@@ -98,6 +98,10 @@ Seven further C++ mapper bundles are curated here but deliberately held out of
   use-visible from another generated class package, making later Ada profiles
   ambiguous. Only a method matching a visible generated type receives a stable
   `_Method` suffix. GCC 13 through 16 are affected.
+- `predicate-conditional-aggregate-box`: relocating a delayed conditional
+  expression into a reference, in order to apply a `Dynamic_Predicate` check,
+  leaves the boxed aggregates in its branches unexpanded and aborts the
+  compiler. GCC 15 and 16 are affected; GCC 13 and 14 are known-good controls.
 
 | Bundle | 13.2.0 | 14.2.0 | 15.3.0 | 16.2.0 |
 | --- | --- | --- | --- | --- |
@@ -118,10 +122,13 @@ Seven further C++ mapper bundles are curated here but deliberately held out of
 | `cxx-ada-profile-formal-type-names` | affected | affected | affected | affected |
 | `cxx-ada-visible-type-method-names` | affected | affected | affected | affected |
 | `cxx-ada-int128-types` | affected | affected | known-good control | known-good control |
+| `predicate-conditional-aggregate-box` | known-good control | known-good control | affected | affected |
 | **Patchset 1.2.0** | patched toolchain | patched toolchain | patched toolchain | validation candidate |
 
-GCC 13 was an unpatched control in patchset `1.0.1` because the only bundle at
-that time did not affect it. It carries a real code patch in `1.1.0`.
+Patchset `1.1.0`, which contains the first two bundles, is the published
+patchset. GCC 13 was an unpatched control in patchset `1.0.1` because the only
+bundle at that time did not affect it; it carries a real code patch from
+`1.1.0` onwards.
 
 Each canonical patch is required to apply with `patch --fuzz=0` to the pinned
 FSF release sources and to the pinned Darwin-maintainer sources of every GCC
@@ -181,6 +188,12 @@ runner distinguishes the three states:
 A `patched` panel run makes no claim about a staged subject and reports those
 suites as skipped. `scripts/package-patchset.sh` and the release workflow never
 see a staged bundle.
+
+The `predicate-conditional-aggregate-box` abort was measured on
+`aarch64-apple-darwin` only before the bundle was written. It is an abort in
+the target-independent front end, so no target-specific behaviour is claimed
+for it; the Linux x86-64 and AArch64 lanes of patchset `1.2.0` are its first
+Linux measurement.
 
 ### Target-dependent protected `Duration` failure
 
@@ -397,6 +410,11 @@ gnat_flyology_native=16.1.0-patchset.1.1.0
 The GCC 16.2 validation candidate will add
 `gnat_flyology_native=16.2.0-patchset.1.1.0` without replacing the immutable
 16.1 release.
+
+Patchset `1.2.0` adds the `predicate-conditional-aggregate-box` correction on
+top of those two bundles and is not published yet. Its releases will add
+`gnat_flyology_native=<gcc-version>-patchset.1.2.0` entries without replacing
+any immutable `1.1.0` release.
 
 The Alire crate configures `PATH` and the platform library paths. A project may
 select `gprbuild` separately through its usual Alire toolchain configuration.

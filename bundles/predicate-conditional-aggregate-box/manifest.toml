@@ -1,0 +1,29 @@
+schema = 1
+id = "predicate-conditional-aggregate-box"
+status = "accepted"
+standalone_patch = true
+introduced_in_patchset = "1.2.0"
+problem = "Relocating a delayed conditional expression into a reference for a predicate check leaves its boxed aggregates unexpanded."
+upstream_issue = "https://github.com/flyology-ada/gnat-patches/issues/4"
+affected_versions = ["15.3.0", "16.1.0", "16.2.0"]
+known_good_versions = ["13.2.0", "14.2.0"]
+source_provenance = "Reduced reproducer, version sweep, and necessary ingredients recorded in the gnat-patches issue; correction derived from the pinned GCC sources. The pinned FSF and Darwin gcc/ada/exp_util.adb blobs are identical for every declared release, so a single canonical patch covers both source flavors."
+files_modified = ["gcc/ada/exp_util.adb", "gcc/testsuite/gnat.dg/predicate_conditional_aggregate_box.adb"]
+regression_tests = ["gcc/testsuite/gnat.dg/predicate_conditional_aggregate_box.adb"]
+repository_fixture = "bundles/predicate-conditional-aggregate-box/tests/predicate_conditional_aggregate_box.adb"
+fixture_sha256 = "6b50c3a458c708697c43add1f9f292feba7f75b99c90fb9e606f3da58cb8f162"
+repository_test_runner = "bundles/predicate-conditional-aggregate-box/run-test.sh"
+application_command = "patch --fuzz=0 -p1 -i bundles/predicate-conditional-aggregate-box/patches/gcc-15-16.patch"
+build_command = "PATH=/path/to/bootstrap/bin:$PATH ./scripts/build-gnat.sh SOURCE BUILD INSTALL"
+test_command = "./scripts/run-regressions.sh INSTALL 1.2.0 GCC_MAJOR patched"
+expected_failure_before_patch = "GCC 15 and 16 abort with a GNAT BUG DETECTED box reporting 'in gnat_to_gnu, at ada/gcc-interface/trans.cc' and produce no executable, at -O0 and -O2 alike. The defect is in the target-independent front end and was measured on aarch64-apple-darwin only; the Linux lanes of this patchset are the first measurement on x86-64 and AArch64 Linux."
+expected_success_after_patch = "The executable test prints PASS predicate conditional aggregate box at -O0 and -O2, having checked that each box supplied the component default High = 25 and that two violating branches still raised Assertion_Error."
+upstream_submission_state = "Tracked for GCC Bugzilla filing and gcc-patches submission; no GCC PR or mailing-list archive is recorded yet."
+licensing = "GCC-derived compiler hunks remain GPL-3.0-or-later. The new test is proposed for the GCC testsuite under GCC project terms."
+
+[[variants]]
+id = "gcc-15-16"
+versions = ["15.3.0", "16.1.0", "16.2.0"]
+source_flavors = ["linux", "darwin_arm64"]
+patch = "bundles/predicate-conditional-aggregate-box/patches/gcc-15-16.patch"
+sha256 = "bbf48d37722fa7c3846c7a7cf716f8a60f02cecde3c4cffea63b663cf3b079a8"
