@@ -47,6 +47,7 @@ jobs:
           python-version: '3.12'
 
       - name: Require a successful source-build matrix
+        timeout-minutes: 10
         run: |
           run_id=$(gh run list --workflow validate.yml --commit "$GITHUB_SHA" \
             --status success --limit 1 --json databaseId \
@@ -75,11 +76,13 @@ jobs:
           echo "value=$source_version" >> "$GITHUB_OUTPUT"
 
       - name: Check aggregate against pinned source
+        timeout-minutes: 10
         run: |
           ./scripts/fetch-source.sh "$SOURCE_VERSION" work/source
           ./scripts/apply-patchset.sh "${{ inputs.patchset_version }}" "${{ inputs.gcc_major }}" work/source
 
       - name: Package complete aggregate
+        timeout-minutes: 10
         run: |
           ./scripts/package-patchset.sh \
             "${{ inputs.patchset_version }}" "${{ inputs.gcc_major }}" dist/release
@@ -91,6 +94,7 @@ jobs:
             >"dist/release/$archive.sha512"
 
       - name: Download validated native toolchains
+        timeout-minutes: 10
         run: |
           for platform in linux-x86_64 linux-aarch64 macos-aarch64; do
             destination="dist/toolchains/$platform"
@@ -169,10 +173,12 @@ jobs:
       - name: Check out patchsets
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
       - name: Set up Alire
+        timeout-minutes: 10
         uses: alire-project/setup-alire@fc4c8ce471aa30b3af0d39ce15add1ee9eaf28f2 # v6.0.0
         with:
           version: 2.1.1
       - name: Build candidate index
+        timeout-minutes: 10
         run: |
           patchset="${{ inputs.patchset_version }}"
           major="${{ inputs.gcc_major }}"
