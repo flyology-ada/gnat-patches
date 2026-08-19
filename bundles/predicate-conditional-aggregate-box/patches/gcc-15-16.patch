@@ -1,0 +1,274 @@
+diff --git a/gcc/ada/exp_util.adb b/gcc/ada/exp_util.adb
+--- a/gcc/ada/exp_util.adb
++++ b/gcc/ada/exp_util.adb
+@@ -12344,6 +12344,11 @@
+       --  that other side effects related to volatile variables are handled
+       --  separately.
+ 
++      procedure Undelay_Conditional_Expression (N : Node_Id);
++      --  N is a conditional expression whose expansion has been delayed,
++      --  possibly wrapped in qualified expressions. Cancel the delay for N
++      --  and for its dependent expressions, and schedule them for reanalysis.
++
+       ---------------------
+       -- Build_Temporary --
+       ---------------------
+@@ -12467,6 +12472,80 @@
+          end if;
+       end Possible_Side_Effect_In_SPARK;
+ 
++      ------------------------------------
++      -- Undelay_Conditional_Expression --
++      ------------------------------------
++
++      procedure Undelay_Conditional_Expression (N : Node_Id) is
++
++         procedure Undelay_Dependent_Expression (Expr : Node_Id);
++         --  Cancel the delayed expansion of the dependent expression Expr
++
++         ----------------------------------
++         -- Undelay_Dependent_Expression --
++         ----------------------------------
++
++         procedure Undelay_Dependent_Expression (Expr : Node_Id) is
++         begin
++            if Is_Delayed_Aggregate (Expr) then
++               if Nkind (Expr) = N_Qualified_Expression then
++                  Set_Expansion_Delayed (Expression (Expr), False);
++                  Set_Analyzed (Expression (Expr), False);
++               else
++                  Set_Expansion_Delayed (Expr, False);
++               end if;
++
++               Set_Analyzed (Expr, False);
++
++            elsif Is_Delayed_Conditional_Expression (Expr) then
++               Undelay_Conditional_Expression (Expr);
++            end if;
++         end Undelay_Dependent_Expression;
++
++         --  Local variables
++
++         Alt  : Node_Id;
++         Expr : Node_Id := N;
++
++      --  Start of processing for Undelay_Conditional_Expression
++
++      begin
++         --  Is_Delayed_Conditional_Expression looks through qualified
++         --  expressions surrounding conditional expressions, so we need to
++         --  reset the Analyzed flag on them as well.
++
++         loop
++            Set_Analyzed (Expr, False);
++
++            exit when Nkind (Expr) in N_Case_Expression | N_If_Expression;
++
++            pragma Assert (Nkind (Expr) = N_Qualified_Expression);
++            Expr := Expression (Expr);
++         end loop;
++
++         Set_Expansion_Delayed (Expr, False);
++
++         --  The dependent expressions have been delayed along with the
++         --  conditional expression itself, so they must be undelayed too.
++
++         if Nkind (Expr) = N_If_Expression then
++            Alt := Next (First (Expressions (Expr)));
++
++            while Present (Alt) loop
++               Undelay_Dependent_Expression (Alt);
++               Next (Alt);
++            end loop;
++
++         else
++            Alt := First (Alternatives (Expr));
++
++            while Present (Alt) loop
++               Undelay_Dependent_Expression (Expression (Alt));
++               Next (Alt);
++            end loop;
++         end if;
++      end Undelay_Conditional_Expression;
++
+       --  Local variables
+ 
+       Loc          : constant Source_Ptr      := Sloc (Exp);
+@@ -12875,6 +12954,15 @@
+             end if;
+ 
+             Set_Analyzed (E, False);
++
++         --  The expansion of a conditional expression is likewise delayed
++         --  when one of its dependent expressions is a nested aggregate, and
++         --  is then driven by the parent construct. The reference built just
++         --  above is not such a construct, so the conditional expression and
++         --  its dependent expressions must be fully expanded here as well.
++
++         elsif Is_Delayed_Conditional_Expression (E) then
++            Undelay_Conditional_Expression (E);
+          end if;
+ 
+          Insert_Action (Exp,
+diff --git a/gcc/testsuite/gnat.dg/predicate_conditional_aggregate_box.adb b/gcc/testsuite/gnat.dg/predicate_conditional_aggregate_box.adb
+new file mode 100644
+--- /dev/null
++++ b/gcc/testsuite/gnat.dg/predicate_conditional_aggregate_box.adb
+@@ -0,0 +1,157 @@
++--  { dg-do run }
++--  { dg-options "-O2 -gnat2022" }
++
++pragma Assertion_Policy (Dynamic_Predicate => Check);
++
++with Ada.Assertions; use Ada.Assertions;
++with Ada.Text_IO;    use Ada.Text_IO;
++
++procedure Predicate_Conditional_Aggregate_Box is
++
++   type Policy is record
++      Low  : Natural := 1;
++      High : Natural := 25;
++   end record
++     with Dynamic_Predicate => Policy.High >= Policy.Low;
++
++   type Config is record
++      Watch : Policy;
++   end record;
++
++   Static_Flag : constant Boolean := True;
++
++   Enforced : Natural := 0;
++   --  Number of predicate violations reported at run time
++
++   function Ident (Value : Boolean) return Boolean;
++   --  Identity function, used to keep the condition of a conditional
++   --  expression from being known at compile time.
++
++   procedure Check (Label : String; Actual, Expected : Natural);
++   --  Report a mismatch between an observed and an expected component value
++
++   procedure Verify (C : Config; Label : String; Low, High : Natural);
++   --  Check both components of the inner record of C
++
++   -----------
++   -- Check --
++   -----------
++
++   procedure Check (Label : String; Actual, Expected : Natural) is
++   begin
++      if Actual /= Expected then
++         raise Program_Error with
++           Label & " is" & Natural'Image (Actual)
++             & " instead of" & Natural'Image (Expected);
++      end if;
++   end Check;
++
++   -----------
++   -- Ident --
++   -----------
++
++   function Ident (Value : Boolean) return Boolean is
++   begin
++      return Value;
++   end Ident;
++
++   ------------
++   -- Verify --
++   ------------
++
++   procedure Verify (C : Config; Label : String; Low, High : Natural) is
++   begin
++      Check (Label & " low", C.Watch.Low, Low);
++      Check (Label & " high", C.Watch.High, High);
++   end Verify;
++
++begin
++   --  A box in a branch of a conditional expression that is a component
++   --  association of an enclosing aggregate must supply the component
++   --  defaults of the inner record type, here High => 25.
++
++   --  Static condition, others box, object declaration
++
++   declare
++      C : constant Config :=
++        (Watch => (if Static_Flag then (Low => 1, others => <>)
++                                  else (Low => 2, others => <>)));
++   begin
++      Verify (C, "static others box", Low => 1, High => 25);
++   end;
++
++   --  Dynamic condition, named component box, object declaration
++
++   declare
++      C : constant Config :=
++        (Watch => (if Ident (True) then (Low => 3, High => <>)
++                                   else (Low => 4, High => <>)));
++   begin
++      Verify (C, "dynamic named box", Low => 3, High => 25);
++   end;
++
++   --  Dynamic condition, others box, assignment statement
++
++   declare
++      C : Config;
++   begin
++      C := (Watch => (if Ident (False) then (Low => 5, others => <>)
++                                       else (Low => 6, others => <>)));
++      Verify (C, "assigned others box", Low => 6, High => 25);
++   end;
++
++   --  Dynamic condition, named component box, assignment statement
++
++   declare
++      C : Config;
++   begin
++      C := (Watch => (if Ident (True) then (Low => 7, High => <>)
++                                      else (Low => 8, High => <>)));
++      Verify (C, "assigned named box", Low => 7, High => 25);
++   end;
++
++   --  Case expression, others box, object declaration
++
++   declare
++      C : constant Config :=
++        (Watch => (case Ident (True) is
++                      when True  => (Low => 9, others => <>),
++                      when False => (Low => 10, others => <>)));
++   begin
++      Verify (C, "case others box", Low => 9, High => 25);
++   end;
++
++   --  The predicate must still be enforced on the selected branch, in an
++   --  object declaration and in an assignment statement alike. The defaulted
++   --  High is 25, so a Low above it violates Policy.High >= Policy.Low.
++
++   begin
++      declare
++         C : constant Config :=
++           (Watch => (if Ident (True) then (Low => 30, others => <>)
++                                      else (Low => 2, others => <>)));
++      begin
++         Verify (C, "unenforced declaration", Low => 30, High => 25);
++      end;
++   exception
++      when Assertion_Error =>
++         Enforced := Enforced + 1;
++   end;
++
++   begin
++      declare
++         C : Config;
++      begin
++         C := (Watch => (if Ident (False) then (Low => 1, others => <>)
++                                          else (Low => 40, High => <>)));
++         Verify (C, "unenforced assignment", Low => 40, High => 25);
++      end;
++   exception
++      when Assertion_Error =>
++         Enforced := Enforced + 1;
++   end;
++
++   Check ("enforced predicate violations", Enforced, 2);
++
++   Put_Line ("PASS predicate conditional aggregate box");
++end Predicate_Conditional_Aggregate_Box;
