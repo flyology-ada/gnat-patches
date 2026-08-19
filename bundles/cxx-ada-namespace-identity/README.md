@@ -23,17 +23,20 @@ type c_Entry is record
 end record;
 ```
 
-The corrected output preserves the C++ hierarchy as nested Ada packages:
+The corrected output preserves the C++ hierarchy as nested Ada packages. The
+`c_` prefix that keeps `entry` from colliding with the Ada reserved word is
+unchanged; what the patch adds is the enclosing package, which is what makes
+the two declarations distinct:
 
 ```ada
 package left is
-   type Entry is record
+   type c_Entry is record
       value : aliased int;
    end record;
 end left;
 
 package right is
-   type Entry is record
+   type c_Entry is record
       value : aliased double;
    end record;
 end right;
