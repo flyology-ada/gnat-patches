@@ -18,6 +18,14 @@ artifacts.
   tree identity. Do not substitute a nearby tag or branch tip.
 - A patchset release contains every accepted bundle applicable to its declared
   GCC major. `scripts/manifest.py validate-patchset` is authoritative.
+- A bundle held out of the published patchset is `status = "staged"`. Staging
+  changes nothing about the evidence: the bundle still needs patch variants for
+  every affected release, an executable `-O0`/`-O2` before/after regression, a
+  README with the offending C++ and both Ada outputs, matrix evidence, and a
+  panel ledger entry. Record `staged_reason` and any `staged_depends_on`, list
+  it in the patchset's `staged_bundles`, and never in `bundles` or
+  `control_tests`. A `patched` regression or panel run must make no claim about
+  a staged subject.
 - Patchset publication is gated by both patchset version and GCC major. Do not
   publish from a tag alone and do not overwrite an existing release.
 - Alire toolchain assets are outputs of successful source-build lanes, not

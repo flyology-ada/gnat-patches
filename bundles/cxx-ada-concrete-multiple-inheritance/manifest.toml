@@ -1,7 +1,9 @@
 schema = 1
 id = "cxx-ada-concrete-multiple-inheritance"
-status = "accepted"
-introduced_in_patchset = "1.2.0"
+status = "staged"
+staged_in_patchset = "1.2.0"
+staged_reason = "Concrete secondary bases are represented as fixed nested as-base storage rather than native Ada multiple inheritance, so the binding is ABI-faithful but not fully type-safe. Held out of the published patchset for separate upstream review."
+staged_depends_on = ["cxx-ada-virtual-inheritance-layout", "cxx-ada-virtual-diamond-layout"]
 problem = "The C++ Ada mapper emits multiple concrete tagged bases as illegal Ada progenitors and omits their secondary subobject storage."
 upstream_issue = "Pending GCC Bugzilla filing."
 affected_versions = ["13.2.0", "14.2.0", "15.3.0", "16.1.0", "16.2.0"]

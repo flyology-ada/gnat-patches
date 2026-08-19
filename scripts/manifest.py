@@ -124,21 +124,55 @@ def extract_added_file(patch: pathlib.Path, target: str) -> bytes:
     return b"".join(result)
 
 
-def accepted_bundles() -> dict[str, dict]:
+BUNDLE_STATUSES = ("accepted", "staged")
+
+
+def curated_bundles() -> dict[str, dict]:
+    """Every bundle this repository curates, accepted or staged."""
+
     result = {}
     for path in sorted((ROOT / "bundles").glob("*/manifest.toml")):
         bundle = load(path)
         bundle_id = bundle.get("id")
         if not bundle_id or bundle_id in result:
             raise ManifestError(f"invalid or duplicate bundle id in {path.relative_to(ROOT)}")
-        if bundle.get("status") == "accepted":
-            result[bundle_id] = bundle
+        if bundle.get("status") not in BUNDLE_STATUSES:
+            raise ManifestError(
+                f"bundle {bundle_id} status must be one of {list(BUNDLE_STATUSES)}"
+            )
+        result[bundle_id] = bundle
     return result
+
+
+def with_status(bundles: dict[str, dict], status: str) -> dict[str, dict]:
+    return {
+        bundle_id: bundle
+        for bundle_id, bundle in bundles.items()
+        if bundle["status"] == status
+    }
+
+
+def bundle_release_key(bundle: dict) -> tuple[int, int, int]:
+    """The patchset release a bundle is scheduled against, by status."""
+
+    field = "introduced_in_patchset" if bundle["status"] == "accepted" else "staged_in_patchset"
+    return patchset_key(bundle.get(field))
 
 
 def validate_bundle(bundle: dict) -> None:
     bundle_id = bundle["id"]
-    patchset_key(bundle.get("introduced_in_patchset"))
+    bundle_release_key(bundle)
+    if bundle["status"] == "accepted":
+        if "staged_in_patchset" in bundle:
+            raise ManifestError(f"accepted bundle {bundle_id} declares staged_in_patchset")
+    else:
+        if "introduced_in_patchset" in bundle:
+            raise ManifestError(f"staged bundle {bundle_id} declares introduced_in_patchset")
+        if not bundle.get("staged_reason"):
+            raise ManifestError(f"staged bundle {bundle_id} has no staged_reason")
+        for dependency in bundle.get("staged_depends_on", []):
+            if dependency == bundle_id:
+                raise ManifestError(f"staged bundle {bundle_id} depends on itself")
     tests = bundle.get("regression_tests", [])
     if not tests:
         raise ManifestError(f"accepted bundle {bundle_id} has no regression tests")
@@ -170,6 +204,16 @@ def validate_bundle(bundle: dict) -> None:
         source_path(version)
 
 
+def applicable(
+    bundles: dict[str, dict], release_key: tuple[int, int, int], version: str, field: str
+) -> list[str]:
+    return sorted(
+        bundle_id
+        for bundle_id, bundle in bundles.items()
+        if bundle_release_key(bundle) <= release_key and version in bundle.get(field, [])
+    )
+
+
 def validate_patchset(version: str, major: int, bundles: dict[str, dict]) -> dict:
     patchset = load(patchset_path(version, major))
     release_key = patchset_key(version)
@@ -178,30 +222,48 @@ def validate_patchset(version: str, major: int, bundles: dict[str, dict]) -> dic
     source = load(source_path(patchset["source_version"]))
     if source.get("major") != major:
         raise ManifestError(f"source major mismatch for {version}/gcc-{major}")
-    expected = sorted(
-        bundle_id
-        for bundle_id, bundle in bundles.items()
-        if patchset_key(bundle["introduced_in_patchset"]) <= release_key
-        and patchset["source_version"] in bundle.get("affected_versions", [])
-    )
+    accepted = with_status(bundles, "accepted")
+    staged = with_status(bundles, "staged")
+    source_version = patchset["source_version"]
+    expected = applicable(accepted, release_key, source_version, "affected_versions")
     declared = patchset.get("bundles", [])
     if len(declared) != len(set(declared)) or sorted(declared) != expected:
         raise ManifestError(
             f"{version}/gcc-{major} must contain every accepted applicable bundle: {expected}"
         )
     controls = patchset.get("control_tests", [])
-    expected_controls = sorted(
-        bundle_id
-        for bundle_id, bundle in bundles.items()
-        if patchset_key(bundle["introduced_in_patchset"]) <= release_key
-        and patchset["source_version"] in bundle.get("known_good_versions", [])
+    expected_controls = applicable(
+        accepted, release_key, source_version, "known_good_versions"
     )
     if sorted(controls) != expected_controls:
         raise ManifestError(
             f"{version}/gcc-{major} control list must be exactly {expected_controls}"
         )
-    for bundle_id in declared:
-        selected_variant(bundles[bundle_id], patchset["source_version"])
+    expected_staged = applicable(staged, release_key, source_version, "affected_versions")
+    declared_staged = patchset.get("staged_bundles", [])
+    if (
+        len(declared_staged) != len(set(declared_staged))
+        or sorted(declared_staged) != expected_staged
+    ):
+        raise ManifestError(
+            f"{version}/gcc-{major} staged list must be exactly {expected_staged}"
+        )
+    if set(declared_staged) & set(declared + controls):
+        raise ManifestError(
+            f"{version}/gcc-{major} lists a staged bundle as a patchset bundle or control"
+        )
+    for bundle_id in declared_staged:
+        missing = [
+            dependency
+            for dependency in bundles[bundle_id].get("staged_depends_on", [])
+            if dependency not in declared_staged
+        ]
+        if missing:
+            raise ManifestError(
+                f"{version}/gcc-{major} stages {bundle_id} without its prerequisites: {missing}"
+            )
+    for bundle_id in declared + declared_staged:
+        selected_variant(bundles[bundle_id], source_version)
     return patchset
 
 
@@ -213,9 +275,19 @@ def validate_all(version: str | None = None, major: int | None = None) -> None:
         or not helper.get("url", "").endswith(helper.get("archive", "missing"))
     ):
         raise ManifestError("invalid Binutils helper source manifest")
-    bundles = accepted_bundles()
+    bundles = curated_bundles()
     for bundle in bundles.values():
         validate_bundle(bundle)
+    for bundle in with_status(bundles, "staged").values():
+        for dependency in bundle.get("staged_depends_on", []):
+            if dependency not in bundles:
+                raise ManifestError(
+                    f"staged bundle {bundle['id']} depends on unknown bundle {dependency}"
+                )
+            if bundles[dependency]["status"] != "staged":
+                raise ManifestError(
+                    f"staged bundle {bundle['id']} depends on accepted bundle {dependency}"
+                )
     if version is not None and major is not None:
         validate_patchset(version, major, bundles)
     else:

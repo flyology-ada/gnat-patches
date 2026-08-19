@@ -9,7 +9,8 @@ atomic_cases = 63
 pairwise_cases = 16
 pairwise_value_pairs = 88
 grammar_cases = 32
-runtime_suites = 30
+runtime_suites = 24
+staged_runtime_suites = 6
 dump_modes = ["full", "slim"]
 
 [[features]]
@@ -102,9 +103,9 @@ note = "The dumper maps a pure abstract, data-free secondary base to a limited i
 [[features]]
 id = "multiple-inheritance-concrete-secondary"
 category = "inheritance"
-state = "patched-with-access-view"
+state = "staged-with-access-view"
 evidence = "generated/catalog.py:concrete_multiple_inheritance,bundles/cxx-ada-concrete-multiple-inheritance,bundles/cxx-ada-virtual-diamond-layout,panels/cxx-ada-spec/cases/recursive-secondary-base"
-note = "Patchset 1.2.0 maps the C++ primary base to Ada inheritance and each additional concrete base to exact nested as-base storage. Access-view conversions at nested component addresses support secondary virtual dispatch, including a secondary base that itself has concrete primary and secondary bases; dynamic virtual-base conversions remain an ABI boundary."
+note = "The staged bundle maps the C++ primary base to Ada inheritance and each additional concrete base to exact nested as-base storage. Access-view conversions at nested component addresses support secondary virtual dispatch, including a secondary base that itself has concrete primary and secondary bases; dynamic virtual-base conversions remain an ABI boundary. Patchset 1.2.0 does not ship this; an unstaged compiler still omits every secondary base subobject."
 
 [[features]]
 id = "enclosing-type-method-name-collisions"
@@ -130,9 +131,9 @@ note = "Patchset 1.2.0 gives a method a stable Method suffix when its identifier
 [[features]]
 id = "derived-class-new-virtual-slots"
 category = "dispatch"
-state = "patched"
+state = "staged"
 evidence = "bundles/cxx-ada-derived-virtual-slots"
-note = "Patchset 1.2.0 gives complete and deleting destructors hierarchy-stable Ada names so they override their inherited slots. Virtuals introduced later in a derived class then retain the C++ vtable indices, including through recursively nested concrete secondary bases."
+note = "The staged bundle gives complete and deleting destructors hierarchy-stable Ada names so they override their inherited slots. Virtuals introduced later in a derived class then retain the C++ vtable indices, including through recursively nested concrete secondary bases. Patchset 1.2.0 does not ship this."
 
 [[features]]
 id = "uninstantiated-templates"
@@ -205,16 +206,16 @@ note = "Patchset 1.2.0 emits the user-specified alignment independently of packe
 [[features]]
 id = "virtual-inheritance-layout"
 category = "inheritance"
-state = "patched"
+state = "staged"
 evidence = "bundles/cxx-ada-virtual-inheritance-layout"
-note = "Patchset 1.2.0 preserves complete size, alignment, direct-member position, and virtual-base position while leaving the hidden ABI pointer as an opaque gap."
+note = "The staged bundle preserves complete size, alignment, direct-member position, and virtual-base position while leaving the hidden ABI pointer as an opaque gap. Patchset 1.2.0 does not ship this."
 
 [[features]]
 id = "virtual-diamond-as-base-layout"
 category = "inheritance"
-state = "patched"
+state = "staged"
 evidence = "bundles/cxx-ada-virtual-diamond-layout"
-note = "Patchset 1.2.0 emits shortened storage types for non-polymorphic direct bases that omit their shared virtual base, preserving all visible diamond fields without duplicating the root."
+note = "The staged bundle emits shortened storage types for non-polymorphic direct bases that omit their shared virtual base, preserving all visible diamond fields without duplicating the root. Patchset 1.2.0 does not ship this."
 
 [[features]]
 id = "ada-casefold-collisions"
@@ -226,9 +227,9 @@ note = "Patchset 1.2.0 assigns stable scope-local suffixes to later case variant
 [[features]]
 id = "generated-name-collisions"
 category = "name-lookup"
-state = "patched"
+state = "staged"
 evidence = "bundles/cxx-ada-generated-name-identity"
-note = "Patchset 1.2.0 reserves source spellings and gives only colliding synthesized declarations readable scope-local suffixes."
+note = "The staged bundle reserves source spellings and gives only colliding synthesized declarations readable scope-local suffixes. It renames entities the staged ABI-layout bundles introduce and does not apply without them, so patchset 1.2.0 does not ship it."
 
 [[features]]
 id = "method-cv-overloads"

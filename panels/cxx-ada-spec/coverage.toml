@@ -13,7 +13,6 @@ suites = [
   "panels/cxx-ada-spec/cases/abi-layout",
   "panels/cxx-ada-spec/cases/call-abi",
   "panels/cxx-ada-spec/cases/interface-secondary-base",
-  "panels/cxx-ada-spec/cases/recursive-secondary-base",
   "panels/cxx-ada-spec/cases/exception-interoperability",
   "panels/cxx-ada-spec/cases/uninstantiated-templates",
   "panels/cxx-ada-spec/cases/stdlib-value-facade",
@@ -31,12 +30,17 @@ suites = [
   "bundles/cxx-ada-member-pointers",
   "bundles/cxx-ada-inherited-tail-padding",
   "bundles/cxx-ada-empty-class-storage",
-  "bundles/cxx-ada-virtual-inheritance-layout",
   "bundles/cxx-ada-enclosing-type-method-names",
-  "bundles/cxx-ada-virtual-diamond-layout",
   "bundles/cxx-ada-profile-formal-type-names",
-  "bundles/cxx-ada-concrete-multiple-inheritance",
   "bundles/cxx-ada-visible-type-method-names",
+]
+# Suites whose subject is a staged bundle. A patchset-only compiler makes no
+# claim about them; they run in the panel's staged state.
+staged_suites = [
+  "panels/cxx-ada-spec/cases/recursive-secondary-base",
+  "bundles/cxx-ada-virtual-inheritance-layout",
+  "bundles/cxx-ada-virtual-diamond-layout",
+  "bundles/cxx-ada-concrete-multiple-inheritance",
   "bundles/cxx-ada-derived-virtual-slots",
   "bundles/cxx-ada-generated-name-identity",
 ]

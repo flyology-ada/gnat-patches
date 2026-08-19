@@ -1,7 +1,9 @@
 schema = 1
 id = "cxx-ada-generated-name-identity"
-status = "accepted"
-introduced_in_patchset = "1.2.0"
+status = "staged"
+staged_in_patchset = "1.2.0"
+staged_reason = "The name allocator renames the as-base types, synthetic base components, and destructor entities introduced by the staged ABI-layout bundles, and its patch does not apply without them. Held out of the published patchset for separate upstream review."
+staged_depends_on = ["cxx-ada-virtual-inheritance-layout", "cxx-ada-virtual-diamond-layout", "cxx-ada-concrete-multiple-inheritance", "cxx-ada-derived-virtual-slots"]
 problem = "Readable Ada names synthesized for C++ entities can collide with user-written identifiers and with each other."
 upstream_issue = "Pending GCC Bugzilla filing."
 affected_versions = ["13.2.0", "14.2.0", "15.3.0", "16.1.0", "16.2.0"]

@@ -1,13 +1,19 @@
 # Patch bundles
 
-This directory contains independent, reviewable GCC/GNAT fixes. Each accepted
-bundle has a manifest, one or more source patches, an executable regression,
-and a README showing the offending input, the broken output, and the corrected
-output. Patchsets select applicable variants by exact GCC release; the bundle
-README is the best starting point for reviewing an individual change.
+This directory contains independent, reviewable GCC/GNAT fixes. Each bundle has
+a manifest, one or more source patches, an executable regression, and a README
+showing the offending input, the broken output, and the corrected output.
+Patchsets select applicable variants by exact GCC release; the bundle README is
+the best starting point for reviewing an individual change.
 
-The tables below summarize the accepted bundles. “GCC releases” describes the
-pinned releases covered by the bundle, not every possible upstream revision.
+A bundle is either **accepted**, meaning every patchset for an affected GCC
+major must contain it, or **staged**, meaning it is curated and validated to the
+same standard but deliberately held out of the published patchset. A staged
+bundle records why in its manifest, and `scripts/manifest.py validate` refuses
+to let one appear in a patchset.
+
+The tables below summarize the bundles. “GCC releases” describes the pinned
+releases covered by the bundle, not every possible upstream revision.
 
 ## Ada expansion and runtime semantics
 
@@ -39,7 +45,6 @@ the [C++ to Ada mapper panel](../panels/cxx-ada-spec/README.md).
 | [Enclosing-type method names](cxx-ada-enclosing-type-method-names/README.md) | 13.2–16.2 | Avoids a case-insensitive collision between a method and its enclosing type. |
 | [Visible-type method names](cxx-ada-visible-type-method-names/README.md) | 13.2–16.2 | Avoids method collisions with types made visible from another generated class package. |
 | [Profile formal/type names](cxx-ada-profile-formal-type-names/README.md) | 13.2–16.2 | Prevents a formal parameter from hiding a type used later in the same Ada profile. |
-| [Generated-name identity](cxx-ada-generated-name-identity/README.md) | 13.2–16.2 | Allocates readable synthesized names without colliding with source names or other generated entities. |
 
 ### Templates and declarations
 
@@ -61,18 +66,30 @@ the [C++ to Ada mapper panel](../panels/cxx-ada-spec/README.md).
 | [Member pointers](cxx-ada-member-pointers/README.md) | 13.2–16.2 | Emits usable representations for data-member and member-function pointers. |
 | [Vector types](cxx-ada-vector-types/README.md) | 13.2–16.2 | Replaces invalid vector placeholders with usable Ada machine-vector types and profiles. |
 
-### Multiple inheritance and ABI-sensitive class layout
-
-These bundles deserve separate upstream review. They are coupled to C++ ABI
-facts—primary and secondary base offsets, reusable tail padding, virtual-base
-sharing, and vtable slot identity—and cannot always be expressed as native Ada
-inheritance. The patches use fixed nested storage views where the ABI position
-is static. Dynamic virtual-base conversion remains a wrapper or thunk boundary.
+### Single-inheritance object layout
 
 | Bundle | GCC releases | Summary |
 | --- | --- | --- |
-| [Concrete multiple inheritance](cxx-ada-concrete-multiple-inheritance/README.md) | 13.2–16.2 | Keeps the primary base as Ada inheritance and emits concrete secondary bases as exact nested as-base storage. |
 | [Inherited tail padding](cxx-ada-inherited-tail-padding/README.md) | 13.2–16.2 | Separates complete-object and as-base sizes and nests a primary base only when C++ actually reuses its tail. |
+
+## Staged: multiple inheritance and vtable identity
+
+These bundles are **not** part of patchset `1.2.0`. They are coupled to Itanium
+C++ ABI facts—secondary base offsets, virtual-base sharing, and vtable slot
+identity—and cannot be expressed as native Ada inheritance, so they need
+separate upstream review before they ship in a toolchain. The patches use fixed
+nested storage views where the ABI position is static; dynamic virtual-base
+conversion remains a wrapper or thunk boundary.
+
+They apply, in the order below, on top of a tree that already carries the
+complete patchset. `cxx-ada-generated-name-identity` is here for a mechanical
+reason rather than an ABI one: it renames entities the other four introduce and
+does not apply without them.
+
+| Staged bundle | GCC releases | Summary |
+| --- | --- | --- |
 | [Virtual inheritance layout](cxx-ada-virtual-inheritance-layout/README.md) | 13.2–16.2 | Restores complete size, alignment, and component positions for classes with virtual bases. |
 | [Virtual diamond layout](cxx-ada-virtual-diamond-layout/README.md) | 13.2–16.2 | Uses shortened as-base views for direct diamond legs instead of duplicating their shared virtual base. |
+| [Concrete multiple inheritance](cxx-ada-concrete-multiple-inheritance/README.md) | 13.2–16.2 | Keeps the primary base as Ada inheritance and emits concrete secondary bases as exact nested as-base storage. |
 | [Derived virtual slots](cxx-ada-derived-virtual-slots/README.md) | 13.2–16.2 | Stabilizes destructor identities so new derived virtuals retain their C++ vtable slots, including through nested secondary bases. |
+| [Generated-name identity](cxx-ada-generated-name-identity/README.md) | 13.2–16.2 | Allocates readable synthesized names without colliding with source names or other generated entities. |

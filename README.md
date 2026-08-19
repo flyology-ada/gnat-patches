@@ -16,9 +16,12 @@ checksum-pinned upstream sources and proves them with source builds.
 ## Current patchset
 
 Patchset `1.2.0` is the current repository candidate for GCC 13, 14, 15, and
-16. It contains fourteen independent corrections, each with its own executable
+16. It contains nineteen independent corrections, each with its own executable
 regression. Patchset `1.1.0` remains the latest published release until the
 `1.2.0` validation and publication workflows complete.
+
+Five further C++ mapper bundles are curated here but deliberately held out of
+`1.2.0`; see [staged bundles](#staged-bundles) below.
 
 - `storage-model-actuals`: selected and indexed actuals rooted at a
   `Designated_Storage_Model` dereference bypass `Copy_From` and `Copy_To`.
@@ -74,13 +77,51 @@ regression. Patchset `1.1.0` remains the latest published release until the
   records contain blank Ada types. Itanium ABI representations preserve data,
   nonvirtual, virtual, and null values as opaque callable-through-C++ values.
   GCC 13 through 16 are affected.
+- `cxx-ada-inherited-tail-padding`: Ada inheritance prevents C++ reuse of a
+  base class's tail padding, so an Ada view of a derived object can be larger
+  than the C++ object and place its own fields at different offsets. The
+  correction separates complete-object and as-base sizes and nests a primary
+  base only where C++ actually reuses its tail. GCC 13 through 16 are affected.
+- `cxx-ada-empty-class-storage`: complete empty objects receive zero Ada
+  storage, and overlapping `[[no_unique_address]]` members are emitted as
+  ordinary components. The correction gives a complete empty object one byte,
+  preserves empty-base optimization, and omits only a member that genuinely
+  contributes no unique storage. GCC 13 through 16 are affected.
+- `cxx-ada-enclosing-type-method-names`: a method whose spelling differs from
+  its enclosing type only by case becomes an illegal duplicate Ada identifier.
+  Only the colliding method receives a stable `_Method` suffix and keeps its
+  C++ external symbol. GCC 13 through 16 are affected.
+- `cxx-ada-profile-formal-type-names`: a formal parameter can hide its own
+  type, a later formal's type, or the result type in the same generated Ada
+  profile, so GNAT rejects the binding. Only a hiding formal receives a stable
+  `the_` prefix. GCC 13 through 16 are affected.
+- `cxx-ada-visible-type-method-names`: a method can collide with a type made
+  use-visible from another generated class package, making later Ada profiles
+  ambiguous. Only a method matching a visible generated type receives a stable
+  `_Method` suffix. GCC 13 through 16 are affected.
 
-| GCC source | `storage-model-actuals` | `protected-duration-validity` | `cxx-ada-template-qualification` | `cxx-ada-template-record-termination` | `cxx-ada-explicit-alignment` | `cxx-ada-namespace-identity` | `cxx-ada-qualified-method-names` | `cxx-ada-casefold-identity` | `cxx-ada-template-nested-types` | `cxx-ada-anonymous-enums` | `cxx-ada-char8-type` | `cxx-ada-int128-types` | `cxx-ada-vector-types` | `cxx-ada-member-pointers` | Patchset 1.2.0 |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 13.2.0 | known-good control | affected | affected | affected | affected | affected | affected | affected | affected | affected | affected | affected | affected | affected | patched toolchain |
-| 14.2.0 | affected | affected | affected | affected | affected | affected | affected | affected | affected | affected | affected | affected | affected | affected | patched toolchain |
-| 15.3.0 | affected | affected | affected | affected | affected | affected | affected | affected | affected | affected | affected | known-good control | affected | affected | patched toolchain |
-| 16.2.0 | affected | affected | affected | affected | affected | affected | affected | affected | affected | affected | affected | known-good control | affected | affected | validation candidate |
+| Bundle | 13.2.0 | 14.2.0 | 15.3.0 | 16.2.0 |
+| --- | --- | --- | --- | --- |
+| `storage-model-actuals` | known-good control | affected | affected | affected |
+| `protected-duration-validity` | affected | affected | affected | affected |
+| `cxx-ada-template-qualification` | affected | affected | affected | affected |
+| `cxx-ada-template-record-termination` | affected | affected | affected | affected |
+| `cxx-ada-explicit-alignment` | affected | affected | affected | affected |
+| `cxx-ada-namespace-identity` | affected | affected | affected | affected |
+| `cxx-ada-qualified-method-names` | affected | affected | affected | affected |
+| `cxx-ada-casefold-identity` | affected | affected | affected | affected |
+| `cxx-ada-template-nested-types` | affected | affected | affected | affected |
+| `cxx-ada-anonymous-enums` | affected | affected | affected | affected |
+| `cxx-ada-char8-type` | affected | affected | affected | affected |
+| `cxx-ada-member-pointers` | affected | affected | affected | affected |
+| `cxx-ada-vector-types` | affected | affected | affected | affected |
+| `cxx-ada-inherited-tail-padding` | affected | affected | affected | affected |
+| `cxx-ada-empty-class-storage` | affected | affected | affected | affected |
+| `cxx-ada-enclosing-type-method-names` | affected | affected | affected | affected |
+| `cxx-ada-profile-formal-type-names` | affected | affected | affected | affected |
+| `cxx-ada-visible-type-method-names` | affected | affected | affected | affected |
+| `cxx-ada-int128-types` | affected | affected | known-good control | known-good control |
+| **Patchset 1.2.0** | patched toolchain | patched toolchain | patched toolchain | validation candidate |
 
 GCC 13 was an unpatched control in patchset `1.0.1` because the only bundle at
 that time did not affect it. It carries a real code patch in `1.1.0`.
@@ -89,6 +130,53 @@ Each canonical patch is required to apply with `patch --fuzz=0` to the pinned
 FSF release sources and to the pinned Darwin-maintainer sources of every GCC
 major it declares. Exact context is required, so no hunk may apply with fuzz; a
 hunk may land at a line offset where a release moved surrounding code.
+
+### Staged bundles
+
+A staged bundle is curated, checksum-pinned, and validated exactly like an
+accepted one: it has patch variants for every affected release, an executable
+`-O0`/`-O2` before/after regression, a README showing the offending C++ with
+both the current and the corrected Ada, and an entry in the panel ledger.
+It is simply not part of the published patchset yet.
+
+Patchset `1.2.0` stages the C++ multiple-inheritance and vtable-identity work.
+These patches are coupled to Itanium C++ ABI facts—secondary base offsets,
+virtual-base sharing, and vtable slot identity—and cannot be expressed as
+native Ada inheritance, so they need separate upstream review before they ship
+in a toolchain.
+
+| Staged bundle | 13.2.0 | 14.2.0 | 15.3.0 | 16.2.0 |
+| --- | --- | --- | --- | --- |
+| `cxx-ada-virtual-inheritance-layout` | affected | affected | affected | affected |
+| `cxx-ada-virtual-diamond-layout` | affected | affected | affected | affected |
+| `cxx-ada-concrete-multiple-inheritance` | affected | affected | affected | affected |
+| `cxx-ada-derived-virtual-slots` | affected | affected | affected | affected |
+| `cxx-ada-generated-name-identity` | affected | affected | affected | affected |
+
+`cxx-ada-generated-name-identity` is staged for a mechanical reason rather than
+an ABI one: its name allocator renames the as-base types, synthetic base
+components, and destructor entities that the other four bundles introduce, and
+its patch does not apply without them.
+
+Staged bundles apply, in the order recorded in
+`patchsets/1.2.0/gcc-<major>.toml`, on top of a tree that already has the
+complete patchset:
+
+```sh
+./scripts/apply-patchset.sh 1.2.0 16 work/gcc-16.2.0
+./scripts/apply-staged.sh 1.2.0 16 work/gcc-16.2.0
+```
+
+A compiler built that way is a *staged* toolchain. Every regression and panel
+runner distinguishes the three states:
+
+- `unpatched`: pinned upstream source, defects characterized;
+- `patched`: patchset `1.2.0` only, the state a release ships;
+- `staged`: patchset `1.2.0` plus the staged bundles.
+
+A `patched` panel run makes no claim about a staged subject and reports those
+suites as skipped. `scripts/package-patchset.sh` and the release workflow never
+see a staged bundle.
 
 ### Target-dependent protected `Duration` failure
 
@@ -195,13 +283,20 @@ PATH=/path/to/bootstrap/bin:$PATH \
 ```
 
 `run-regressions.sh` takes a toolchain root, a patchset version, a GCC major,
-and whether that toolchain is `unpatched` or `patched`. It resolves the
-applicable bundles and known-good controls from the selected patchset and runs
-each bundle's own executable regression, so the same command covers a bootstrap
-compiler, a freshly built compiler, and a relocated release archive:
+and whether that toolchain is `unpatched`, `patched`, or `staged`. It resolves
+the applicable bundles and known-good controls from the selected patchset and
+runs each bundle's own executable regression, so the same command covers a
+bootstrap compiler, a freshly built compiler, and a relocated release archive:
 
 ```sh
 ./scripts/run-regressions.sh "$BOOTSTRAP_ROOT" 1.2.0 16 unpatched
+```
+
+A `staged` toolchain additionally carries the staged bundles, so that state
+selects their regressions as well:
+
+```sh
+./scripts/run-regressions.sh install/gcc-16 1.2.0 16 staged
 ```
 
 To apply exactly one bundle instead of an aggregate:
@@ -219,7 +314,12 @@ Validation builds GCC/GNAT from source on Linux x86_64, Linux arm64, and macOS
 arm64 for GCC 13 through 16, which is twelve independent source-build lanes.
 Each lane proves the unpatched controls, applies the complete `1.2.0`
 aggregate to the declared source baseline, builds the compiler, and runs every
-applicable bundle's executable regression at `-O0` and `-O2`. When the
+applicable bundle's executable regression at `-O0` and `-O2`. Each lane then
+checks that the staged bundles still apply with zero fuzz on top of that
+release's patchset; it does not rebuild for them. A separate GCC 16.2 Linux
+x86_64 lane builds a staged compiler and runs the staged regressions and the
+staged panel, so the staged bundles keep executable before/after evidence
+without entering a shipped toolchain. When the
 bootstrap already contains the patchset, as for GCC 16.2, CI first builds and
 tests a separate unpatched compiler from the pinned source, discards that
 control build, and then performs a fresh patched build. Source and bootstrap

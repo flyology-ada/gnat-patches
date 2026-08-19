@@ -1,7 +1,9 @@
 schema = 1
 id = "cxx-ada-virtual-inheritance-layout"
-status = "accepted"
-introduced_in_patchset = "1.2.0"
+status = "staged"
+staged_in_patchset = "1.2.0"
+staged_reason = "Virtual-base layout is C++ ABI-coupled and cannot be expressed as native Ada inheritance; dynamic virtual-base conversion stays an explicit ABI-wrapper boundary. Held out of the published patchset for separate upstream review."
+staged_depends_on = []
 problem = "The C++ Ada mapper drops the size, alignment, and component positions of classes with virtual bases."
 upstream_issue = "Pending GCC Bugzilla filing."
 affected_versions = ["13.2.0", "14.2.0", "15.3.0", "16.1.0", "16.2.0"]

@@ -1,7 +1,9 @@
 schema = 1
 id = "cxx-ada-derived-virtual-slots"
-status = "accepted"
-introduced_in_patchset = "1.2.0"
+status = "staged"
+staged_in_patchset = "1.2.0"
+staged_reason = "Stabilizing destructor identities changes generated vtable slot naming for every derived class, which only has an observable contract once the ABI-layout bundles are accepted. Held out of the published patchset for separate upstream review."
+staged_depends_on = []
 problem = "Class-specific Ada destructor names consume new dispatch slots in derived classes and displace virtual methods introduced after them from their C++ vtable indices."
 upstream_issue = "Pending GCC Bugzilla filing."
 affected_versions = ["13.2.0", "14.2.0", "15.3.0", "16.1.0", "16.2.0"]

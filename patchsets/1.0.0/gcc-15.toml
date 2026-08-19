@@ -4,3 +4,4 @@ gcc_major = 15
 source_version = "15.3.0"
 bundles = ["storage-model-actuals"]
 control_tests = []
+staged_bundles = []

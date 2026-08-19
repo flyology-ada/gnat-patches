@@ -1,7 +1,9 @@
 schema = 1
 id = "cxx-ada-virtual-diamond-layout"
-status = "accepted"
-introduced_in_patchset = "1.2.0"
+status = "staged"
+staged_in_patchset = "1.2.0"
+staged_reason = "Shortened as-base views for diamond legs depend on the virtual-base layout representation and share its C++ ABI coupling. Held out of the published patchset for separate upstream review."
+staged_depends_on = ["cxx-ada-virtual-inheritance-layout"]
 problem = "The C++ Ada mapper uses complete virtual-base class types for shortened direct base subobjects in a virtual diamond."
 upstream_issue = "Pending GCC Bugzilla filing."
 affected_versions = ["13.2.0", "14.2.0", "15.3.0", "16.1.0", "16.2.0"]

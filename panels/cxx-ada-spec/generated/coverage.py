@@ -19,37 +19,50 @@ ROOT = pathlib.Path(__file__).resolve().parents[3]
 PANEL = ROOT / "panels" / "cxx-ada-spec"
 
 
-def accepted_cxx_bundles() -> dict[str, tuple[pathlib.Path, dict]]:
-    """Return every accepted C++ Ada defect bundle by manifest identity."""
+def curated_cxx_bundles(status: str) -> dict[str, tuple[pathlib.Path, dict]]:
+    """Return every C++ Ada defect bundle with STATUS, by manifest identity."""
     result: dict[str, tuple[pathlib.Path, dict]] = {}
     for path in sorted((ROOT / "bundles").glob("cxx-ada-*/manifest.toml")):
         with path.open("rb") as stream:
             manifest = tomllib.load(stream)
         bundle_id = manifest.get("id")
-        if manifest.get("status") == "accepted":
+        if manifest.get("status") == status:
             if not bundle_id or bundle_id in result:
                 raise SystemExit(f"error: invalid C++ Ada bundle identity in {path}")
             result[bundle_id] = (path.parent, manifest)
     return result
 
 
-def validate_confirmed_bundles(coverage: dict, matrix: dict) -> int:
-    """Prove that every confirmed mapper defect keeps its full evidence chain."""
-    bundles = accepted_cxx_bundles()
+def check_bundle_suites(bundles: dict, declared: list[str], label: str) -> None:
     expected_suites = {f"bundles/{bundle_id}" for bundle_id in bundles}
     declared_suites = {
-        suite for suite in coverage["runtime"]["suites"]
-        if suite.startswith("bundles/cxx-ada-")
+        suite for suite in declared if suite.startswith("bundles/cxx-ada-")
     }
-    if declared_suites != expected_suites:
-        missing = sorted(expected_suites - declared_suites)
-        extra = sorted(declared_suites - expected_suites)
-        if missing:
-            print("error: confirmed bundles absent from runtime coverage: " +
-                  ", ".join(missing))
-        if extra:
-            print("error: unknown C++ Ada runtime bundles: " + ", ".join(extra))
-        raise SystemExit(1)
+    if declared_suites == expected_suites:
+        return
+    missing = sorted(expected_suites - declared_suites)
+    extra = sorted(declared_suites - expected_suites)
+    if missing:
+        print(f"error: {label} bundles absent from runtime coverage: " +
+              ", ".join(missing))
+    if extra:
+        print(f"error: unknown C++ Ada {label} runtime bundles: " + ", ".join(extra))
+    raise SystemExit(1)
+
+
+def validate_confirmed_bundles(coverage: dict, matrix: dict) -> tuple[int, int]:
+    """Prove that every confirmed mapper defect keeps its full evidence chain.
+
+    Staging a bundle out of the published patchset does not relax any evidence
+    requirement: it still needs a runtime suite, a before/after regression at
+    -O0 and -O2, matrix evidence, a panel ledger entry, and an inline README
+    showing the offending C++ with both the current and corrected Ada.
+    """
+    accepted = curated_cxx_bundles("accepted")
+    staged = curated_cxx_bundles("staged")
+    check_bundle_suites(accepted, coverage["runtime"]["suites"], "confirmed")
+    check_bundle_suites(staged, coverage["runtime"]["staged_suites"], "staged")
+    bundles = {**accepted, **staged}
 
     driver = (PANEL / "run-panel.sh").read_text()
     panel_readme = (PANEL / "README.md").read_text()
@@ -123,7 +136,7 @@ def validate_confirmed_bundles(coverage: dict, matrix: dict) -> int:
                 "and corrected output"
             )
 
-    return len(bundles)
+    return len(accepted), len(staged)
 
 
 def main() -> int:
@@ -132,10 +145,13 @@ def main() -> int:
     with (PANEL / "matrix.toml").open("rb") as stream:
         matrix = tomllib.load(stream)
 
-    confirmed_count = validate_confirmed_bundles(coverage, matrix)
+    confirmed_count, staged_count = validate_confirmed_bundles(coverage, matrix)
 
     driver = (PANEL / "run-panel.sh").read_text()
-    for suite in coverage["runtime"]["suites"]:
+    all_suites = coverage["runtime"]["suites"] + coverage["runtime"]["staged_suites"]
+    if set(coverage["runtime"]["suites"]) & set(coverage["runtime"]["staged_suites"]):
+        raise SystemExit("error: a runtime suite is both shipped and staged")
+    for suite in all_suites:
         directory = ROOT / suite
         runner = directory / "run-test.sh"
         if not directory.is_dir() or not runner.is_file():
@@ -179,7 +195,7 @@ def main() -> int:
 
     expectations_path = PANEL / "generated" / "catalog-expectations.toml"
     print(f"atomic catalog: {len(CASES)} cases in {len(coverage['groups'])} groups")
-    for state in ("unpatched", "patched"):
+    for state in ("unpatched", "patched", "staged"):
         print(f"  {state} expectations:")
         for major in ("13", "14", "15", "16"):
             expected = expectation_table(expectations_path, major, state)
@@ -204,6 +220,7 @@ def main() -> int:
         "pairwise_value_pairs": pair_count,
         "grammar_cases": CASE_COUNT,
         "runtime_suites": len(coverage["runtime"]["suites"]),
+        "staged_runtime_suites": len(coverage["runtime"]["staged_suites"]),
     }
     for key, actual in actual_counts.items():
         if declared.get(key) != actual:
@@ -217,10 +234,11 @@ def main() -> int:
         f"all {pair_count} value pairs across {len(AXES)} axes"
     )
     print(f"deterministic grammar survey: {CASE_COUNT} cases, seed {SEED}")
-    print(f"runtime suites: {len(coverage['runtime']['suites'])}")
+    print(f"runtime suites: {len(coverage['runtime']['suites'])} shipped, "
+          f"{len(coverage['runtime']['staged_suites'])} staged")
     print(
-        f"confirmed C++ defects: {confirmed_count} bundles with inline "
-        "before/after evidence"
+        f"confirmed C++ defects: {confirmed_count} accepted and {staged_count} "
+        "staged bundles with inline before/after evidence"
     )
     print(f"mapper tree-code families: {len(coverage['mapper_tree_codes'])}")
     print(f"explicit remaining limits: {len(coverage['limits']['not_yet_covered'])}")

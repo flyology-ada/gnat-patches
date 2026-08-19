@@ -12,7 +12,7 @@ import tomllib
 
 sys.dont_write_bytecode = True
 
-from pairwise import classify, expectation_table
+from pairwise import classify, expectation_table, state_layers
 
 
 # Each entry is (C++ source, required Ada-spec regexes).  Compilation of the
@@ -236,7 +236,11 @@ double f_double(double v); long double f_long_double(long double v);
         "struct Left { virtual int left(); int l; }; "
         "struct Right { virtual int right(); int r; }; "
         "struct Both : Left, Right { int both; };\n",
-        (r"type Both",),
+        # Legal Ada alone is not evidence here: dropping both base subobjects
+        # also compiles.  Require the primary base as Ada inheritance and the
+        # secondary base as its own storage view.
+        (r"type Both is limited new Left with record",
+         r"field_2 : aliased Right_As_Base;"),
     ),
     "nonpublic_inheritance": (
         "struct PublicBase { int value; }; "
@@ -330,7 +334,7 @@ def main() -> int:
     parser.add_argument("--discover", action="store_true")
     parser.add_argument("--case", choices=sorted(CASES))
     parser.add_argument("--show-spec", action="store_true")
-    parser.add_argument("--state", choices=("unpatched", "patched"),
+    parser.add_argument("--state", choices=("unpatched", "patched", "staged"),
                         default="unpatched")
     args = parser.parse_args()
 
@@ -349,10 +353,11 @@ def main() -> int:
         expectation_data = tomllib.load(stream)
     diagnostics = dict(expectation_data.get("diagnostics", {}))
     diagnostics.update(expectation_data.get(f"diagnostics_gcc_{major}", {}))
-    diagnostics.update(expectation_data.get(f"diagnostics_{args.state}", {}))
-    diagnostics.update(
-        expectation_data.get(f"diagnostics_{args.state}_gcc_{major}", {})
-    )
+    for layer in state_layers(args.state):
+        diagnostics.update(expectation_data.get(f"diagnostics_{layer}", {}))
+        diagnostics.update(
+            expectation_data.get(f"diagnostics_{layer}_gcc_{major}", {})
+        )
     failures = 0
     with tempfile.TemporaryDirectory(prefix="gnat-cxx-ada-catalog-") as temp:
         root = pathlib.Path(temp)

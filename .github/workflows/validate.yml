@@ -249,6 +249,13 @@ jobs:
           retention-days: 30
           if-no-files-found: error
 
+      # The staged bundles are not built here. This proves only that they still
+      # apply with zero fuzz on top of this release's complete patchset, on the
+      # pinned source this lane already checked out. The source tree is no
+      # longer read after packaging.
+      - name: Verify staged bundles apply to the patched source
+        run: ./scripts/apply-staged.sh 1.2.0 "${{ matrix.major }}" work/source
+
       - name: Collect failure logs
         if: failure()
         run: ./ci/collect-logs.sh build logs
@@ -258,6 +265,84 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: failure-${{ matrix.version }}-${{ matrix.platform }}
+          path: logs/
+          retention-days: 14
+          if-no-files-found: error
+
+  staged:
+    name: Staged bundles · GCC ${{ matrix.version }} · ${{ matrix.platform }}
+    needs: repository
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {version: 16.2.0, major: 16, platform: linux-x86_64, runner: ubuntu-24.04}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 360
+    env:
+      GNAT_PATCHES_CACHE: ${{ github.workspace }}/.cache
+      GNAT_PATCHES_JOBS: 2
+    steps:
+      - name: Check out patchsets
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+
+      - name: Reclaim Linux runner space
+        run: ./ci/reclaim-space.sh
+
+      - name: Install Linux build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential flex bison gawk texinfo \
+            libgmp-dev libmpfr-dev libmpc-dev zlib1g-dev
+
+      - name: Restore verified downloads
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          path: .cache
+          key: downloads-${{ runner.os }}-${{ runner.arch }}-${{ matrix.version }}-${{ hashFiles('sources/*.toml', 'ci/bootstrap.tsv') }}
+
+      - name: Resolve bootstrap compiler
+        run: |
+          bootstrap=$(./scripts/fetch-bootstrap.sh "${{ matrix.version }}" work/bootstrap)
+          echo "BOOTSTRAP_ROOT=$bootstrap" >> "$GITHUB_ENV"
+          echo "$bootstrap/bin" >> "$GITHUB_PATH"
+
+      - name: Fetch pinned GCC source
+        run: ./scripts/fetch-source.sh "${{ matrix.version }}" work/source
+
+      - name: Apply complete patchset
+        run: ./scripts/apply-patchset.sh 1.2.0 "${{ matrix.major }}" work/source
+
+      - name: Apply staged bundles
+        run: ./scripts/apply-staged.sh 1.2.0 "${{ matrix.major }}" work/source
+
+      - name: Build GCC and GNAT from source
+        run: ./scripts/build-gnat.sh work/source build/gcc install/gcc
+
+      - name: Run staged regressions
+        run: |
+          ./scripts/run-regressions.sh install/gcc \
+            1.2.0 "${{ matrix.major }}" staged
+
+      - name: Run staged C++ Ada feature panel
+        run: |
+          ./panels/cxx-ada-spec/run-panel.sh install/gcc \
+            "${{ matrix.version }}" staged
+
+      - name: Collect failure logs
+        if: failure()
+        run: ./ci/collect-logs.sh build logs
+
+      - name: Retain failure logs
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: failure-staged-${{ matrix.version }}-${{ matrix.platform }}
           path: logs/
           retention-days: 14
           if-no-files-found: error

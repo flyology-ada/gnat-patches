@@ -100,6 +100,23 @@ def source_for(case: tuple[str, ...]) -> str:
     return f"{declaration}\n\n{use}\n"
 
 
+# A staged compiler carries the patchset plus the staged bundles, so its
+# expectations start from the patched ones and then override.
+STATE_CHAIN = {
+    "unpatched": ("unpatched",),
+    "patched": ("patched",),
+    "staged": ("patched", "staged"),
+}
+
+
+def state_layers(state: str | None) -> tuple[str, ...]:
+    if not state:
+        return ()
+    if state not in STATE_CHAIN:
+        raise ValueError(f"unknown panel state: {state}")
+    return STATE_CHAIN[state]
+
+
 def expectation_table(
     path: pathlib.Path, major: str, state: str | None = None
 ) -> dict[str, str]:
@@ -107,9 +124,9 @@ def expectation_table(
         data = tomllib.load(stream)
     expected = {case: result for case, result in data.get("all", {}).items()}
     expected.update(data.get(f"gcc_{major}", {}))
-    if state:
-        expected.update(data.get(state, {}))
-        expected.update(data.get(f"{state}_gcc_{major}", {}))
+    for layer in state_layers(state):
+        expected.update(data.get(layer, {}))
+        expected.update(data.get(f"{layer}_gcc_{major}", {}))
     return expected
 
 
