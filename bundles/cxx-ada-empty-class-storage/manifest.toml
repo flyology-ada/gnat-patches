@@ -1,7 +1,10 @@
 schema = 1
 id = "cxx-ada-empty-class-storage"
-status = "accepted"
-introduced_in_patchset = "1.2.0"
+status = "staged"
+standalone_patch = false
+staged_in_patchset = "1.2.0"
+staged_reason = "This patch rewrites needs_tail_padding_layout and reuses the as-base size machinery introduced by the staged tail-padding bundle, and does not apply without it. Held out of the published patchset with the rest of the layout family."
+staged_depends_on = ["cxx-ada-inherited-tail-padding"]
 problem = "The C++ Ada mapper gives complete empty-class objects zero storage and maps overlapping no_unique_address members as ordinary Ada storage."
 upstream_issue = "Pending GCC Bugzilla filing."
 affected_versions = ["13.2.0", "14.2.0", "15.3.0", "16.1.0", "16.2.0"]

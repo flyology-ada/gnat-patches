@@ -1,6 +1,7 @@
 schema = 1
 id = "cxx-ada-profile-formal-type-names"
 status = "accepted"
+standalone_patch = true
 introduced_in_patchset = "1.2.0"
 problem = "A C++ formal parameter can hide a type used later in the generated Ada subprogram profile, causing GNAT to reject the binding."
 upstream_issue = "Pending GCC Bugzilla filing."

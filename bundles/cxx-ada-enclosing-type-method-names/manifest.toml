@@ -1,6 +1,7 @@
 schema = 1
 id = "cxx-ada-enclosing-type-method-names"
 status = "accepted"
+standalone_patch = false
 introduced_in_patchset = "1.2.0"
 problem = "The C++ Ada mapper emits a method whose name differs from its enclosing type only by case as an illegal duplicate Ada identifier."
 upstream_issue = "Pending GCC Bugzilla filing."

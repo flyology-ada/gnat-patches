@@ -1,6 +1,7 @@
 schema = 1
 id = "cxx-ada-namespace-identity"
 status = "accepted"
+standalone_patch = true
 introduced_in_patchset = "1.2.0"
 problem = "The C++ Ada spec dumper flattens named namespaces, causing unrelated declarations with the same unqualified name to collide in Ada."
 upstream_issue = "GCC PR 109260."

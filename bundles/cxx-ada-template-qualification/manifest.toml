@@ -1,6 +1,7 @@
 schema = 1
 id = "cxx-ada-template-qualification"
 status = "accepted"
+standalone_patch = true
 introduced_in_patchset = "1.2.0"
 problem = "The C++ Ada spec dumper drops the generated package qualifier from references to concrete template instances, making specs with multiple instantiations ambiguous."
 upstream_issue = "Pending GCC Bugzilla filing."

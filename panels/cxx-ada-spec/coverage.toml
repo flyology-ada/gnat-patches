@@ -28,8 +28,6 @@ suites = [
   "bundles/cxx-ada-int128-types",
   "bundles/cxx-ada-vector-types",
   "bundles/cxx-ada-member-pointers",
-  "bundles/cxx-ada-inherited-tail-padding",
-  "bundles/cxx-ada-empty-class-storage",
   "bundles/cxx-ada-enclosing-type-method-names",
   "bundles/cxx-ada-profile-formal-type-names",
   "bundles/cxx-ada-visible-type-method-names",
@@ -38,6 +36,8 @@ suites = [
 # claim about them; they run in the panel's staged state.
 staged_suites = [
   "panels/cxx-ada-spec/cases/recursive-secondary-base",
+  "bundles/cxx-ada-inherited-tail-padding",
+  "bundles/cxx-ada-empty-class-storage",
   "bundles/cxx-ada-virtual-inheritance-layout",
   "bundles/cxx-ada-virtual-diamond-layout",
   "bundles/cxx-ada-concrete-multiple-inheritance",

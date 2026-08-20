@@ -2,15 +2,18 @@
 set -euo pipefail
 
 if [[ $# -ne 3 ]]; then
-  echo "usage: $0 TOOLCHAIN_ROOT GCC_VERSION unpatched|patched" >&2
+  echo "usage: $0 TOOLCHAIN_ROOT GCC_VERSION unpatched|patched|staged" >&2
   exit 2
 fi
 
 state=$3
-[[ "$state" == unpatched || "$state" == patched ]] || {
-  echo "error: state must be unpatched or patched" >&2
-  exit 2
-}
+case "$state" in
+  unpatched|patched|staged) ;;
+  *)
+    echo "error: state must be unpatched, patched, or staged" >&2
+    exit 2
+    ;;
+esac
 
 root=$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)
 source "$root/scripts/regression-common.sh"

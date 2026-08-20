@@ -162,6 +162,10 @@ def bundle_release_key(bundle: dict) -> tuple[int, int, int]:
 def validate_bundle(bundle: dict) -> None:
     bundle_id = bundle["id"]
     bundle_release_key(bundle)
+    # Whether this patch applies to pristine upstream source, or only in the
+    # patchset's recorded order. scripts/check-standalone.sh proves the claim.
+    if not isinstance(bundle.get("standalone_patch"), bool):
+        raise ManifestError(f"bundle {bundle_id} must declare a boolean standalone_patch")
     if bundle["status"] == "accepted":
         if "staged_in_patchset" in bundle:
             raise ManifestError(f"accepted bundle {bundle_id} declares staged_in_patchset")
@@ -313,6 +317,9 @@ def main() -> int:
     get_bundle.add_argument("bundle_id")
     get_bundle.add_argument("version")
     get_bundle.add_argument("field", choices=("patch", "sha256", "variant", "runner"))
+    get_bundle_field = sub.add_parser("bundle-field")
+    get_bundle_field.add_argument("bundle_id")
+    get_bundle_field.add_argument("field")
     validate = sub.add_parser("validate")
     validate.add_argument("--patchset")
     validate.add_argument("--gcc", type=int)
@@ -324,6 +331,8 @@ def main() -> int:
             emit(nested(load(helper_path(args.version)), args.field))
         elif args.command == "patchset":
             emit(nested(load(patchset_path(args.version, args.major)), args.field))
+        elif args.command == "bundle-field":
+            emit(nested(load(bundle_path(args.bundle_id)), args.field))
         elif args.command == "bundle":
             bundle = load(bundle_path(args.bundle_id))
             if args.field == "runner":

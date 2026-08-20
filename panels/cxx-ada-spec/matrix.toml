@@ -9,8 +9,8 @@ atomic_cases = 63
 pairwise_cases = 16
 pairwise_value_pairs = 88
 grammar_cases = 32
-runtime_suites = 24
-staged_runtime_suites = 6
+runtime_suites = 22
+staged_runtime_suites = 8
 dump_modes = ["full", "slim"]
 
 [[features]]
@@ -54,16 +54,16 @@ note = "The positive case avoids inherited tail-padding reuse and checks both Ad
 [[features]]
 id = "inherited-tail-padding-layout"
 category = "data-layout"
-state = "patched"
+state = "staged"
 evidence = "bundles/cxx-ada-inherited-tail-padding"
-note = "Patchset 1.2.0 preserves the base subobject data size separately from its complete-object size and emits exact component positions for C++ tail-padding reuse."
+note = "The staged bundle preserves the base subobject data size separately from its complete-object size and emits exact component positions for C++ tail-padding reuse. The nested primary-base component it selects is emitted by the staged virtual-base layout path, so patchset 1.2.0 does not ship it."
 
 [[features]]
 id = "empty-class-object-size"
 category = "data-layout"
-state = "patched"
+state = "staged"
 evidence = "bundles/cxx-ada-empty-class-storage"
-note = "Patchset 1.2.0 separates a zero-size empty value from its nonzero complete-object allocation. It omits artificial empty bases and only a no_unique_address selector that actually overlaps another field; naming that omitted C++ subobject requires an accessor wrapper."
+note = "The staged bundle separates a zero-size empty value from its nonzero complete-object allocation. It omits artificial empty bases and only a no_unique_address selector that actually overlaps another field; naming that omitted C++ subobject requires an accessor wrapper. It reuses the staged tail-padding machinery, so patchset 1.2.0 does not ship it."
 
 [[features]]
 id = "explicit-template-instantiations"

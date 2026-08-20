@@ -1,6 +1,7 @@
 schema = 1
 id = "cxx-ada-int128-types"
 status = "accepted"
+standalone_patch = true
 introduced_in_patchset = "1.2.0"
 problem = "GCC 13 and 14 emit the internal C++ name for unsigned __int128 as an undefined Ada identifier."
 upstream_issue = "Pending GCC Bugzilla filing."

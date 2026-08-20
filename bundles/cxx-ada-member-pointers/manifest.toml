@@ -1,6 +1,7 @@
 schema = 1
 id = "cxx-ada-member-pointers"
 status = "accepted"
+standalone_patch = true
 introduced_in_patchset = "1.2.0"
 problem = "C++ data-member and member-function pointer representations contain blank underlying Ada types and make the generated specification invalid."
 upstream_issue = "Pending GCC Bugzilla filing."

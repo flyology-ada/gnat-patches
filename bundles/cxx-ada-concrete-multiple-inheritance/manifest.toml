@@ -1,6 +1,7 @@
 schema = 1
 id = "cxx-ada-concrete-multiple-inheritance"
 status = "staged"
+standalone_patch = false
 staged_in_patchset = "1.2.0"
 staged_reason = "Concrete secondary bases are represented as fixed nested as-base storage rather than native Ada multiple inheritance, so the binding is ABI-faithful but not fully type-safe. Held out of the published patchset for separate upstream review."
 staged_depends_on = ["cxx-ada-virtual-inheritance-layout", "cxx-ada-virtual-diamond-layout"]

@@ -1,6 +1,7 @@
 schema = 1
 id = "cxx-ada-anonymous-enums"
 status = "accepted"
+standalone_patch = true
 introduced_in_patchset = "1.2.0"
 problem = "Top-level C++ anonymous enumerations lose their constants and appear as incomplete internal types in generated Ada specifications."
 upstream_issue = "Pending GCC Bugzilla filing."

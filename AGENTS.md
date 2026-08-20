@@ -12,6 +12,10 @@ artifacts.
 - Keep unrelated compiler problems in separate directories under `bundles/`.
 - Use one canonical patch across releases only after exact, zero-fuzz context
   checks. Otherwise add explicit version variants and record each checksum.
+- One bundle per problem, but do not claim more independence than the patches
+  have. Declare `standalone_patch` honestly; `scripts/check-standalone.sh`
+  proves it against pristine source in every CI lane. A non-standalone bundle
+  applies only in the order its patchset records.
 - Known-good releases are unpatched controls. Never manufacture a code patch
   for a release that does not have the defect.
 - Source manifests fail closed on release archive checksum, Git commit, and Git

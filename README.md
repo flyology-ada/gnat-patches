@@ -6,9 +6,18 @@ executable regression fixtures, pinned source metadata, and the scripts used
 to apply and validate them. It does not contain a GCC source tree.
 
 Every accepted patch bundle includes at least one executable regression test.
-A code-only change is not an accepted bundle. Independent compiler problems
-live in independent `bundles/<id>/` directories; a new problem does not modify
-or depend on an existing bundle.
+A code-only change is not an accepted bundle. Each compiler problem gets its
+own `bundles/<id>/` directory and its own regression; a new problem never folds
+itself into an existing bundle's patch.
+
+Separate directories are not the same as separate patches. A bundle records
+whether its patch applies to pristine upstream source with
+`standalone_patch`, and `scripts/check-standalone.sh` proves that claim against
+the pinned source in CI. Fourteen of the twenty-four bundles are standalone.
+The other ten form an ordered series: their patch text is expressed against the
+accumulated tree, so upstream submission means either regenerating them against
+trunk or sending them as a declared series. `patchsets/<version>/gcc-<major>.toml`
+records the order they apply in.
 
 This repository is not a GCC fork. It curates patches against unmodified,
 checksum-pinned upstream sources and proves them with source builds.
@@ -16,11 +25,11 @@ checksum-pinned upstream sources and proves them with source builds.
 ## Current patchset
 
 Patchset `1.2.0` is the current repository candidate for GCC 13, 14, 15, and
-16. It contains nineteen independent corrections, each with its own executable
+16. It contains seventeen independent corrections, each with its own executable
 regression. Patchset `1.1.0` remains the latest published release until the
 `1.2.0` validation and publication workflows complete.
 
-Five further C++ mapper bundles are curated here but deliberately held out of
+Seven further C++ mapper bundles are curated here but deliberately held out of
 `1.2.0`; see [staged bundles](#staged-bundles) below.
 
 - `storage-model-actuals`: selected and indexed actuals rooted at a
@@ -77,16 +86,6 @@ Five further C++ mapper bundles are curated here but deliberately held out of
   records contain blank Ada types. Itanium ABI representations preserve data,
   nonvirtual, virtual, and null values as opaque callable-through-C++ values.
   GCC 13 through 16 are affected.
-- `cxx-ada-inherited-tail-padding`: Ada inheritance prevents C++ reuse of a
-  base class's tail padding, so an Ada view of a derived object can be larger
-  than the C++ object and place its own fields at different offsets. The
-  correction separates complete-object and as-base sizes and nests a primary
-  base only where C++ actually reuses its tail. GCC 13 through 16 are affected.
-- `cxx-ada-empty-class-storage`: complete empty objects receive zero Ada
-  storage, and overlapping `[[no_unique_address]]` members are emitted as
-  ordinary components. The correction gives a complete empty object one byte,
-  preserves empty-base optimization, and omits only a member that genuinely
-  contributes no unique storage. GCC 13 through 16 are affected.
 - `cxx-ada-enclosing-type-method-names`: a method whose spelling differs from
   its enclosing type only by case becomes an illegal duplicate Ada identifier.
   Only the colliding method receives a stable `_Method` suffix and keeps its
@@ -115,8 +114,6 @@ Five further C++ mapper bundles are curated here but deliberately held out of
 | `cxx-ada-char8-type` | affected | affected | affected | affected |
 | `cxx-ada-member-pointers` | affected | affected | affected | affected |
 | `cxx-ada-vector-types` | affected | affected | affected | affected |
-| `cxx-ada-inherited-tail-padding` | affected | affected | affected | affected |
-| `cxx-ada-empty-class-storage` | affected | affected | affected | affected |
 | `cxx-ada-enclosing-type-method-names` | affected | affected | affected | affected |
 | `cxx-ada-profile-formal-type-names` | affected | affected | affected | affected |
 | `cxx-ada-visible-type-method-names` | affected | affected | affected | affected |
@@ -139,24 +136,31 @@ accepted one: it has patch variants for every affected release, an executable
 both the current and the corrected Ada, and an entry in the panel ledger.
 It is simply not part of the published patchset yet.
 
-Patchset `1.2.0` stages the C++ multiple-inheritance and vtable-identity work.
-These patches are coupled to Itanium C++ ABI facts—secondary base offsets,
-virtual-base sharing, and vtable slot identity—and cannot be expressed as
-native Ada inheritance, so they need separate upstream review before they ship
-in a toolchain.
+Patchset `1.2.0` stages the C++ object-layout and vtable-identity work. These
+patches are coupled to Itanium C++ ABI facts—as-base versus complete-object
+sizes, secondary base offsets, virtual-base sharing, and vtable slot
+identity—and cannot be expressed as native Ada inheritance, so they need
+separate upstream review before they ship in a toolchain. They form one ordered
+series, not seven independent patches.
 
 | Staged bundle | 13.2.0 | 14.2.0 | 15.3.0 | 16.2.0 |
 | --- | --- | --- | --- | --- |
+| `cxx-ada-inherited-tail-padding` | affected | affected | affected | affected |
+| `cxx-ada-empty-class-storage` | affected | affected | affected | affected |
 | `cxx-ada-virtual-inheritance-layout` | affected | affected | affected | affected |
 | `cxx-ada-virtual-diamond-layout` | affected | affected | affected | affected |
 | `cxx-ada-concrete-multiple-inheritance` | affected | affected | affected | affected |
 | `cxx-ada-derived-virtual-slots` | affected | affected | affected | affected |
 | `cxx-ada-generated-name-identity` | affected | affected | affected | affected |
 
-`cxx-ada-generated-name-identity` is staged for a mechanical reason rather than
-an ABI one: its name allocator renames the as-base types, synthetic base
-components, and destructor entities that the other four bundles introduce, and
-its patch does not apply without them.
+Two of the seven are staged by dependency rather than by ABI judgement.
+`cxx-ada-inherited-tail-padding` decides *when* to nest a primary-base
+component, but the virtual-base layout path is what emits it, so on its own the
+patch does not produce the corrected record. CI proved that by building it.
+And
+`cxx-ada-generated-name-identity` renames the as-base types, synthetic base
+components, and destructor entities the layout bundles introduce, so its patch
+does not apply without them.
 
 Staged bundles apply, in the order recorded in
 `patchsets/1.2.0/gcc-<major>.toml`, on top of a tree that already has the

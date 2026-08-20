@@ -1,6 +1,7 @@
 schema = 1
 id = "cxx-ada-vector-types"
 status = "accepted"
+standalone_patch = true
 introduced_in_patchset = "1.2.0"
 problem = "Fixed-size C++ vector typedefs and signatures are emitted as invalid <vector> placeholders, with no usable Ada machine type or calling convention."
 upstream_issue = "Pending GCC Bugzilla filing."

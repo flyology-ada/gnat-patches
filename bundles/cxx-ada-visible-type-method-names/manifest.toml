@@ -1,6 +1,7 @@
 schema = 1
 id = "cxx-ada-visible-type-method-names"
 status = "accepted"
+standalone_patch = false
 introduced_in_patchset = "1.2.0"
 problem = "A C++ method can collide with a type made use-visible from another generated class package, making later Ada profiles ambiguous."
 upstream_issue = "Pending GCC Bugzilla filing."

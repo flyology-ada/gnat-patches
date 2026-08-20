@@ -1,6 +1,7 @@
 schema = 1
 id = "cxx-ada-template-record-termination"
 status = "accepted"
+standalone_patch = true
 introduced_in_patchset = "1.2.0"
 problem = "The C++ Ada spec dumper omits the terminating semicolon from trivial record declarations emitted for concrete class-template instances."
 upstream_issue = "Pending GCC Bugzilla filing."

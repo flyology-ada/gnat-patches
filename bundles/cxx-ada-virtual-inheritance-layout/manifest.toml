@@ -1,6 +1,7 @@
 schema = 1
 id = "cxx-ada-virtual-inheritance-layout"
 status = "staged"
+standalone_patch = false
 staged_in_patchset = "1.2.0"
 staged_reason = "Virtual-base layout is C++ ABI-coupled and cannot be expressed as native Ada inheritance; dynamic virtual-base conversion stays an explicit ABI-wrapper boundary. Held out of the published patchset for separate upstream review."
 staged_depends_on = []

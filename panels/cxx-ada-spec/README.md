@@ -36,7 +36,7 @@ The executable panel currently has four layers:
   translation unit, with periodic inheritance and overload clusters. They
   exercise higher-order interactions in the currently representable subset and
   alternate full and slim dump modes.
-- Twenty-four shipped runtime suites, plus six staged ones, link C++ and Ada at
+- Twenty-two shipped runtime suites, plus eight staged ones, link C++ and Ada at
   `-O0` and `-O2`. They check scalar,
   enum, record, union, pointer, reference, and callback calling conventions;
   object size, alignment, and field offsets; ordinary, interface, and concrete
@@ -81,7 +81,7 @@ the staged bundle reports `spec-mismatch`, not a false `pass`.
 
 The confirmed-history ledger is larger than that residual atomic count:
 twenty-two independent C++ mapper defects have bundles introduced for 1.2.0 —
-seventeen accepted into the patchset and five staged — and no confirmed
+fifteen accepted into the patchset and seven staged — and no confirmed
 fixed-layout runtime defect remains. Every linked bundle, accepted or staged,
 contains the offending C++, the unpatched Ada output, the corrected Ada output,
 and an executable `-O0`/`-O2` before/after regression:
@@ -98,8 +98,6 @@ and an executable `-O0`/`-O2` before/after regression:
 - [`cxx-ada-int128-types`](../../bundles/cxx-ada-int128-types/README.md): GCC 13 and 14 fail to recognize the unsigned internal 128-bit type name;
 - [`cxx-ada-vector-types`](../../bundles/cxx-ada-vector-types/README.md): machine vectors map to placeholders that cannot appear in profiles;
 - [`cxx-ada-member-pointers`](../../bundles/cxx-ada-member-pointers/README.md): data- and function-member pointer representations are emitted without Ada types;
-- [`cxx-ada-inherited-tail-padding`](../../bundles/cxx-ada-inherited-tail-padding/README.md): Ada inheritance prevents C++ reuse of base tail padding and moves derived fields;
-- [`cxx-ada-empty-class-storage`](../../bundles/cxx-ada-empty-class-storage/README.md): empty complete objects receive zero storage while overlapping empty subobjects are represented as ordinary fields;
 - [`cxx-ada-enclosing-type-method-names`](../../bundles/cxx-ada-enclosing-type-method-names/README.md): a method collides case-insensitively with its enclosing Ada type;
 - [`cxx-ada-profile-formal-type-names`](../../bundles/cxx-ada-profile-formal-type-names/README.md): a formal hides its own, a later formal's, or the result type;
 - [`cxx-ada-visible-type-method-names`](../../bundles/cxx-ada-visible-type-method-names/README.md): a method hides a type made visible from another generated class package.
@@ -108,8 +106,10 @@ and an executable `-O0`/`-O2` before/after regression:
 
 Patchset `1.2.0` does not ship these. They carry the same evidence as an
 accepted bundle and run in the panel's `staged` state; a `patched` run skips
-them and their six runtime suites.
+them and their eight runtime suites.
 
+- [`cxx-ada-inherited-tail-padding`](../../bundles/cxx-ada-inherited-tail-padding/README.md): Ada inheritance prevents C++ reuse of base tail padding and moves derived fields;
+- [`cxx-ada-empty-class-storage`](../../bundles/cxx-ada-empty-class-storage/README.md): empty complete objects receive zero storage while overlapping empty subobjects are represented as ordinary fields;
 - [`cxx-ada-virtual-inheritance-layout`](../../bundles/cxx-ada-virtual-inheritance-layout/README.md): virtual bases lose complete size, alignment, and field positions;
 - [`cxx-ada-virtual-diamond-layout`](../../bundles/cxx-ada-virtual-diamond-layout/README.md): direct diamond bases incorrectly include their shared virtual base as complete storage;
 - [`cxx-ada-concrete-multiple-inheritance`](../../bundles/cxx-ada-concrete-multiple-inheritance/README.md): additional concrete bases are emitted as illegal Ada progenitors instead of nested ABI storage;

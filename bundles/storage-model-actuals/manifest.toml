@@ -1,6 +1,7 @@
 schema = 1
 id = "storage-model-actuals"
 status = "accepted"
+standalone_patch = true
 introduced_in_patchset = "1.0.0"
 problem = "Selected and indexed actuals rooted at Designated_Storage_Model dereferences bypass Copy_From and Copy_To."
 upstream_issue = "https://github.com/flyology-ada/flyology/issues/27"

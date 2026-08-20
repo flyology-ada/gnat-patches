@@ -1,6 +1,7 @@
 schema = 1
 id = "cxx-ada-explicit-alignment"
 status = "accepted"
+standalone_patch = true
 introduced_in_patchset = "1.2.0"
 problem = "The C++ Ada spec dumper omits user-specified record alignment unless the layout is also packed or contains bit fields."
 upstream_issue = "Pending GCC Bugzilla filing."

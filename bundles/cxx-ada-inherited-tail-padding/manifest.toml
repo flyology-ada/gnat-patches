@@ -1,7 +1,10 @@
 schema = 1
 id = "cxx-ada-inherited-tail-padding"
-status = "accepted"
-introduced_in_patchset = "1.2.0"
+status = "staged"
+standalone_patch = false
+staged_in_patchset = "1.2.0"
+staged_reason = "The nested primary-base component this bundle selects is emitted by the staged virtual-base layout path, so a compiler carrying this patch without the staged ABI-layout bundles does not produce the corrected record. Held out of the published patchset with the rest of the layout family."
+staged_depends_on = ["cxx-ada-virtual-inheritance-layout"]
 problem = "The C++ Ada mapper loses reusable base-class tail padding, including non-polymorphic and multiple-base layouts, so an Ada view can have a larger size and different field offsets than C++."
 upstream_issue = "Pending GCC Bugzilla filing."
 affected_versions = ["13.2.0", "14.2.0", "15.3.0", "16.1.0", "16.2.0"]

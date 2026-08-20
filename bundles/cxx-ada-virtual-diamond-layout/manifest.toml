@@ -1,6 +1,7 @@
 schema = 1
 id = "cxx-ada-virtual-diamond-layout"
 status = "staged"
+standalone_patch = false
 staged_in_patchset = "1.2.0"
 staged_reason = "Shortened as-base views for diamond legs depend on the virtual-base layout representation and share its C++ ABI coupling. Held out of the published patchset for separate upstream review."
 staged_depends_on = ["cxx-ada-virtual-inheritance-layout"]

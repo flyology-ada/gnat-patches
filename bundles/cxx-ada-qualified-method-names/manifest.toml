@@ -1,6 +1,7 @@
 schema = 1
 id = "cxx-ada-qualified-method-names"
 status = "accepted"
+standalone_patch = true
 introduced_in_patchset = "1.2.0"
 problem = "The C++ Ada spec dumper emits colliding names for cv/ref-qualified methods and for copy/move assignment operators."
 upstream_issue = "Not yet filed."

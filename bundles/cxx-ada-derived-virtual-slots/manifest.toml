@@ -1,6 +1,7 @@
 schema = 1
 id = "cxx-ada-derived-virtual-slots"
 status = "staged"
+standalone_patch = false
 staged_in_patchset = "1.2.0"
 staged_reason = "Stabilizing destructor identities changes generated vtable slot naming for every derived class, which only has an observable contract once the ABI-layout bundles are accepted. Held out of the published patchset for separate upstream review."
 staged_depends_on = []

@@ -1,10 +1,19 @@
 # Patch bundles
 
-This directory contains independent, reviewable GCC/GNAT fixes. Each bundle has
-a manifest, one or more source patches, an executable regression, and a README
-showing the offending input, the broken output, and the corrected output.
-Patchsets select applicable variants by exact GCC release; the bundle README is
-the best starting point for reviewing an individual change.
+This directory contains reviewable GCC/GNAT fixes, one problem per bundle. Each
+bundle has a manifest, one or more source patches, an executable regression, and
+a README showing the offending input, the broken output, and the corrected
+output. Patchsets select applicable variants by exact GCC release; the bundle
+README is the best starting point for reviewing an individual change.
+
+Each bundle addresses an independent problem, but the patches are not all
+independent of each other. `standalone_patch` in the manifest records whether a
+bundle's patch applies with zero fuzz to pristine upstream source;
+`scripts/check-standalone.sh` proves it in CI. Fourteen bundles are standalone.
+The rest apply only in the order recorded in
+`patchsets/<version>/gcc-<major>.toml`, because their patch text is expressed
+against the accumulated tree — sometimes only as line-offset context, sometimes
+because they genuinely extend a helper an earlier bundle introduced.
 
 A bundle is either **accepted**, meaning every patchset for an affected GCC
 major must contain it, or **staged**, meaning it is curated and validated to the
@@ -59,35 +68,32 @@ the [C++ to Ada mapper panel](../panels/cxx-ada-spec/README.md).
 
 | Bundle | GCC releases | Summary |
 | --- | --- | --- |
-| [Empty-class storage](cxx-ada-empty-class-storage/README.md) | 13.2–16.2 | Gives complete empty objects one byte, preserves EBO, and omits only an actually overlapping `[[no_unique_address]]` selector. |
 | [Explicit alignment](cxx-ada-explicit-alignment/README.md) | 13.2–16.2 | Emits user-specified record alignment even without packing or bit fields. |
 | [`char8_t` type](cxx-ada-char8-type/README.md) | 13.2–16.2 | Maps `char8_t` without referring to a nonexistent `Interfaces.C` type. |
 | [128-bit integers](cxx-ada-int128-types/README.md) | 13.2–14.2 | Replaces GCC's internal unsigned 128-bit name with a valid Ada type. |
 | [Member pointers](cxx-ada-member-pointers/README.md) | 13.2–16.2 | Emits usable representations for data-member and member-function pointers. |
 | [Vector types](cxx-ada-vector-types/README.md) | 13.2–16.2 | Replaces invalid vector placeholders with usable Ada machine-vector types and profiles. |
 
-### Single-inheritance object layout
-
-| Bundle | GCC releases | Summary |
-| --- | --- | --- |
-| [Inherited tail padding](cxx-ada-inherited-tail-padding/README.md) | 13.2–16.2 | Separates complete-object and as-base sizes and nests a primary base only when C++ actually reuses its tail. |
-
-## Staged: multiple inheritance and vtable identity
+## Staged: C++ object layout and vtable identity
 
 These bundles are **not** part of patchset `1.2.0`. They are coupled to Itanium
-C++ ABI facts—secondary base offsets, virtual-base sharing, and vtable slot
-identity—and cannot be expressed as native Ada inheritance, so they need
-separate upstream review before they ship in a toolchain. The patches use fixed
-nested storage views where the ABI position is static; dynamic virtual-base
-conversion remains a wrapper or thunk boundary.
+C++ ABI facts—as-base versus complete-object sizes, secondary base offsets,
+virtual-base sharing, and vtable slot identity—and cannot be expressed as
+native Ada inheritance, so they need separate upstream review before they ship
+in a toolchain. The patches use fixed nested storage views where the ABI
+position is static; dynamic virtual-base conversion remains a wrapper or thunk
+boundary.
 
-They apply, in the order below, on top of a tree that already carries the
-complete patchset. `cxx-ada-generated-name-identity` is here for a mechanical
-reason rather than an ABI one: it renames entities the other four introduce and
-does not apply without them.
+They form one ordered series and apply, in the order below, on top of a tree
+that already carries the complete patchset. Two are here by dependency rather
+than by ABI judgement: `cxx-ada-inherited-tail-padding` selects a nested
+primary-base component that the virtual-base layout path emits, and
+`cxx-ada-generated-name-identity` renames entities the layout bundles introduce.
 
 | Staged bundle | GCC releases | Summary |
 | --- | --- | --- |
+| [Inherited tail padding](cxx-ada-inherited-tail-padding/README.md) | 13.2–16.2 | Separates complete-object and as-base sizes and nests a primary base only when C++ actually reuses its tail. |
+| [Empty-class storage](cxx-ada-empty-class-storage/README.md) | 13.2–16.2 | Gives complete empty objects one byte, preserves EBO, and omits only an actually overlapping `[[no_unique_address]]` selector. |
 | [Virtual inheritance layout](cxx-ada-virtual-inheritance-layout/README.md) | 13.2–16.2 | Restores complete size, alignment, and component positions for classes with virtual bases. |
 | [Virtual diamond layout](cxx-ada-virtual-diamond-layout/README.md) | 13.2–16.2 | Uses shortened as-base views for direct diamond legs instead of duplicating their shared virtual base. |
 | [Concrete multiple inheritance](cxx-ada-concrete-multiple-inheritance/README.md) | 13.2–16.2 | Keeps the primary base as Ada inheritance and emits concrete secondary bases as exact nested as-base storage. |

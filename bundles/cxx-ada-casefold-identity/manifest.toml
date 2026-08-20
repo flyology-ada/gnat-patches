@@ -1,6 +1,7 @@
 schema = 1
 id = "cxx-ada-casefold-identity"
 status = "accepted"
+standalone_patch = false
 introduced_in_patchset = "1.2.0"
 problem = "The C++ Ada spec dumper emits case-distinct C++ identifiers as duplicate Ada identifiers."
 upstream_issue = "Not yet filed."

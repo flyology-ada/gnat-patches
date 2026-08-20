@@ -1,6 +1,7 @@
 schema = 1
 id = "cxx-ada-generated-name-identity"
 status = "staged"
+standalone_patch = false
 staged_in_patchset = "1.2.0"
 staged_reason = "The name allocator renames the as-base types, synthetic base components, and destructor entities introduced by the staged ABI-layout bundles, and its patch does not apply without them. Held out of the published patchset for separate upstream review."
 staged_depends_on = ["cxx-ada-virtual-inheritance-layout", "cxx-ada-virtual-diamond-layout", "cxx-ada-concrete-multiple-inheritance", "cxx-ada-derived-virtual-slots"]

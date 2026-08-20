@@ -1,6 +1,7 @@
 schema = 1
 id = "cxx-ada-char8-type"
 status = "accepted"
+standalone_patch = true
 introduced_in_patchset = "1.2.0"
 problem = "The C++ Ada spec dumper emits char8_t references even though GNAT's Interfaces.C has no such Ada type."
 upstream_issue = "Pending GCC Bugzilla filing."
