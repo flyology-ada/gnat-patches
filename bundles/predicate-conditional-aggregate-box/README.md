@@ -50,13 +50,15 @@ fails. Two further cases select a branch that violates the predicate and
 require `Assertion_Error`, so a correction that suppressed the check also
 fails.
 
-A qualified expression written around the conditional expression is
-deliberately outside this bundle. It reaches the same assertion by a different
-route: `Expand_N_Qualified_Expression` distributes the qualification into the
-dependent expressions and replaces the delayed conditional expression with a
-fresh one that does not carry `Expansion_Delayed`. That form aborts GCC 15 and
-16 with no predicate at all, so it has a different ingredient set and belongs
-in its own bundle.
+A qualified expression written around the conditional expression avoids the
+abort rather than reaching it. Replacing the fixture's unqualified conditional
+with `Policy'(if Flag then ... else ...)` compiles on unpatched GCC 15.3.0 and
+16.1.0, where the unqualified form aborts; both were measured on
+`aarch64-apple-darwin`. Why qualification changes the expansion has not been
+traced through the sources, so it is recorded here as an observed caller-side
+workaround and nothing more, alongside naming every component instead of using
+a box and hoisting the conditional expression into its own constant. It is not
+a separate defect and needs no separate bundle.
 
 The defect is in the target-independent front end, and it was measured on
 `aarch64-apple-darwin` only: GCC 13.2.0, 14.1.0, and 14.2.0 compile and run the
