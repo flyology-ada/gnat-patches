@@ -73,6 +73,8 @@ if [[ "$state" == patched ]]; then
 else
   "$root/panels/cxx-ada-spec/cases/recursive-secondary-base/run-test.sh" \
     "$toolchain" "$version" "$bundle_state"
+  "$root/bundles/cxx-ada-vector-types/run-test.sh" \
+    "$toolchain" "$version" "$bundle_state"
   "$root/bundles/cxx-ada-inherited-tail-padding/run-test.sh" \
     "$toolchain" "$version" "$bundle_state"
   "$root/bundles/cxx-ada-empty-class-storage/run-test.sh" \
@@ -86,8 +88,6 @@ else
   "$root/bundles/cxx-ada-derived-virtual-slots/run-test.sh" \
     "$toolchain" "$version" "$bundle_state"
   "$root/bundles/cxx-ada-generated-name-identity/run-test.sh" \
-    "$toolchain" "$version" "$bundle_state"
-  "$root/bundles/cxx-ada-vector-types/run-test.sh" \
     "$toolchain" "$version" "$bundle_state"
 fi
 

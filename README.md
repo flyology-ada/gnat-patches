@@ -138,27 +138,32 @@ accepted one: it has patch variants for every affected release, an executable
 both the current and the corrected Ada, and an entry in the panel ledger.
 It is simply not part of the published patchset yet.
 
-Patchset `1.2.0` stages two different kinds of work.
+Patchset `1.2.0` stages two different kinds of work. Both apply in the order
+recorded in `patchsets/1.2.0/gcc-<major>.toml`.
 
-The first seven bundles are the C++ object-layout and vtable-identity series.
-These patches are coupled to Itanium C++ ABI facts—as-base versus
-complete-object sizes, secondary base offsets, virtual-base sharing, and vtable
-slot identity—and cannot be expressed as native Ada inheritance, so they need
+`cxx-ada-vector-types` is staged on its own. Its patch is standalone — it
+applies to pristine upstream source — and its free-function vector mapping is
+proven by an executable regression. But the same `VECTOR_TYPE` printer fix also
+makes a vector-bearing C++ method print as a callable `Convention => CPP`
+binding, and no tested GNAT release classifies that method ABI consistently.
+Where the unpatched mapper rejected the spec at compile time, that binding
+compiles and can return a wrong value; direct dispatch needs an `extern "C"`
+C++ wrapper. The bundle ships once that unproven binding fails closed, the way
+the same patch already handles scalable SVE/RVV vectors. It applies before the
+layout series because `cxx-ada-generated-name-identity` rewrites the
+declaration terminator immediately above the alignment emission this patch
+adds.
+
+The remaining seven are the C++ object-layout and vtable-identity series. These
+patches are coupled to Itanium C++ ABI facts—as-base versus complete-object
+sizes, secondary base offsets, virtual-base sharing, and vtable slot
+identity—and cannot be expressed as native Ada inheritance, so they need
 separate upstream review before they ship in a toolchain. They form one ordered
 series, not seven independent patches.
 
-`cxx-ada-vector-types` is staged on its own and for a different reason. Its
-patch is standalone, and its free-function vector mapping is proven by an
-executable regression, but the same `VECTOR_TYPE` printer fix also makes a
-vector-bearing C++ method print as a callable `Convention => CPP` binding. No
-tested GNAT release classifies that method ABI consistently, so the generated
-binding compiles and can return wrong values where the unpatched mapper failed
-loudly at compile time. Direct dispatch needs an `extern "C"` C++ wrapper. The
-bundle ships once that unproven binding fails closed, the way the same patch
-already handles scalable SVE/RVV vectors.
-
 | Staged bundle | 13.2.0 | 14.2.0 | 15.3.0 | 16.2.0 |
 | --- | --- | --- | --- | --- |
+| `cxx-ada-vector-types` | affected | affected | affected | affected |
 | `cxx-ada-inherited-tail-padding` | affected | affected | affected | affected |
 | `cxx-ada-empty-class-storage` | affected | affected | affected | affected |
 | `cxx-ada-virtual-inheritance-layout` | affected | affected | affected | affected |
@@ -166,7 +171,6 @@ already handles scalable SVE/RVV vectors.
 | `cxx-ada-concrete-multiple-inheritance` | affected | affected | affected | affected |
 | `cxx-ada-derived-virtual-slots` | affected | affected | affected | affected |
 | `cxx-ada-generated-name-identity` | affected | affected | affected | affected |
-| `cxx-ada-vector-types` | affected | affected | affected | affected |
 
 Two of the layout series are staged by dependency rather than by ABI judgement.
 `cxx-ada-inherited-tail-padding` decides *when* to nest a primary-base
@@ -175,7 +179,9 @@ patch does not produce the corrected record. CI proved that by building it.
 And
 `cxx-ada-generated-name-identity` renames the as-base types, synthetic base
 components, and destructor entities the layout bundles introduce, so its patch
-does not apply without them.
+does not apply without them. It also rewrites the declaration terminator that
+sits directly above the vector bundle's alignment emission, so it does not
+apply without that either.
 
 Staged bundles apply, in the order recorded in
 `patchsets/1.2.0/gcc-<major>.toml`, on top of a tree that already has the

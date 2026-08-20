@@ -112,14 +112,14 @@ Patchset `1.2.0` does not ship these. They carry the same evidence as an
 accepted bundle and run in the panel's `staged` state; a `patched` run skips
 them and their nine runtime suites.
 
+- [`cxx-ada-vector-types`](../../bundles/cxx-ada-vector-types/README.md): machine vectors map to placeholders that cannot appear in profiles;
 - [`cxx-ada-inherited-tail-padding`](../../bundles/cxx-ada-inherited-tail-padding/README.md): Ada inheritance prevents C++ reuse of base tail padding and moves derived fields;
 - [`cxx-ada-empty-class-storage`](../../bundles/cxx-ada-empty-class-storage/README.md): empty complete objects receive zero storage while overlapping empty subobjects are represented as ordinary fields;
 - [`cxx-ada-virtual-inheritance-layout`](../../bundles/cxx-ada-virtual-inheritance-layout/README.md): virtual bases lose complete size, alignment, and field positions;
 - [`cxx-ada-virtual-diamond-layout`](../../bundles/cxx-ada-virtual-diamond-layout/README.md): direct diamond bases incorrectly include their shared virtual base as complete storage;
 - [`cxx-ada-concrete-multiple-inheritance`](../../bundles/cxx-ada-concrete-multiple-inheritance/README.md): additional concrete bases are emitted as illegal Ada progenitors instead of nested ABI storage;
 - [`cxx-ada-derived-virtual-slots`](../../bundles/cxx-ada-derived-virtual-slots/README.md): class-specific destructor names shift later derived virtuals away from their C++ vtable slots;
-- [`cxx-ada-generated-name-identity`](../../bundles/cxx-ada-generated-name-identity/README.md): readable synthesized names collide with user-written methods, aliases, formals, layout helpers, class packages, and special members;
-- [`cxx-ada-vector-types`](../../bundles/cxx-ada-vector-types/README.md): machine vectors map to placeholders that cannot appear in profiles.
+- [`cxx-ada-generated-name-identity`](../../bundles/cxx-ada-generated-name-identity/README.md): readable synthesized names collide with user-written methods, aliases, formals, layout helpers, class packages, and special members.
 
 The following list is only the work still open or intentionally bounded, not
 the complete defect history.
