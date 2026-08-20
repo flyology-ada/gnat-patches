@@ -39,8 +39,12 @@ jobs:
         with:
           python-version: '3.12'
 
+      # enablement creates the Pages site on the first run, so publishing does
+      # not depend on someone having switched it on by hand beforehand.
       - name: Configure Pages
         uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
+        with:
+          enablement: true
 
       - name: Test the generator
         run: ./ci/test-generate-site.sh
