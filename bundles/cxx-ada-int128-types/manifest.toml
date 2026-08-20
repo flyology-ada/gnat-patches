@@ -1,0 +1,29 @@
+schema = 1
+id = "cxx-ada-int128-types"
+status = "accepted"
+standalone_patch = true
+introduced_in_patchset = "1.2.0"
+problem = "GCC 13 and 14 emit the internal C++ name for unsigned __int128 as an undefined Ada identifier."
+upstream_issue = "Pending GCC Bugzilla filing."
+affected_versions = ["13.2.0", "14.2.0"]
+known_good_versions = ["15.3.0", "16.1.0", "16.2.0"]
+source_provenance = "Repository-authored backport of the __int128 prefix recognition present in the pinned GCC 15 and 16 sources, with an executable regression; exact application verified locally against the pinned Darwin GCC 13 and 14 identities. Pinned FSF release application is required by Linux CI."
+files_modified = ["gcc/c-family/c-ada-spec.cc", "gcc/testsuite/g++.dg/ada-spec/int128-types.C"]
+regression_tests = ["gcc/testsuite/g++.dg/ada-spec/int128-types.C"]
+repository_fixture = "bundles/cxx-ada-int128-types/tests/int128-types.C"
+fixture_sha256 = "8bce39aa86a2cd371c8f98b5f7e6f7f71bd021e1fefcb0b63666ebcb52ce42e3"
+repository_test_runner = "bundles/cxx-ada-int128-types/run-test.sh"
+application_command = "patch --fuzz=0 -p1 -i bundles/cxx-ada-int128-types/patches/gcc-13-14.patch"
+build_command = "PATH=/path/to/bootstrap/bin:$PATH ./scripts/build-gnat.sh SOURCE BUILD INSTALL"
+test_command = "./scripts/run-regressions.sh INSTALL 1.2.0 GCC_MAJOR patched"
+expected_failure_before_patch = "GNAT rejects the generated specification because uu_int128_unsigned is undefined."
+expected_success_after_patch = "Signed and unsigned 128-bit values round-trip by value through Ada and C++ at -O0 and -O2."
+upstream_submission_state = "Not yet filed or submitted upstream."
+licensing = "GCC-derived compiler hunks remain GPL-3.0-or-later. The new test is proposed for the GCC testsuite under GCC project terms."
+
+[[variants]]
+id = "gcc-13-14"
+versions = ["13.2.0", "14.2.0"]
+source_flavors = ["linux", "darwin_arm64"]
+patch = "bundles/cxx-ada-int128-types/patches/gcc-13-14.patch"
+sha256 = "0ff464719272eaf8ea9696a06e91338c9e77c33e71cbc565493a2c044a3e5969"

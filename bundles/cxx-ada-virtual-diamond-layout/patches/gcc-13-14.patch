@@ -1,0 +1,361 @@
+diff --git a/gcc/c-family/c-ada-spec.cc b/gcc/c-family/c-ada-spec.cc
+index 7bee7f4..d0f00c1 100644
+--- a/gcc/c-family/c-ada-spec.cc
++++ b/gcc/c-family/c-ada-spec.cc
+@@ -2856,6 +2856,216 @@ is_ada_record_field (tree field)
+   return DECL_NAME (field) || !is_tagged_type (TREE_TYPE (field));
+ }
+ 
++/* Return true if NODE needs a distinct storage type when used as a base
++   subobject.  A non-polymorphic class with virtual bases contains those bases
++   as a complete object, but excludes them from its as-base size.  */
++
++static bool
++needs_virtual_as_base_type (tree node)
++{
++  if (!cpp_check || !RECORD_OR_UNION_TYPE_P (node) || is_tagged_type (node)
++      || !cpp_check (node, HAS_VIRTUAL_BASE))
++    return false;
++
++  const int data_size = cpp_check (node, GET_AS_BASE_SIZE);
++  const HOST_WIDE_INT object_size = int_size_in_bytes (node);
++  return data_size > 0 && object_size > data_size;
++}
++
++/* Return true if FIELD stores only the as-base portion of a virtual-base
++   class.  The complete Ada type has a larger Object_Size and cannot be used
++   for this component.  */
++
++static bool
++is_shortened_virtual_base_field (tree field)
++{
++  if (TREE_CODE (field) != FIELD_DECL || DECL_NAME (field)
++      || !needs_virtual_as_base_type (TREE_TYPE (field))
++      || !DECL_SIZE (field) || !tree_fits_uhwi_p (DECL_SIZE (field)))
++    return false;
++
++  const HOST_WIDE_INT object_size = int_size_in_bytes (TREE_TYPE (field));
++  return object_size > 0
++    && tree_to_uhwi (DECL_SIZE (field))
++       < (unsigned HOST_WIDE_INT) object_size * BITS_PER_UNIT;
++}
++
++/* Dump FIELD's named type, selecting the shortened storage type when FIELD
++   is a base subobject that excludes its type's virtual bases.  */
++
++static void
++dump_ada_record_field_type (pretty_printer *buffer, tree field)
++{
++  dump_ada_decl_name (buffer, TYPE_NAME (TREE_TYPE (field)), false);
++  if (is_shortened_virtual_base_field (field))
++    pp_string (buffer, "_As_Base");
++}
++
++/* Return true if FIELD lies wholly inside NODE's C++ as-base size.  */
++
++static bool
++field_fits_as_base (tree node, tree field)
++{
++  const int data_size = cpp_check (node, GET_AS_BASE_SIZE);
++  if (data_size < 0 || !is_ada_record_field (node, field)
++      || !DECL_FIELD_OFFSET (field) || !DECL_FIELD_BIT_OFFSET (field)
++      || !DECL_SIZE (field)
++      || !tree_fits_uhwi_p (DECL_FIELD_OFFSET (field))
++      || !tree_fits_uhwi_p (DECL_FIELD_BIT_OFFSET (field))
++      || !tree_fits_uhwi_p (DECL_SIZE (field)))
++    return false;
++
++  const unsigned HOST_WIDE_INT bitpos
++    = tree_to_uhwi (DECL_FIELD_OFFSET (field)) * BITS_PER_UNIT
++      + tree_to_uhwi (DECL_FIELD_BIT_OFFSET (field));
++  const unsigned HOST_WIDE_INT size = tree_to_uhwi (DECL_SIZE (field));
++  return size > 0 && bitpos + size
++    <= (unsigned HOST_WIDE_INT) data_size * BITS_PER_UNIT;
++}
++
++/* Return the strongest Ada alignment that divides NODE's as-base size.  The
++   complete C++ alignment can exceed that storage size because reusable tail
++   padding is not part of a base subobject.  */
++
++static unsigned int
++virtual_as_base_alignment (tree node, unsigned int data_size)
++{
++  unsigned int alignment = TYPE_ALIGN (node) / BITS_PER_UNIT;
++  while (alignment > 1 && data_size % alignment != 0)
++    alignment >>= 1;
++  return alignment;
++}
++
++/* Dump a storage-only Ada type for NODE's C++ as-base representation.  This
++   keeps each direct field addressable while excluding shared virtual bases.  */
++
++static void
++dump_ada_virtual_as_base_type (pretty_printer *buffer, tree node, tree type,
++			       int spc)
++{
++  const unsigned int data_size = cpp_check (node, GET_AS_BASE_SIZE);
++  int field_num = 0;
++
++  pp_newline (buffer);
++  newline_and_indent (buffer, spc);
++  pp_string (buffer, "type ");
++  dump_ada_node (buffer, TYPE_NAME (node), type, spc, false, true);
++  pp_string (buffer, "_As_Base is record");
++  pp_newline (buffer);
++
++  for (tree field = TYPE_FIELDS (node); field; field = TREE_CHAIN (field))
++    if (field_fits_as_base (node, field))
++      {
++	if (!DECL_NAME (field))
++	  {
++	    if (is_tagged_type (TREE_TYPE (field)))
++	      continue;
++
++	    INDENT (spc + INDENT_INCR);
++	    if (field_num == 0)
++	      pp_string (buffer, "parent : ");
++	    else
++	      {
++		char buf[32];
++		sprintf (buf, "field_%d : ", field_num + 1);
++		pp_string (buffer, buf);
++	      }
++	    dump_ada_record_field_type (buffer, field);
++	    pp_semicolon (buffer);
++	    pp_newline (buffer);
++	    field_num++;
++	  }
++	else
++	  {
++	    INDENT (spc + INDENT_INCR);
++	    dump_ada_node (buffer, field, type, spc, false, true);
++	    pp_string (buffer, " : ");
++	    dump_ada_record_field_type (buffer, field);
++	    pp_string (buffer, ";  -- ");
++	    dump_sloc (buffer, field);
++	    pp_newline (buffer);
++	    field_num++;
++	  }
++      }
++
++  if (field_num == 0)
++    {
++      INDENT (spc + INDENT_INCR);
++      pp_string (buffer, "null;");
++      pp_newline (buffer);
++    }
++
++  INDENT (spc);
++  pp_string (buffer, "end record");
++  newline_and_indent (buffer, spc);
++  pp_string (buffer, "with Convention => C_Pass_By_Copy;");
++
++  newline_and_indent (buffer, spc);
++  pp_string (buffer, "for ");
++  dump_ada_node (buffer, TYPE_NAME (node), type, spc, false, true);
++  pp_string (buffer, "_As_Base'Size use ");
++  pp_wide_integer (buffer, (HOST_WIDE_INT) data_size * BITS_PER_UNIT);
++  pp_semicolon (buffer);
++
++  newline_and_indent (buffer, spc);
++  pp_string (buffer, "for ");
++  dump_ada_node (buffer, TYPE_NAME (node), type, spc, false, true);
++  pp_string (buffer, "_As_Base'Object_Size use ");
++  pp_wide_integer (buffer, (HOST_WIDE_INT) data_size * BITS_PER_UNIT);
++  pp_semicolon (buffer);
++
++  newline_and_indent (buffer, spc);
++  pp_string (buffer, "for ");
++  dump_ada_node (buffer, TYPE_NAME (node), type, spc, false, true);
++  pp_string (buffer, "_As_Base'Alignment use ");
++  pp_decimal_int (buffer, virtual_as_base_alignment (node, data_size));
++  pp_semicolon (buffer);
++
++  newline_and_indent (buffer, spc);
++  pp_string (buffer, "for ");
++  dump_ada_node (buffer, TYPE_NAME (node), type, spc, false, true);
++  pp_string (buffer, "_As_Base use record");
++
++  int repr_field_num = 0;
++  for (tree field = TYPE_FIELDS (node); field; field = TREE_CHAIN (field))
++    if (field_fits_as_base (node, field))
++      {
++	if (!DECL_NAME (field) && is_tagged_type (TREE_TYPE (field)))
++	  continue;
++
++	repr_field_num++;
++	const unsigned HOST_WIDE_INT bitpos
++	  = tree_to_uhwi (DECL_FIELD_OFFSET (field)) * BITS_PER_UNIT
++	    + tree_to_uhwi (DECL_FIELD_BIT_OFFSET (field));
++	const unsigned HOST_WIDE_INT position = bitpos / BITS_PER_UNIT;
++	const unsigned HOST_WIDE_INT first_bit = bitpos % BITS_PER_UNIT;
++	const unsigned HOST_WIDE_INT last_bit
++	  = first_bit + tree_to_uhwi (DECL_SIZE (field)) - 1;
++
++	newline_and_indent (buffer, spc + INDENT_INCR);
++	if (DECL_NAME (field))
++	  dump_ada_decl_name (buffer, field, false);
++	else if (repr_field_num == 1)
++	  pp_string (buffer, "parent");
++	else
++	  {
++	    char buf[32];
++	    sprintf (buf, "field_%d", repr_field_num);
++	    pp_string (buffer, buf);
++	  }
++	pp_string (buffer, " at ");
++	pp_unsigned_wide_integer (buffer, position);
++	pp_string (buffer, " range ");
++	pp_unsigned_wide_integer (buffer, first_bit);
++	pp_string (buffer, " .. ");
++	pp_unsigned_wide_integer (buffer, last_bit);
++	pp_semicolon (buffer);
++      }
++
++  newline_and_indent (buffer, spc);
++  pp_string (buffer, "end record;");
++}
++
+ /* Dump the value and object sizes of an empty C++ class.  Ada's value size is
+    zero so an empty base consumes no storage, while Object_Size preserves the
+    byte occupied by a complete C++ object.  */
+@@ -3929,8 +4133,7 @@ dump_ada_structure (pretty_printer *buffer, tree node, tree type, bool nested,
+ 		      sprintf (buf, "field_%d : aliased ", field_num + 1);
+ 		      pp_string (buffer, buf);
+ 		    }
+-		  dump_ada_decl_name (buffer, TYPE_NAME (TREE_TYPE (tmp)),
+-				      false);
++		  dump_ada_record_field_type (buffer, tmp);
+ 		  pp_semicolon (buffer);
+ 		}
+ 
+@@ -4056,6 +4259,9 @@ dump_ada_structure (pretty_printer *buffer, tree node, tree type, bool nested,
+       pp_newline (buffer);
+       dump_ada_cpp_layout (buffer, node, type, spc,
+ 			   cpp_check (node, HAS_VIRTUAL_BASE));
++
++      if (needs_virtual_as_base_type (node))
++	dump_ada_virtual_as_base_type (buffer, node, type, spc);
+     }
+ 
+   /* Print the static fields of the structure, if any.  */
+diff --git a/gcc/testsuite/g++.dg/ada-spec/virtual-diamond-layout.C b/gcc/testsuite/g++.dg/ada-spec/virtual-diamond-layout.C
+new file mode 100644
+index 0000000..bd62fde
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/ada-spec/virtual-diamond-layout.C
+@@ -0,0 +1,114 @@
++/* { dg-do compile } */
++/* { dg-require-effective-target lp64 } */
++/* { dg-options "-fdump-ada-spec-slim" } */
++/* { dg-final { scan-file virtual_diamond_layout_c.ads "type Diamond_Left_As_Base" } } */
++/* { dg-final { scan-file virtual_diamond_layout_c.ads "for Diamond_Left_As_Base'Object_Size use 96;" } } */
++/* { dg-final { scan-file virtual_diamond_layout_c.ads "type Diamond_Right_As_Base" } } */
++/* { dg-final { scan-file virtual_diamond_layout_c.ads "for Diamond_Right_As_Base'Object_Size use 96;" } } */
++/* { dg-final { scan-file virtual_diamond_layout_c.ads "parent : aliased Diamond_Left_As_Base;" } } */
++/* { dg-final { scan-file virtual_diamond_layout_c.ads "field_2 : aliased Diamond_Right_As_Base;" } } */
++
++struct Diamond_Root
++{
++  int root_value;
++};
++
++struct Diamond_Left : virtual Diamond_Root
++{
++  int left_value;
++};
++
++struct Diamond_Right : virtual Diamond_Root
++{
++  int right_value;
++};
++
++struct Diamond : Diamond_Left, Diamond_Right
++{
++  int diamond_value;
++  Diamond (int root, int left, int right, int diamond_arg);
++};
++
++Diamond::Diamond (int root, int left, int right, int diamond_arg)
++  : Diamond_Root {root}, Diamond_Left {}, Diamond_Right {},
++    diamond_value {diamond_arg}
++{
++  left_value = left;
++  right_value = right;
++}
++
++extern "C" unsigned long cpp_diamond_root_size ()
++{
++  return sizeof (Diamond_Root);
++}
++
++extern "C" unsigned long cpp_diamond_size ()
++{
++  return sizeof (Diamond);
++}
++
++extern "C" unsigned long cpp_diamond_alignment ()
++{
++  return alignof (Diamond);
++}
++
++extern "C" unsigned long cpp_diamond_left_offset ()
++{
++  Diamond object (0, 0, 0, 0);
++  return reinterpret_cast<char *> (&object.left_value)
++    - reinterpret_cast<char *> (&object);
++}
++
++extern "C" unsigned long cpp_diamond_right_offset ()
++{
++  Diamond object (0, 0, 0, 0);
++  return reinterpret_cast<char *> (&object.right_value)
++    - reinterpret_cast<char *> (&object);
++}
++
++extern "C" unsigned long cpp_diamond_value_offset ()
++{
++  Diamond object (0, 0, 0, 0);
++  return reinterpret_cast<char *> (&object.diamond_value)
++    - reinterpret_cast<char *> (&object);
++}
++
++extern "C" unsigned long cpp_diamond_root_offset ()
++{
++  Diamond object (0, 0, 0, 0);
++  return reinterpret_cast<char *> (&object.root_value)
++    - reinterpret_cast<char *> (&object);
++}
++
++extern "C" Diamond *cpp_diamond_create
++  (int root, int left, int right, int diamond_arg)
++{
++  return new Diamond (root, left, right, diamond_arg);
++}
++
++extern "C" void cpp_diamond_delete (Diamond *object)
++{
++  delete object;
++}
++
++extern "C" int cpp_diamond_root_value (const Diamond *object)
++{
++  return object->root_value;
++}
++
++extern "C" int cpp_diamond_left_value (const Diamond *object)
++{
++  return object->left_value;
++}
++
++extern "C" int cpp_diamond_right_value (const Diamond *object)
++{
++  return object->right_value;
++}
++
++extern "C" int cpp_diamond_value (const Diamond *object)
++{
++  return object->diamond_value;
++}
++
++/* { dg-final { cleanup-ada-spec } } */

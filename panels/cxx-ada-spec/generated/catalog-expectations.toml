@@ -1,0 +1,78 @@
+schema = 1
+
+[all]
+alias_template = "ada-reject"
+anonymous_enum = "spec-mismatch"
+casefold_collision = "ada-reject"
+complex_and_vector = "ada-reject"
+concrete_multiple_inheritance = "spec-mismatch"
+constrained_template = "ada-reject"
+copy_move_constructors = "ada-reject"
+data_member_pointer = "ada-reject"
+default_template_arguments = "ada-reject"
+extended_characters = "ada-reject"
+full_specialization = "ada-reject"
+member_function_pointer = "ada-reject"
+method_cv_overloads = "ada-reject"
+nested_template = "ada-reject"
+non_type_template = "ada-reject"
+partial_specialization = "ada-reject"
+ref_qualified_methods = "ada-reject"
+template_template_parameter = "ada-reject"
+
+[gcc_13]
+integer_128 = "ada-reject"
+
+[gcc_14]
+integer_128 = "ada-reject"
+
+[patched]
+alias_template = "pass"
+anonymous_enum = "pass"
+casefold_collision = "pass"
+complex_and_vector = "pass"
+copy_move_constructors = "pass"
+constrained_template = "pass"
+data_member_pointer = "pass"
+default_template_arguments = "pass"
+extended_characters = "pass"
+full_specialization = "pass"
+integer_128 = "pass"
+member_function_pointer = "pass"
+nested_template = "pass"
+method_cv_overloads = "pass"
+non_type_template = "pass"
+partial_specialization = "pass"
+ref_qualified_methods = "pass"
+template_template_parameter = "pass"
+
+# A staged compiler adds the curated bundles that patchset 1.2.0 holds back.
+[staged]
+concrete_multiple_inheritance = "pass"
+
+[diagnostics]
+alias_template = "missing.*;"
+anonymous_enum = "missing pattern: Anonymous_Zero"
+casefold_collision = "ITEM.*conflicts"
+complex_and_vector = "subtype indication expected"
+concrete_multiple_inheritance = "missing pattern: type Both is limited new Left"
+constrained_template = "missing.*;"
+copy_move_constructors = "Assign_Value.*conflicts"
+data_member_pointer = "extra.*;"
+default_template_arguments = "anon_array[0-9]+.*undefined"
+extended_characters = "char8_t.*undefined"
+full_specialization = "missing.*;"
+member_function_pointer = "identifier expected"
+method_cv_overloads = "get.*conflicts"
+nested_template = "missing.*;"
+non_type_template = "anon_array[0-9]+.*undefined"
+partial_specialization = "missing.*;"
+ref_qualified_methods = "get.*conflicts"
+template_template_parameter = "missing.*;"
+
+[diagnostics_gcc_13]
+integer_128 = "uu_int128_unsigned.*undefined"
+
+
+[diagnostics_gcc_14]
+integer_128 = "uu_int128_unsigned.*undefined"

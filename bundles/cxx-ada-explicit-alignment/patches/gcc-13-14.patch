@@ -1,0 +1,51 @@
+diff --git a/gcc/c-family/c-ada-spec.cc b/gcc/c-family/c-ada-spec.cc
+--- a/gcc/c-family/c-ada-spec.cc
++++ b/gcc/c-family/c-ada-spec.cc
+@@ -3440,16 +3440,26 @@ dump_ada_structure (pretty_printer *buffer, tree node, tree type, bool nested,
+       pp_string (buffer, "Unchecked_Union => True");
+     }
+ 
+-  if (bitfield_used || packed_layout)
++  const bool needs_pack = bitfield_used || packed_layout;
++
++  if (needs_pack)
+     {
+-      char buf[32];
+       pp_comma (buffer);
+       newline_and_indent (buffer, spc + 5);
+       pp_string (buffer, "Pack => True");
++    }
++
++  if (needs_pack || TYPE_USER_ALIGN (node))
++    {
++      char buf[32];
+       pp_comma (buffer);
+       newline_and_indent (buffer, spc + 5);
+       sprintf (buf, "Alignment => %d", TYPE_ALIGN (node) / BITS_PER_UNIT);
+       pp_string (buffer, buf);
++    }
++
++  if (needs_pack)
++    {
+       bitfield_used = false;
+       packed_layout = false;
+     }
+diff --git a/gcc/testsuite/g++.dg/ada-spec/explicit-alignment.C b/gcc/testsuite/g++.dg/ada-spec/explicit-alignment.C
+new file mode 100644
+index 000000000..1450e6b84
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/ada-spec/explicit-alignment.C
+@@ -0,0 +1,13 @@
++/* { dg-do compile } */
++/* { dg-options "-fdump-ada-spec-slim" } */
++/* { dg-final { scan-file explicit_alignment_c.ads "Alignment => 32" } } */
++
++struct alignas(32) Aligned
++{
++  int value;
++};
++
++extern "C" unsigned long cpp_size () { return sizeof (Aligned); }
++extern "C" unsigned long cpp_alignment () { return alignof (Aligned); }
++
++/* { dg-final { cleanup-ada-spec } } */

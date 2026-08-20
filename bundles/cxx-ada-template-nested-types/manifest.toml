@@ -1,0 +1,36 @@
+schema = 1
+id = "cxx-ada-template-nested-types"
+status = "accepted"
+standalone_patch = true
+introduced_in_patchset = "1.2.0"
+problem = "Concrete C++ class-template packages reference anonymous array field types without declaring them in the generated Ada specification."
+upstream_issue = "Pending GCC Bugzilla filing."
+affected_versions = ["13.2.0", "14.2.0", "15.3.0", "16.1.0", "16.2.0"]
+known_good_versions = []
+source_provenance = "Repository-authored GCC patch and executable regression; exact application verified locally against the pinned Darwin release identities. Pinned FSF release application is required by Linux CI."
+files_modified = ["gcc/c-family/c-ada-spec.cc", "gcc/testsuite/g++.dg/ada-spec/template-nested-types.C"]
+regression_tests = ["gcc/testsuite/g++.dg/ada-spec/template-nested-types.C"]
+repository_fixture = "bundles/cxx-ada-template-nested-types/tests/template-nested-types.C"
+fixture_sha256 = "76e26b3452197d34e248b1739b50e9e78f51fd4cdca9bfd46e70b6b6c582a963"
+repository_test_runner = "bundles/cxx-ada-template-nested-types/run-test.sh"
+application_command = "patch --fuzz=0 -p1 -i bundles/cxx-ada-template-nested-types/patches/VARIANT.patch"
+build_command = "PATH=/path/to/bootstrap/bin:$PATH ./scripts/build-gnat.sh SOURCE BUILD INSTALL"
+test_command = "./scripts/run-regressions.sh INSTALL 1.2.0 GCC_MAJOR patched"
+expected_failure_before_patch = "GNAT rejects both generated template packages because their anon_array field types are undefined."
+expected_success_after_patch = "Both packages declare their anonymous arrays, compile, and pass their records to C++ at -O0 and -O2."
+upstream_submission_state = "Not yet filed or submitted upstream."
+licensing = "GCC-derived compiler hunks remain GPL-3.0-or-later. The new test is proposed for the GCC testsuite under GCC project terms."
+
+[[variants]]
+id = "gcc-13-14"
+versions = ["13.2.0", "14.2.0"]
+source_flavors = ["linux", "darwin_arm64"]
+patch = "bundles/cxx-ada-template-nested-types/patches/gcc-13-14.patch"
+sha256 = "85f8c81874baba2e24a5cbacd797935139790822eb7383d6d844d7a1c0de8044"
+
+[[variants]]
+id = "gcc-15-16"
+versions = ["15.3.0", "16.1.0", "16.2.0"]
+source_flavors = ["linux", "darwin_arm64"]
+patch = "bundles/cxx-ada-template-nested-types/patches/gcc-15-16.patch"
+sha256 = "a79edec02ccea6b8a2706132c55f358052c976906065a04ea4620de611fba0be"

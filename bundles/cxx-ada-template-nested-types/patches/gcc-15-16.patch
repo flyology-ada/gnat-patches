@@ -1,0 +1,59 @@
+diff --git a/gcc/c-family/c-ada-spec.cc b/gcc/c-family/c-ada-spec.cc
+index c7ae03223..4bf4f8527 100644
+--- a/gcc/c-family/c-ada-spec.cc
++++ b/gcc/c-family/c-ada-spec.cc
+@@ -37,6 +37,7 @@ along with GCC; see the file COPYING3.  If not see
+ static int  dump_ada_node (pretty_printer *, tree, tree, int, bool, bool);
+ static int  dump_ada_declaration (pretty_printer *, tree, tree, int);
+ static void dump_ada_structure (pretty_printer *, tree, tree, bool, int);
++static void dump_nested_types (pretty_printer *, tree, int);
+ static char *to_ada_name (const char *, bool *);
+ 
+ #define INDENT(SPACE) \
+@@ -1956,2 +1957,3 @@ dump_ada_template (pretty_printer *pp, tree t, int spc)
+       TREE_VISITED (get_underlying_decl (instance)) = 1;
++      dump_nested_types (pp, TYPE_NAME (instance), spc);
+       pp_string (pp, "type ");
+diff --git a/gcc/testsuite/g++.dg/ada-spec/template-nested-types.C b/gcc/testsuite/g++.dg/ada-spec/template-nested-types.C
+new file mode 100644
+index 000000000..d4ca15a51
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/ada-spec/template-nested-types.C
+@@ -0,0 +1,37 @@
++/* { dg-do compile } */
++/* { dg-options "-std=gnu++20 -fdump-ada-spec-slim" } */
++/* { dg-final { scan-file template_nested_types_c.ads "package Buffer_int_4 is" } } */
++/* { dg-final { scan-file template_nested_types_c.ads "package Defaults_int_2 is" } } */
++/* { dg-final { scan-file template_nested_types_c.ads "type anon_array[0-9]+ is array \(0 \.\. 3\) of aliased int;" } } */
++/* { dg-final { scan-file template_nested_types_c.ads "type anon_array[0-9]+ is array \(0 \.\. 1\) of aliased int;" } } */
++
++template <typename T, unsigned N>
++struct Buffer
++{
++  T values[N];
++};
++
++template struct Buffer<int, 4>;
++
++template <typename T = int, unsigned N = 2>
++struct Defaults
++{
++  T values[N];
++};
++
++template struct Defaults<>;
++
++extern "C" int
++buffer_sum (const Buffer<int, 4> *value)
++{
++  return value->values[0] + value->values[1]
++    + value->values[2] + value->values[3];
++}
++
++extern "C" int
++defaults_sum (const Defaults<> *value)
++{
++  return value->values[0] + value->values[1];
++}
++
++/* { dg-final { cleanup-ada-spec } } */

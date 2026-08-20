@@ -1,0 +1,197 @@
+schema = 1
+
+[generated]
+atomic_catalog = "panels/cxx-ada-spec/generated/catalog.py"
+atomic_expectations = "panels/cxx-ada-spec/generated/catalog-expectations.toml"
+pairwise_generator = "panels/cxx-ada-spec/generated/pairwise.py"
+pairwise_expectations = "panels/cxx-ada-spec/generated/expectations.toml"
+grammar_generator = "panels/cxx-ada-spec/generated/grammar.py"
+
+[runtime]
+suites = [
+  "panels/cxx-ada-spec/cases/core-language",
+  "panels/cxx-ada-spec/cases/abi-layout",
+  "panels/cxx-ada-spec/cases/call-abi",
+  "panels/cxx-ada-spec/cases/interface-secondary-base",
+  "panels/cxx-ada-spec/cases/exception-interoperability",
+  "panels/cxx-ada-spec/cases/uninstantiated-templates",
+  "panels/cxx-ada-spec/cases/stdlib-value-facade",
+  "bundles/cxx-ada-template-qualification",
+  "bundles/cxx-ada-template-record-termination",
+  "bundles/cxx-ada-explicit-alignment",
+  "bundles/cxx-ada-namespace-identity",
+  "bundles/cxx-ada-qualified-method-names",
+  "bundles/cxx-ada-casefold-identity",
+  "bundles/cxx-ada-template-nested-types",
+  "bundles/cxx-ada-anonymous-enums",
+  "bundles/cxx-ada-char8-type",
+  "bundles/cxx-ada-int128-types",
+  "bundles/cxx-ada-vector-types",
+  "bundles/cxx-ada-member-pointers",
+  "bundles/cxx-ada-enclosing-type-method-names",
+  "bundles/cxx-ada-profile-formal-type-names",
+  "bundles/cxx-ada-visible-type-method-names",
+]
+# Suites whose subject is a staged bundle. A patchset-only compiler makes no
+# claim about them; they run in the panel's staged state.
+staged_suites = [
+  "panels/cxx-ada-spec/cases/recursive-secondary-base",
+  "bundles/cxx-ada-inherited-tail-padding",
+  "bundles/cxx-ada-empty-class-storage",
+  "bundles/cxx-ada-virtual-inheritance-layout",
+  "bundles/cxx-ada-virtual-diamond-layout",
+  "bundles/cxx-ada-concrete-multiple-inheritance",
+  "bundles/cxx-ada-derived-virtual-slots",
+  "bundles/cxx-ada-generated-name-identity",
+]
+oracles = [
+  "generated Ada compiles",
+  "required Ada declarations are present",
+  "C++ symbols link",
+  "runtime values round-trip",
+  "virtual and interface dispatch agree",
+  "sizeof and Object_Size agree",
+  "alignof and Alignment agree",
+  "public field offsets agree",
+  "accepted defects fail before and pass after their patches",
+]
+
+[mapper_tree_codes]
+NULLPTR_TYPE = ["nullptr_type"]
+VOID_TYPE = ["incomplete_forward_declaration"]
+VECTOR_TYPE = ["complex_and_vector"]
+COMPLEX_TYPE = ["complex_and_vector"]
+ENUMERAL_TYPE = ["scoped_enums", "anonymous_enum"]
+REAL_TYPE = ["fundamental_scalars"]
+INTEGER_TYPE = ["fundamental_scalars", "integer_128"]
+BOOLEAN_TYPE = ["fundamental_scalars"]
+POINTER_TYPE = ["multiple_indirection", "function_pointer"]
+REFERENCE_TYPE = ["free_rvalue_references"]
+ARRAY_TYPE = ["multidimensional_arrays", "flexible_array"]
+RECORD_TYPE = ["anonymous_aggregates", "empty_base"]
+UNION_TYPE = ["anonymous_aggregates"]
+INTEGER_CST = ["globals_constants", "scoped_enums"]
+REAL_CST = ["globals_constants"]
+STRING_CST = ["string_constant_array"]
+TYPE_DECL = ["typedef_and_using"]
+FUNCTION_DECL = ["free_overloads"]
+CONST_DECL = ["scoped_enums"]
+VAR_DECL = ["globals_constants", "thread_local_storage"]
+PARM_DECL = ["free_overloads"]
+FIELD_DECL = ["anonymous_aggregates", "bit_fields"]
+NAMESPACE_DECL = ["nested_namespace", "anonymous_namespace"]
+TEMPLATE = ["function_template_instance", "partial_specialization"]
+TREE_BINFO = ["diamond_inheritance", "virtual_inheritance"]
+
+[[groups]]
+id = "types-layout"
+cases = [
+  "anonymous_aggregates",
+  "anonymous_enum",
+  "bit_fields",
+  "complex_and_vector",
+  "extended_characters",
+  "flexible_array",
+  "fundamental_scalars",
+  "incomplete_forward_declaration",
+  "integer_128",
+  "multidimensional_arrays",
+  "multiple_indirection",
+  "nullptr_type",
+  "packing_alignment",
+  "scoped_enums",
+  "string_constant_array",
+]
+
+[[groups]]
+id = "pointers-references-functions"
+cases = [
+  "conversion_operators",
+  "copy_move_constructors",
+  "data_member_pointer",
+  "deleted_defaulted",
+  "free_overloads",
+  "free_rvalue_references",
+  "friend_function",
+  "function_pointer",
+  "member_function_pointer",
+  "method_cv_overloads",
+  "noexcept_default_arguments",
+  "operators",
+  "ref_qualified_methods",
+  "variadic_function",
+]
+
+[[groups]]
+id = "templates"
+cases = [
+  "alias_template",
+  "constrained_template",
+  "default_template_arguments",
+  "full_specialization",
+  "function_template_instance",
+  "member_template",
+  "nested_template",
+  "non_type_template",
+  "partial_specialization",
+  "template_template_parameter",
+  "variable_template",
+]
+
+[[groups]]
+id = "classes-inheritance"
+cases = [
+  "abstract_virtual_destructor",
+  "concrete_multiple_inheritance",
+  "covariant_return",
+  "diamond_inheritance",
+  "empty_base",
+  "final_override",
+  "nested_class",
+  "nonpublic_inheritance",
+  "virtual_inheritance",
+]
+
+[[groups]]
+id = "names-scopes-linkage"
+cases = [
+  "ada_reserved_names",
+  "anonymous_namespace",
+  "casefold_collision",
+  "extern_c_linkage",
+  "inline_namespace",
+  "namespace_alias",
+  "nested_namespace",
+  "typedef_and_using",
+]
+
+[[groups]]
+id = "runtime-storage-modern"
+cases = [
+  "constexpr_consteval",
+  "exception_throw",
+  "globals_constants",
+  "static_data_member",
+  "thread_local_storage",
+  "volatile_global",
+]
+
+[limits]
+not_yet_covered = [
+  "C++ modules and header units",
+  "coroutines",
+  "lambda closure and local-class emission",
+  "RTTI, typeid, and dynamic_cast runtime behavior",
+  "direct ownership transfer and by-value ABI for nontrivial standard-library values beyond the tested facade boundary",
+  "atomics and concurrency memory-order behavior",
+  "Windows/MSVC ABI targets outside this repository's supported hosts",
+  "three-way and higher feature interactions beyond the pairwise generator",
+  "runtime ABI execution for every compile-only atomic catalog entry",
+  "portable recovery of a propagated exception's C++ language identity across GNAT runtime versions",
+  "Linux AArch64 long double call interoperability on GNAT releases whose Ada and C++ target conventions disagree",
+  "direct Ada dispatch to vector-bearing C++ methods; use a C++ wrapper so method dispatch stays under the C++ ABI",
+  "concrete base classes of a C++ class with no virtual destructor: the mapper emits no base list at all, so both base subobjects vanish from the Ada record even with the staged layout bundles applied",
+  "instrumented branch coverage measurement for c-ada-spec.cc",
+  "mutation testing that proves each mapper branch has a sensitive oracle",
+  "coverage-guided grammar fuzzing with automatic failure minimization",
+]

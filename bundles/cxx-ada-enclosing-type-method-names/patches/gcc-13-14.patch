@@ -1,0 +1,93 @@
+diff --git a/gcc/c-family/c-ada-spec.cc b/gcc/c-family/c-ada-spec.cc
+index 7bd245e..7bee7f4 100644
+--- a/gcc/c-family/c-ada-spec.cc
++++ b/gcc/c-family/c-ada-spec.cc
+@@ -3294,6 +3294,29 @@ print_method_qualifiers (pretty_printer *buffer, tree t)
+     pp_string (buffer, "_Rvalue");
+ }
+ 
++/* Return true if METHOD_NAME collides with the enclosing C++ TYPE name after
++   Ada's case-insensitive identifier conversion.  */
++
++static bool
++method_name_matches_type (tree method_name, tree type)
++{
++  if (!method_name || !RECORD_OR_UNION_TYPE_P (type) || !TYPE_NAME (type))
++    return false;
++
++  tree type_decl = TYPE_NAME (type);
++  tree type_name_node = TREE_CODE (type_decl) == TYPE_DECL
++			? DECL_NAME (type_decl) : type_decl;
++  if (!type_name_node || TREE_CODE (type_name_node) != IDENTIFIER_NODE)
++    return false;
++
++  char *method_ada = to_ada_name (IDENTIFIER_POINTER (method_name), NULL);
++  char *type_ada = to_ada_name (IDENTIFIER_POINTER (type_name_node), NULL);
++  const bool matches = !strcasecmp (method_ada, type_ada);
++  free (method_ada);
++  free (type_ada);
++  return matches;
++}
++
+ /* Return the name of type T.  */
+ 
+ static const char *
+@@ -3636,7 +3659,11 @@ dump_ada_declaration (pretty_printer *buffer, tree t, tree type, int spc)
+ 	  const unsigned int suffix = overloading_index (decl_name);
+ 	  pp_ada_tree_identifier (buffer, decl_name, t, false);
+ 	  if (is_method)
+-	    print_method_qualifiers (buffer, t);
++	    {
++	      print_method_qualifiers (buffer, t);
++	      if (method_name_matches_type (decl_name, type))
++		pp_string (buffer, "_Method");
++	    }
+ 	  if (suffix > 1)
+ 	    pp_decimal_int (buffer, suffix);
+ 	}
+diff --git a/gcc/testsuite/g++.dg/ada-spec/enclosing-type-method-names.C b/gcc/testsuite/g++.dg/ada-spec/enclosing-type-method-names.C
+new file mode 100644
+index 0000000..c513257
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/ada-spec/enclosing-type-method-names.C
+@@ -0,0 +1,40 @@
++/* { dg-do compile } */
++/* { dg-options "-fdump-ada-spec-slim" } */
++/* { dg-final { scan-file enclosing_type_method_names_c.ads "function left_Method" } } */
++/* { dg-final { scan-file enclosing_type_method_names_c.ads "function right_Method" } } */
++
++struct Left
++{
++  virtual int left ();
++  int l;
++};
++
++struct Right
++{
++  virtual int right ();
++  int r;
++};
++
++struct Both : Left, Right
++{
++  int both;
++};
++
++int Left::left () { return l; }
++int Right::right () { return r; }
++extern "C" Left *cpp_create_left (int value)
++{
++  Left *object = new Left;
++  object->l = value;
++  return object;
++}
++extern "C" Right *cpp_create_right (int value)
++{
++  Right *object = new Right;
++  object->r = value;
++  return object;
++}
++extern "C" void cpp_delete_left (Left *object) { delete object; }
++extern "C" void cpp_delete_right (Right *object) { delete object; }
++
++/* { dg-final { cleanup-ada-spec } } */

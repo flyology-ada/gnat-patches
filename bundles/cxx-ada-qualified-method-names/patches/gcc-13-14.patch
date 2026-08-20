@@ -1,0 +1,165 @@
+diff --git a/gcc/c-family/c-ada-spec.h b/gcc/c-family/c-ada-spec.h
+--- a/gcc/c-family/c-ada-spec.h
++++ b/gcc/c-family/c-ada-spec.h
+@@ -25,6 +25,7 @@
+ /* In c-ada-spec.cc  */
+ 
+ enum cpp_operation {
++  GET_FUNCTION_QUALIFIERS,
+   HAS_DEPENDENT_TEMPLATE_ARGS,
+   IS_ABSTRACT,
+   IS_ASSIGNMENT_OPERATOR,
+@@ -36,6 +37,14 @@ enum cpp_operation {
+   IS_TRIVIAL
+ };
+ 
++enum cpp_function_qualifier {
++  CPP_FUNCTION_CONST = 1 << 0,
++  CPP_FUNCTION_VOLATILE = 1 << 1,
++  CPP_FUNCTION_LVALUE = 1 << 2,
++  CPP_FUNCTION_RVALUE = 1 << 3,
++  CPP_FUNCTION_MOVE_ASSIGNMENT = 1 << 4
++};
++
+ extern void collect_ada_nodes (tree, const char *);
+ extern void collect_source_ref (const char *);
+ extern void dump_ada_specs (void (*)(const char *),
+diff --git a/gcc/c-family/c-ada-spec.cc b/gcc/c-family/c-ada-spec.cc
+--- a/gcc/c-family/c-ada-spec.cc
++++ b/gcc/c-family/c-ada-spec.cc
+@@ -2869,6 +2869,27 @@ print_assignment_operator (pretty_printer *buffer, tree t, tree type)
+ 
+   pp_string (buffer, "Assign_");
+   pp_ada_tree_identifier (buffer, decl_name, t, false);
++
++  if (cpp_check (t, GET_FUNCTION_QUALIFIERS)
++	& CPP_FUNCTION_MOVE_ASSIGNMENT)
++    pp_string (buffer, "_Move");
++}
++
++/* Append the C++ method qualifiers that Ada profiles cannot represent.  */
++
++static void
++print_method_qualifiers (pretty_printer *buffer, tree t)
++{
++  const int qualifiers = cpp_check (t, GET_FUNCTION_QUALIFIERS);
++
++  if (qualifiers & CPP_FUNCTION_CONST)
++    pp_string (buffer, "_Const");
++  if (qualifiers & CPP_FUNCTION_VOLATILE)
++    pp_string (buffer, "_Volatile");
++  if (qualifiers & CPP_FUNCTION_LVALUE)
++    pp_string (buffer, "_Lvalue");
++  else if (qualifiers & CPP_FUNCTION_RVALUE)
++    pp_string (buffer, "_Rvalue");
+ }
+ 
+ /* Return the name of type T.  */
+@@ -3175,6 +3196,8 @@ dump_ada_declaration (pretty_printer *buffer, tree t, tree type, int spc)
+ 	{
+ 	  const unsigned int suffix = overloading_index (decl_name);
+ 	  pp_ada_tree_identifier (buffer, decl_name, t, false);
++	  if (is_method)
++	    print_method_qualifiers (buffer, t);
+ 	  if (suffix > 1)
+ 	    pp_decimal_int (buffer, suffix);
+ 	}
+diff --git a/gcc/cp/decl2.cc b/gcc/cp/decl2.cc
+--- a/gcc/cp/decl2.cc
++++ b/gcc/cp/decl2.cc
+@@ -4408,6 +4408,28 @@ cpp_check (tree t, cpp_operation op)
+ {
+   switch (op)
+     {
++      case GET_FUNCTION_QUALIFIERS:
++	{
++	  int qualifiers = 0;
++	  tree type = TREE_TYPE (t);
++
++	  if (TREE_CODE (type) == METHOD_TYPE)
++	    {
++	      if (type_memfn_quals (type) & TYPE_QUAL_CONST)
++		qualifiers |= CPP_FUNCTION_CONST;
++	      if (type_memfn_quals (type) & TYPE_QUAL_VOLATILE)
++		qualifiers |= CPP_FUNCTION_VOLATILE;
++	      if (FUNCTION_REF_QUALIFIED (type))
++		qualifiers |= FUNCTION_RVALUE_QUALIFIED (type)
++			      ? CPP_FUNCTION_RVALUE : CPP_FUNCTION_LVALUE;
++	    }
++
++	  if (DECL_ASSIGNMENT_OPERATOR_P (t)
++	      && special_function_p (t) == sfk_move_assignment)
++	    qualifiers |= CPP_FUNCTION_MOVE_ASSIGNMENT;
++
++	  return qualifiers;
++	}
+       case HAS_DEPENDENT_TEMPLATE_ARGS:
+ 	{
+ 	  tree ti = CLASSTYPE_TEMPLATE_INFO (t);
+diff --git a/gcc/testsuite/g++.dg/ada-spec/qualified-method-names.C b/gcc/testsuite/g++.dg/ada-spec/qualified-method-names.C
+new file mode 100644
+index 000000000..6dae7c302
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/ada-spec/qualified-method-names.C
+@@ -0,0 +1,61 @@
++/* { dg-do compile } */
++/* { dg-options "-fdump-ada-spec-slim" } */
++/* { dg-final { scan-file qualified_method_names_c.ads "function inspect_Const" } } */
++/* { dg-final { scan-file qualified_method_names_c.ads "function inspect_Volatile" } } */
++/* { dg-final { scan-file qualified_method_names_c.ads "function category_Lvalue" } } */
++/* { dg-final { scan-file qualified_method_names_c.ads "function category_Rvalue" } } */
++/* { dg-final { scan-file qualified_method_names_c.ads "function Assign_Value_Move" } } */
++
++class Accessor
++{
++public:
++  explicit Accessor (int value);
++  int inspect ();
++  int inspect () const;
++  int inspect () volatile;
++  int category () &;
++  int category () &&;
++
++private:
++  int value_;
++};
++
++Accessor::Accessor (int value) : value_ (value) {}
++int Accessor::inspect () { return value_ + 1; }
++int Accessor::inspect () const { return value_ + 2; }
++int Accessor::inspect () volatile { return value_ + 3; }
++int Accessor::category () & { return value_ + 4; }
++int Accessor::category () && { return value_ + 5; }
++
++class Value
++{
++public:
++  explicit Value (int initial);
++  Value &operator= (const Value &other);
++  Value &operator= (Value &&other);
++  int get () const;
++
++private:
++  int value_;
++};
++
++Value::Value (int initial) : value_ (initial) {}
++
++Value &
++Value::operator= (const Value &other)
++{
++  value_ = other.value_;
++  return *this;
++}
++
++Value &
++Value::operator= (Value &&other)
++{
++  value_ = other.value_;
++  other.value_ = -1;
++  return *this;
++}
++
++int Value::get () const { return value_; }
++
++/* { dg-final { cleanup-ada-spec } } */

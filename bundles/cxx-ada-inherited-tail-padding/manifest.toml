@@ -1,0 +1,38 @@
+schema = 1
+id = "cxx-ada-inherited-tail-padding"
+status = "staged"
+standalone_patch = false
+staged_in_patchset = "1.2.0"
+staged_reason = "The nested primary-base component this bundle selects is emitted by the staged virtual-base layout path, so a compiler carrying this patch without the staged ABI-layout bundles does not produce the corrected record. Held out of the published patchset with the rest of the layout family."
+staged_depends_on = ["cxx-ada-virtual-inheritance-layout"]
+problem = "The C++ Ada mapper loses reusable base-class tail padding, including non-polymorphic and multiple-base layouts, so an Ada view can have a larger size and different field offsets than C++."
+upstream_issue = "Pending GCC Bugzilla filing."
+affected_versions = ["13.2.0", "14.2.0", "15.3.0", "16.1.0", "16.2.0"]
+known_good_versions = []
+source_provenance = "Repository-authored GCC patch and executable regression; exact application verified locally against the pinned Darwin release identities. Pinned FSF release application is required by Linux CI."
+files_modified = ["gcc/c-family/c-ada-spec.cc", "gcc/c-family/c-ada-spec.h", "gcc/cp/decl2.cc", "gcc/testsuite/g++.dg/ada-spec/inherited-tail-padding.C"]
+regression_tests = ["gcc/testsuite/g++.dg/ada-spec/inherited-tail-padding.C"]
+repository_fixture = "bundles/cxx-ada-inherited-tail-padding/tests/inherited-tail-padding.C"
+fixture_sha256 = "268ecfbbea1c448203e52faeb141862008ec80f297ee4875a8032d0a15998484"
+repository_test_runner = "bundles/cxx-ada-inherited-tail-padding/run-test.sh"
+application_command = "patch --fuzz=0 -p1 -i bundles/cxx-ada-inherited-tail-padding/patches/VARIANT.patch"
+build_command = "PATH=/path/to/bootstrap/bin:$PATH ./scripts/build-gnat.sh SOURCE BUILD INSTALL"
+test_command = "./scripts/run-regressions.sh INSTALL 1.2.0 GCC_MAJOR patched"
+expected_failure_before_patch = "The generated Ada derived type is larger than its C++ class and writes a derived field at the wrong offset."
+expected_success_after_patch = "Ada and C++ agree on polymorphic, non-polymorphic, and multiple-base tail-padding sizes, offsets, and field values at -O0 and -O2."
+upstream_submission_state = "Not yet filed or submitted upstream."
+licensing = "GCC-derived compiler hunks remain GPL-3.0-or-later. The new tests are proposed for the GCC testsuite under GCC project terms."
+
+[[variants]]
+id = "gcc-13-14"
+versions = ["13.2.0", "14.2.0"]
+source_flavors = ["linux", "darwin_arm64"]
+patch = "bundles/cxx-ada-inherited-tail-padding/patches/gcc-13-14.patch"
+sha256 = "1987e8144695191a0fe034394e27bb3f29f7a3aa4a5fe3382108458b2c7683ff"
+
+[[variants]]
+id = "gcc-15-16"
+versions = ["15.3.0", "16.1.0", "16.2.0"]
+source_flavors = ["linux", "darwin_arm64"]
+patch = "bundles/cxx-ada-inherited-tail-padding/patches/gcc-15-16.patch"
+sha256 = "b095db3638dfd6734bd4190191e8aad005e37d492ccf5329bda801203cf16307"

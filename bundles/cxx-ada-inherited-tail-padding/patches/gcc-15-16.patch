@@ -1,0 +1,332 @@
+diff --git a/gcc/c-family/c-ada-spec.cc b/gcc/c-family/c-ada-spec.cc
+--- a/gcc/c-family/c-ada-spec.cc
++++ b/gcc/c-family/c-ada-spec.cc
+@@ -2875,6 +2875,102 @@ dump_ada_methods (pretty_printer *pp, tree node, int spc)
+   return 1;
+ }
+ 
++/* Return true if NODE needs an explicit Ada layout to describe C++ tail
++   padding, either because its object size exceeds its size as a base class or
++   because it places a field in a direct base class's tail padding.  */
++
++static bool
++needs_tail_padding_layout (tree node)
++{
++  if (!cpp_check || !RECORD_OR_UNION_TYPE_P (node))
++    return false;
++
++  const int data_size = cpp_check (node, GET_AS_BASE_SIZE);
++  const HOST_WIDE_INT object_size = int_size_in_bytes (node);
++  return (data_size >= 0 && object_size > data_size)
++	 || cpp_check (node, REUSES_BASE_TAIL_PADDING);
++}
++
++/* Return true if all of NODE's fields that are visible in the generated Ada
++   record have constant positions and sizes suitable for component clauses.  */
++
++static bool
++has_constant_field_layout (tree node)
++{
++  for (tree field = TYPE_FIELDS (node); field; field = TREE_CHAIN (field))
++    if (TREE_CODE (field) == FIELD_DECL
++	&& DECL_NAME (field)
++	&& !DECL_VIRTUAL_P (field)
++	&& (!DECL_FIELD_OFFSET (field)
++	    || !DECL_FIELD_BIT_OFFSET (field)
++	    || !DECL_SIZE (field)
++	    || !tree_fits_uhwi_p (DECL_FIELD_OFFSET (field))
++	    || !tree_fits_uhwi_p (DECL_FIELD_BIT_OFFSET (field))
++	    || !tree_fits_uhwi_p (DECL_SIZE (field))
++	    || tree_to_uhwi (DECL_SIZE (field)) == 0))
++      return false;
++
++  return true;
++}
++
++/* Dump the size and component clauses needed to preserve NODE's C++ tail
++   padding layout.  TYPE is the declaration used for Ada name qualification.  */
++
++static void
++dump_ada_tail_padding_layout (pretty_printer *pp, tree node, tree type, int spc)
++{
++  const int data_size = cpp_check (node, GET_AS_BASE_SIZE);
++  const HOST_WIDE_INT object_size = int_size_in_bytes (node);
++
++  gcc_assert (data_size >= 0 && object_size >= 0);
++
++  newline_and_indent (pp, spc);
++  pp_string (pp, "for ");
++  dump_ada_node (pp, TYPE_NAME (node), type, spc, false, true);
++  pp_string (pp, "'Size use ");
++  pp_wide_integer (pp, (HOST_WIDE_INT) data_size * BITS_PER_UNIT);
++  pp_semicolon (pp);
++
++  newline_and_indent (pp, spc);
++  pp_string (pp, "for ");
++  dump_ada_node (pp, TYPE_NAME (node), type, spc, false, true);
++  pp_string (pp, "'Object_Size use ");
++  pp_wide_integer (pp, object_size * BITS_PER_UNIT);
++  pp_semicolon (pp);
++
++  newline_and_indent (pp, spc);
++  pp_string (pp, "for ");
++  dump_ada_node (pp, TYPE_NAME (node), type, spc, false, true);
++  pp_string (pp, " use record");
++
++  for (tree field = TYPE_FIELDS (node); field; field = TREE_CHAIN (field))
++    if (TREE_CODE (field) == FIELD_DECL
++	&& DECL_NAME (field)
++	&& !DECL_VIRTUAL_P (field))
++      {
++	const unsigned HOST_WIDE_INT bitpos
++	  = tree_to_uhwi (DECL_FIELD_OFFSET (field)) * BITS_PER_UNIT
++	    + tree_to_uhwi (DECL_FIELD_BIT_OFFSET (field));
++	const unsigned HOST_WIDE_INT position = bitpos / BITS_PER_UNIT;
++	const unsigned HOST_WIDE_INT first_bit = bitpos % BITS_PER_UNIT;
++	const unsigned HOST_WIDE_INT last_bit
++	  = first_bit + tree_to_uhwi (DECL_SIZE (field)) - 1;
++
++	newline_and_indent (pp, spc + INDENT_INCR);
++	dump_ada_decl_name (pp, field, false);
++	pp_string (pp, " at ");
++	pp_unsigned_wide_integer (pp, position);
++	pp_string (pp, " range ");
++	pp_unsigned_wide_integer (pp, first_bit);
++	pp_string (pp, " .. ");
++	pp_unsigned_wide_integer (pp, last_bit);
++	pp_semicolon (pp);
++      }
++
++  newline_and_indent (pp, spc);
++  pp_string (pp, "end record;");
++}
++
+ /* Dump in PP a forward declaration for TYPE present inside T.
+    SPC is the indentation level.  */
+ 
+@@ -3897,6 +3993,18 @@ dump_ada_structure (pretty_printer *pp, tree node, tree type, bool nested,
+ 
+   need_semicolon = !dump_ada_methods (pp, node, spc);
+ 
++  if (needs_tail_padding_layout (node) && has_constant_field_layout (node))
++    {
++      if (need_semicolon)
++	{
++	  need_semicolon = false;
++	  pp_semicolon (pp);
++	}
++
++      pp_newline (pp);
++      dump_ada_tail_padding_layout (pp, node, type, spc);
++    }
++
+   /* Print the static fields of the structure, if any.  */
+   for (tree tmp = TYPE_FIELDS (node); tmp; tmp = TREE_CHAIN (tmp))
+     {
+diff --git a/gcc/c-family/c-ada-spec.h b/gcc/c-family/c-ada-spec.h
+--- a/gcc/c-family/c-ada-spec.h
++++ b/gcc/c-family/c-ada-spec.h
+@@ -25,6 +25,7 @@ along with GCC; see the file COPYING3.  If not see
+ /* In c-ada-spec.cc  */
+ 
+ enum cpp_operation {
++  GET_AS_BASE_SIZE,
+   GET_FUNCTION_QUALIFIERS,
+   HAS_DEPENDENT_TEMPLATE_ARGS,
+   IS_ABSTRACT,
+@@ -34,7 +35,8 @@ enum cpp_operation {
+   IS_COPY_CONSTRUCTOR,
+   IS_MOVE_CONSTRUCTOR,
+   IS_TEMPLATE,
+-  IS_TRIVIAL
++  IS_TRIVIAL,
++  REUSES_BASE_TAIL_PADDING
+ };
+ 
+ enum cpp_function_qualifier {
+diff --git a/gcc/cp/decl2.cc b/gcc/cp/decl2.cc
+--- a/gcc/cp/decl2.cc
++++ b/gcc/cp/decl2.cc
+@@ -5257,6 +5257,15 @@ cpp_check (tree t, cpp_operation op)
+ {
+   switch (op)
+     {
++      case GET_AS_BASE_SIZE:
++	{
++	  if (!CLASS_TYPE_P (t) || !COMPLETE_TYPE_P (t))
++	    return -1;
++
++	  const HOST_WIDE_INT size
++	    = int_size_in_bytes (CLASSTYPE_AS_BASE (t));
++	  return size >= 0 && size <= INT_MAX ? size : -1;
++	}
+       case GET_FUNCTION_QUALIFIERS:
+ 	{
+ 	  int qualifiers = 0;
+@@ -5305,6 +5314,47 @@ cpp_check (tree t, cpp_operation op)
+ 	return TREE_CODE (t) == TEMPLATE_DECL;
+       case IS_TRIVIAL:
+ 	return trivial_type_p (t);
++      case REUSES_BASE_TAIL_PADDING:
++	{
++	  if (!CLASS_TYPE_P (t) || !COMPLETE_TYPE_P (t) || !TYPE_BINFO (t))
++	    return 0;
++
++	  for (unsigned int i = 0;
++	       i < BINFO_N_BASE_BINFOS (TYPE_BINFO (t));
++	       ++i)
++	    {
++	      tree base_binfo = BINFO_BASE_BINFO (TYPE_BINFO (t), i);
++	      if (BINFO_VIRTUAL_P (base_binfo)
++		  || !tree_fits_uhwi_p (BINFO_OFFSET (base_binfo)))
++		continue;
++
++	      tree base_type = BINFO_TYPE (base_binfo);
++	      const HOST_WIDE_INT data_size
++		= int_size_in_bytes (CLASSTYPE_AS_BASE (base_type));
++	      const HOST_WIDE_INT object_size = int_size_in_bytes (base_type);
++	      if (data_size < 0 || object_size <= data_size)
++		continue;
++
++	      const unsigned HOST_WIDE_INT base_offset
++		= tree_to_uhwi (BINFO_OFFSET (base_binfo));
++	      for (tree field = TYPE_FIELDS (t); field;
++		   field = DECL_CHAIN (field))
++		if (TREE_CODE (field) == FIELD_DECL
++		    && !DECL_ARTIFICIAL (field)
++		    && tree_fits_uhwi_p (bit_position (field)))
++		  {
++		    const unsigned HOST_WIDE_INT field_bitpos
++		      = tree_to_uhwi (bit_position (field));
++		    if (field_bitpos
++			>= (base_offset + data_size) * BITS_PER_UNIT
++			&& field_bitpos < ((base_offset + object_size)
++					   * BITS_PER_UNIT))
++		      return 1;
++		  }
++	    }
++
++	  return 0;
++	}
+       default:
+         return 0;
+     }
+diff --git a/gcc/testsuite/g++.dg/ada-spec/inherited-tail-padding.C b/gcc/testsuite/g++.dg/ada-spec/inherited-tail-padding.C
+new file mode 100644
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/ada-spec/inherited-tail-padding.C
+@@ -0,0 +1,114 @@
++/* { dg-do compile } */
++/* { dg-require-effective-target lp64 } */
++/* { dg-options "-fdump-ada-spec-slim" } */
++/* { dg-final { scan-file inherited_tail_padding_c.ads "for Tail_Base'Size use 96;" } } */
++/* { dg-final { scan-file inherited_tail_padding_c.ads "for Tail_Base'Object_Size use 128;" } } */
++/* { dg-final { scan-file inherited_tail_padding_c.ads "value_u at 8 range 0 .. 31;" } } */
++/* { dg-final { scan-file inherited_tail_padding_c.ads "extra_u at 12 range 0 .. 31;" } } */
++/* { dg-final { scan-file inherited_tail_padding_c.ads "for Plain_Base'Size use 24;" } } */
++/* { dg-final { scan-file inherited_tail_padding_c.ads "derived_char at 3 range 0 .. 7;" } } */
++/* { dg-final { scan-file inherited_tail_padding_c.ads "extra at 7 range 0 .. 7;" } } */
++
++class Tail_Base
++{
++public:
++  Tail_Base (int value);
++  virtual ~Tail_Base ();
++  int value () const { return value_; }
++
++protected:
++  int value_;
++};
++
++class Tail_Derived : public Tail_Base
++{
++public:
++  Tail_Derived (int value, int extra);
++  ~Tail_Derived () override;
++  int extra () const { return extra_; }
++
++private:
++  int extra_;
++};
++
++Tail_Base::Tail_Base (int value) : value_ (value) {}
++Tail_Base::~Tail_Base () = default;
++Tail_Derived::Tail_Derived (int value, int extra)
++  : Tail_Base (value), extra_ (extra) {}
++Tail_Derived::~Tail_Derived () = default;
++
++extern "C" unsigned long
++cpp_base_size ()
++{
++  return sizeof (Tail_Base);
++}
++
++extern "C" unsigned long
++cpp_derived_size ()
++{
++  return sizeof (Tail_Derived);
++}
++
++extern "C" int
++cpp_value (const Tail_Derived *object)
++{
++  return object->value ();
++}
++
++extern "C" int
++cpp_extra (const Tail_Derived *object)
++{
++  return object->extra ();
++}
++
++struct Plain_Base
++{
++  short base_short;
++  char base_char;
++  Plain_Base () : base_short (1), base_char (2) {}
++};
++
++struct Plain_Derived : Plain_Base
++{
++  char derived_char;
++  Plain_Derived () : derived_char (3) {}
++};
++
++struct Plain_Left
++{
++  short left_short;
++  char left_char;
++  Plain_Left () : left_short (4), left_char (5) {}
++};
++
++struct Plain_Right
++{
++  short right_short;
++  char right_char;
++  Plain_Right () : right_short (6), right_char (7) {}
++};
++
++struct Plain_Both : Plain_Left, Plain_Right
++{
++  char extra;
++  Plain_Both () : extra (8) {}
++};
++
++extern "C" Plain_Derived *cpp_plain_create () { return new Plain_Derived; }
++extern "C" void cpp_plain_delete (Plain_Derived *p) { delete p; }
++extern "C" unsigned long cpp_plain_size () { return sizeof (Plain_Derived); }
++extern "C" int cpp_plain_values (const Plain_Derived *p)
++{
++  return p->base_short + p->base_char + p->derived_char;
++}
++
++extern "C" Plain_Both *cpp_both_create () { return new Plain_Both; }
++extern "C" void cpp_both_delete (Plain_Both *p) { delete p; }
++extern "C" unsigned long cpp_both_plain_size () { return sizeof (Plain_Both); }
++extern "C" int cpp_both_values (const Plain_Both *p)
++{
++  return p->left_short + p->left_char + p->right_short
++    + p->right_char + p->extra;
++}
++
++/* { dg-final { cleanup-ada-spec } } */

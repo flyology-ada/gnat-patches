@@ -1,0 +1,732 @@
+diff --git a/gcc/c-family/c-ada-spec.cc b/gcc/c-family/c-ada-spec.cc
+index 0f4b802f864e3322c7adaff16c26072c69063aae..b21548d8ec214bceaf0640a928f2e8ae7e41ff8b 100644
+--- a/gcc/c-family/c-ada-spec.cc
++++ b/gcc/c-family/c-ada-spec.cc
+@@ -766,12 +766,19 @@ enum ada_name_role
+   ADA_NAME_TEMPLATE_INSTANCE,
+   ADA_NAME_AS_BASE,
+   ADA_NAME_SYNTHETIC_FIELD,
+-  ADA_NAME_FORMAL
++  ADA_NAME_FORMAL,
++  ADA_NAME_CLASS_PACKAGE,
++  ADA_NAME_CONSTRUCTOR,
++  ADA_NAME_DESTRUCTOR,
++  ADA_NAME_ASSIGNMENT
+ };
+ 
+ static const char *allocate_ada_name (const char *, tree, ada_name_role,
+ 				      tree, const char *, const char *);
+ static void pp_ada_namespace_name (pretty_printer *, tree);
++static void reserve_ada_source_names (const char *);
++static bool method_name_matches_visible_type (tree, tree);
++static bool method_name_matches_destructor (tree);
+ 
+ /* Return the innermost named C++ namespace containing NODE.  Anonymous
+    namespaces do not add an Ada package level.  */
+@@ -978,6 +985,9 @@ dump_ada_nodes (pretty_printer *pp, const char *source_file)
+   /* Sort the table of declarations to dump by sloc.  */
+   qsort (to_dump, to_dump_count, sizeof (tree), compare_node);
+ 
++  if (cpp_check)
++    reserve_ada_source_names (source_file);
++
+   /* Fetch the table of comments.  */
+   comments = cpp_get_comments (parse_in);
+ 
+@@ -1744,6 +1754,88 @@ allocate_ada_name (const char *preferred, tree identity, ada_name_role role,
+   return allocated->name;
+ }
+ 
++/* Reserve DECL's spelling before any synthetic names are allocated.  This
++   gives user-written C++ identifiers priority independent of dump order.  */
++
++static void
++reserve_ada_source_decl (tree decl, const char *file)
++{
++  if (!decl || !DECL_P (decl))
++    return;
++
++  for (tree context = DECL_CONTEXT (decl); context; )
++    {
++      if (TREE_CODE (context) == NAMESPACE_DECL
++	  && DECL_NAME (context)
++	  && strcmp (IDENTIFIER_POINTER (DECL_NAME (context)), "::"))
++	{
++	  bool space_found = false;
++	  char *name = to_ada_name (IDENTIFIER_POINTER (DECL_NAME (context)),
++				    &space_found);
++	  allocate_ada_name (name, DECL_NAME (context), ADA_NAME_SOURCE,
++			     DECL_CONTEXT (context), file, "_Case_");
++	  free (name);
++	}
++
++      context = DECL_P (context) ? DECL_CONTEXT (context)
++		: TYPE_P (context) ? TYPE_CONTEXT (context) : NULL_TREE;
++    }
++
++  if (DECL_NAME (decl))
++    {
++      bool space_found = false;
++      char *name = to_ada_name (IDENTIFIER_POINTER (DECL_NAME (decl)),
++				&space_found);
++      allocate_ada_name (name, DECL_NAME (decl), ADA_NAME_SOURCE,
++			 DECL_CONTEXT (decl), file, "_Case_");
++      free (name);
++    }
++
++  if (TREE_CODE (decl) == FUNCTION_DECL)
++    for (tree arg = DECL_ARGUMENTS (decl); arg; arg = DECL_CHAIN (arg))
++      reserve_ada_source_decl (arg, file);
++}
++
++/* Reserve all source spellings in this generated Ada unit.  */
++
++static void
++reserve_ada_source_names (const char *file)
++{
++  for (int i = 0; i < to_dump_count; ++i)
++    {
++      tree decl = to_dump[i];
++      reserve_ada_source_decl (decl, file);
++      if (TREE_CODE (decl) == TYPE_DECL
++	  && RECORD_OR_UNION_TYPE_P (TREE_TYPE (decl)))
++	for (tree field = TYPE_FIELDS (TREE_TYPE (decl)); field;
++	     field = TREE_CHAIN (field))
++	  reserve_ada_source_decl (field, file);
++    }
++}
++
++/* Return the allocated name of the package that encloses a non-trivial C++
++   class declaration.  */
++
++static const char *
++allocated_class_package_name (tree decl)
++{
++  bool space_found = false;
++  char *source = to_ada_name (IDENTIFIER_POINTER (DECL_NAME (decl)),
++			      &space_found);
++  const char *base
++    = allocate_ada_name (source, DECL_NAME (decl), ADA_NAME_SOURCE,
++			 DECL_CONTEXT (decl),
++			 LOCATION_FILE (decl_sloc (decl, false)), "_Case_");
++  char *candidate = concat ("Class_", base, NULL);
++  const char *allocated
++    = allocate_ada_name (candidate, TREE_TYPE (decl), ADA_NAME_CLASS_PACKAGE,
++			 DECL_CONTEXT (decl),
++			 LOCATION_FILE (decl_sloc (decl, false)), "_");
++  free (candidate);
++  free (source);
++  return allocated;
++}
++
+ /* Dump in PP the name of an identifier NODE of type TYPE, following Ada
+    syntax.  LIMITED_ACCESS indicates whether NODE can be accessed through a
+    limited 'with' clause rather than a regular 'with' clause.  */
+@@ -1808,8 +1900,7 @@ pp_ada_tree_identifier (pretty_printer *pp, tree node, tree type,
+ 	  && (external_decl
+ 	      || named_namespace_context (decl) != current_namespace))
+ 	{
+-	  pp_string (pp, "Class_");
+-	  pp_string (pp, allocated);
++	  pp_string (pp, allocated_class_package_name (decl));
+ 	  pp_dot (pp);
+ 	}
+     }
+@@ -2059,6 +2150,29 @@ parameter_name_conflicts_with_profile (tree parameter, tree func,
+   return identifier_matches_type (name, return_type);
+ }
+ 
++/* Return PARAMETER's complete Ada formal name.  A conflict with a profile
++   type is resolved before allocation, so a user-written the_Name remains a
++   distinct declaration rather than colliding with the generated spelling.  */
++
++static const char *
++allocated_formal_name (tree parameter, tree func, bool is_constructor)
++{
++  bool space_found = false;
++  char *base = to_ada_name (IDENTIFIER_POINTER (DECL_NAME (parameter)),
++			    &space_found);
++  const bool renamed
++    = parameter_name_conflicts_with_profile (parameter, func, is_constructor);
++  char *candidate = renamed ? concat ("the_", base, NULL) : xstrdup (base);
++  const char *allocated
++    = allocate_ada_name (candidate, renamed ? parameter : DECL_NAME (parameter),
++			 renamed ? ADA_NAME_FORMAL : ADA_NAME_SOURCE,
++			 DECL_CONTEXT (parameter),
++			 LOCATION_FILE (decl_sloc (func, false)), "_");
++  free (candidate);
++  free (base);
++  return allocated;
++}
++
+ /* Dump in PP a function declaration FUNC in Ada syntax.
+    IS_METHOD indicates whether FUNC is a C++ method.
+    IS_CONSTRUCTOR whether FUNC is a C++ constructor.
+@@ -2136,11 +2250,8 @@ dump_ada_function_declaration (pretty_printer *pp, tree func,
+ 	{
+ 	  if (DECL_NAME (arg))
+ 	    {
+-	      if (parameter_name_conflicts_with_profile (arg, func,
+-						  is_constructor))
+-		pp_string (pp, "the_");
+-	      pp_ada_tree_identifier (pp, DECL_NAME (arg), NULL_TREE,
+-				      false);
++	      pp_string (pp, allocated_formal_name (arg, func,
++						    is_constructor));
+ 	      pp_string (pp, " : ");
+ 	    }
+ 	  else
+@@ -2333,6 +2444,26 @@ dump_template_types (pretty_printer *pp, tree types, int spc)
+     }
+ }
+ 
++/* Dump the allocated package name for a concrete template INSTANCE.  */
++
++static void
++dump_template_instance_name (pretty_printer *pp, tree tmpl, tree instance,
++			     tree types, int spc)
++{
++  pretty_printer name_pp;
++  const bool saved_package_prefix = package_prefix;
++  package_prefix = false;
++  dump_ada_node (&name_pp, instance, tmpl, spc, false, true);
++  dump_template_types (&name_pp, types, spc);
++  package_prefix = saved_package_prefix;
++  const char *candidate = pp_formatted_text (&name_pp);
++  const char *allocated
++    = allocate_ada_name (candidate, instance, ADA_NAME_TEMPLATE_INSTANCE,
++			 DECL_CONTEXT (tmpl),
++			 LOCATION_FILE (decl_sloc (tmpl, false)), "_");
++  pp_string (pp, allocated);
++}
++
+ /* If NODE is a concrete template instance emitted in a nested package,
+    dump the type name owned by that package.  */
+ 
+@@ -2373,8 +2504,7 @@ dump_template_type_name (pretty_printer *pp, tree node, int spc)
+ 	    continue;
+ 
+ 	  package_prefix = false;
+-	  dump_ada_node (pp, TYPE_NAME (instance), tmpl, spc, false, true);
+-	  dump_template_types (pp, types, spc);
++	  dump_template_instance_name (pp, tmpl, instance, types, spc);
+ 	  pp_dot (pp);
+ 	  dump_ada_node (pp, TYPE_NAME (instance), tmpl, spc, false, true);
+ 	  package_prefix = true;
+@@ -2430,8 +2560,7 @@ dump_ada_template (pretty_printer *pp, tree t, int spc)
+       INDENT (spc);
+       pp_string (pp, "package ");
+       package_prefix = false;
+-      dump_ada_node (pp, instance, t, spc, false, true);
+-      dump_template_types (pp, types, spc);
++      dump_template_instance_name (pp, t, instance, types, spc);
+       pp_string (pp, " is");
+       spc += INDENT_INCR;
+       newline_and_indent (pp, spc);
+@@ -2463,8 +2592,7 @@ dump_ada_template (pretty_printer *pp, tree t, int spc)
+       newline_and_indent (pp, spc);
+       pp_string (pp, "use ");
+       package_prefix = false;
+-      dump_ada_node (pp, instance, t, spc, false, true);
+-      dump_template_types (pp, types, spc);
++      dump_template_instance_name (pp, t, instance, types, spc);
+       package_prefix = true;
+       current_template = previous_template;
+       current_template_instance = previous_template_instance;
+@@ -3355,15 +3483,69 @@ is_shortened_base_field (tree field)
+        < (unsigned HOST_WIDE_INT) object_size * BITS_PER_UNIT;
+ }
+ 
++/* Return the allocated name of NODE's shortened base-subobject type.  */
++
++static const char *
++allocated_as_base_name (tree node)
++{
++  tree decl = get_underlying_decl (node);
++  gcc_assert (decl && DECL_NAME (decl));
++  bool space_found = false;
++  char *source = to_ada_name (IDENTIFIER_POINTER (DECL_NAME (decl)),
++			      &space_found);
++  const char *base
++    = allocate_ada_name (source, DECL_NAME (decl), ADA_NAME_SOURCE,
++			 DECL_CONTEXT (decl),
++			 LOCATION_FILE (decl_sloc (decl, false)), "_Case_");
++  char *candidate = concat (base, "_As_Base", NULL);
++  const char *allocated
++    = allocate_ada_name (candidate, node, ADA_NAME_AS_BASE,
++			 DECL_CONTEXT (decl),
++			 LOCATION_FILE (decl_sloc (decl, false)), "_");
++  free (candidate);
++  free (source);
++  return allocated;
++}
++
++/* Dump NODE's shortened base-subobject type name.  */
++
++static void
++dump_ada_as_base_name (pretty_printer *pp, tree node)
++{
++  pp_ada_namespace_prefix (pp, get_underlying_decl (node));
++  pp_string (pp, allocated_as_base_name (node));
++}
++
++/* Return the allocated name of an unnamed C++ base component.  NUMBER is its
++   one-based position among represented fields.  */
++
++static const char *
++allocated_synthetic_field_name (tree owner, tree field, int number)
++{
++  char candidate[32];
++  if (number == 1)
++    strcpy (candidate, "parent");
++  else
++    snprintf (candidate, sizeof (candidate), "field_%d", number);
++  tree decl = get_underlying_decl (owner);
++  gcc_assert (decl);
++  const char *allocated
++    = allocate_ada_name (candidate, field, ADA_NAME_SYNTHETIC_FIELD,
++			 owner, LOCATION_FILE (decl_sloc (decl, false)),
++			 "_Base_");
++  return allocated;
++}
++
+ /* Dump FIELD's named type, selecting the shortened storage type when FIELD
+    is a base subobject that excludes its type's virtual bases.  */
+ 
+ static void
+ dump_ada_record_field_type (pretty_printer *pp, tree field)
+ {
+-  dump_ada_decl_name (pp, TYPE_NAME (TREE_TYPE (field)), false);
+   if (is_shortened_base_field (field))
+-    pp_string (pp, "_As_Base");
++    dump_ada_as_base_name (pp, TREE_TYPE (field));
++  else
++    dump_ada_decl_name (pp, TYPE_NAME (TREE_TYPE (field)), false);
+ }
+ 
+ /* Return true if FIELD lies wholly inside NODE's C++ as-base size.  */
+@@ -3414,8 +3596,8 @@ dump_ada_as_base_storage_type (pretty_printer *pp, tree node, tree type,
+   pp_newline (pp);
+   newline_and_indent (pp, spc);
+   pp_string (pp, "type ");
+-  dump_ada_node (pp, TYPE_NAME (node), type, spc, false, true);
+-  pp_string (pp, "_As_Base is record");
++  pp_string (pp, allocated_as_base_name (node));
++  pp_string (pp, " is record");
+   pp_newline (pp);
+ 
+   for (tree field = TYPE_FIELDS (node); field; field = TREE_CHAIN (field))
+@@ -3427,14 +3609,9 @@ dump_ada_as_base_storage_type (pretty_printer *pp, tree node, tree type,
+ 	      continue;
+ 
+ 	    INDENT (spc + INDENT_INCR);
+-	    if (field_num == 0)
+-	      pp_string (pp, "parent : ");
+-	    else
+-	      {
+-		char buf[32];
+-		sprintf (buf, "field_%d : ", field_num + 1);
+-		pp_string (pp, buf);
+-	      }
++	    pp_string (pp, allocated_synthetic_field_name (node, field,
++							   field_num + 1));
++	    pp_string (pp, " : ");
+ 	    dump_ada_record_field_type (pp, field);
+ 	    pp_semicolon (pp);
+ 	    pp_newline (pp);
+@@ -3470,35 +3647,35 @@ dump_ada_as_base_storage_type (pretty_printer *pp, tree node, tree type,
+     {
+       newline_and_indent (pp, spc);
+       pp_string (pp, "pragma Component_Alignment (Storage_Unit, ");
+-      dump_ada_node (pp, TYPE_NAME (node), type, spc, false, true);
+-      pp_string (pp, "_As_Base);");
++      pp_string (pp, allocated_as_base_name (node));
++      pp_string (pp, ");");
+     }
+ 
+   newline_and_indent (pp, spc);
+   pp_string (pp, "for ");
+-  dump_ada_node (pp, TYPE_NAME (node), type, spc, false, true);
+-  pp_string (pp, "_As_Base'Size use ");
++  pp_string (pp, allocated_as_base_name (node));
++  pp_string (pp, "'Size use ");
+   pp_wide_integer (pp, (HOST_WIDE_INT) data_size * BITS_PER_UNIT);
+   pp_semicolon (pp);
+ 
+   newline_and_indent (pp, spc);
+   pp_string (pp, "for ");
+-  dump_ada_node (pp, TYPE_NAME (node), type, spc, false, true);
+-  pp_string (pp, "_As_Base'Object_Size use ");
++  pp_string (pp, allocated_as_base_name (node));
++  pp_string (pp, "'Object_Size use ");
+   pp_wide_integer (pp, (HOST_WIDE_INT) data_size * BITS_PER_UNIT);
+   pp_semicolon (pp);
+ 
+   newline_and_indent (pp, spc);
+   pp_string (pp, "for ");
+-  dump_ada_node (pp, TYPE_NAME (node), type, spc, false, true);
+-  pp_string (pp, "_As_Base'Alignment use ");
++  pp_string (pp, allocated_as_base_name (node));
++  pp_string (pp, "'Alignment use ");
+   pp_decimal_int (pp, as_base_alignment (node, data_size));
+   pp_semicolon (pp);
+ 
+   newline_and_indent (pp, spc);
+   pp_string (pp, "for ");
+-  dump_ada_node (pp, TYPE_NAME (node), type, spc, false, true);
+-  pp_string (pp, "_As_Base use record");
++  pp_string (pp, allocated_as_base_name (node));
++  pp_string (pp, " use record");
+ 
+   int repr_field_num = 0;
+   for (tree field = TYPE_FIELDS (node); field; field = TREE_CHAIN (field))
+@@ -3519,14 +3696,9 @@ dump_ada_as_base_storage_type (pretty_printer *pp, tree node, tree type,
+ 	newline_and_indent (pp, spc + INDENT_INCR);
+ 	if (DECL_NAME (field))
+ 	  dump_ada_decl_name (pp, field, false);
+-	else if (repr_field_num == 1)
+-	  pp_string (pp, "parent");
+ 	else
+-	  {
+-	    char buf[32];
+-	    sprintf (buf, "field_%d", repr_field_num);
+-	    pp_string (pp, buf);
+-	  }
++	  pp_string (pp, allocated_synthetic_field_name (node, field,
++							 repr_field_num));
+ 	pp_string (pp, " at ");
+ 	pp_unsigned_wide_integer (pp, position);
+ 	pp_string (pp, " range ");
+@@ -3645,14 +3817,9 @@ dump_ada_cpp_layout (pretty_printer *pp, tree node, tree type, int spc,
+ 	newline_and_indent (pp, spc + INDENT_INCR);
+ 	if (DECL_NAME (field))
+ 	  dump_ada_decl_name (pp, field, false);
+-	else if (field_num == 1)
+-	  pp_string (pp, "parent");
+ 	else
+-	  {
+-	    char buf[32];
+-	    sprintf (buf, "field_%d", field_num);
+-	    pp_string (pp, buf);
+-	  }
++	  pp_string (pp, allocated_synthetic_field_name (node, field,
++							 field_num));
+ 	pp_string (pp, " at ");
+ 	pp_unsigned_wide_integer (pp, position);
+ 	pp_string (pp, " range ");
+@@ -3937,10 +4104,20 @@ overloading_index (tree name)
+ static void
+ print_constructor (pretty_printer *pp, tree t, tree type)
+ {
+-  tree decl_name = DECL_NAME (TYPE_NAME (type));
+-
+-  pp_string (pp, "New_");
+-  pp_ada_tree_identifier (pp, decl_name, t, false);
++  tree type_decl = TYPE_NAME (type);
++  bool space_found = false;
++  char *source = to_ada_name (IDENTIFIER_POINTER (DECL_NAME (type_decl)),
++			      &space_found);
++  const char *base
++    = allocate_ada_name (source, DECL_NAME (type_decl), ADA_NAME_SOURCE,
++			 DECL_CONTEXT (type_decl),
++			 LOCATION_FILE (decl_sloc (type_decl, false)), "_Case_");
++  char *candidate = concat ("New_", base, NULL);
++  pp_string (pp, allocate_ada_name (candidate, t, ADA_NAME_CONSTRUCTOR,
++				    DECL_CONTEXT (t),
++				    LOCATION_FILE (decl_sloc (t, false)), "_"));
++  free (candidate);
++  free (source);
+ }
+ 
+ /* Dump in PP destructor spec corresponding to T.  */
+@@ -3948,10 +4125,12 @@ print_constructor (pretty_printer *pp, tree t, tree type)
+ static void
+ print_destructor (pretty_printer *pp, tree t)
+ {
+-  if (startswith (IDENTIFIER_POINTER (DECL_NAME (t)), "__dt_del"))
+-    pp_string (pp, "Delete_And_Free");
+-  else
+-    pp_string (pp, "Delete");
++  const char *candidate
++    = startswith (IDENTIFIER_POINTER (DECL_NAME (t)), "__dt_del")
++      ? "Delete_And_Free" : "Delete";
++  pp_string (pp, allocate_ada_name (candidate, t, ADA_NAME_DESTRUCTOR,
++				    DECL_CONTEXT (t),
++				    LOCATION_FILE (decl_sloc (t, false)), "_"));
+ }
+ 
+ /* Dump in PP assignment operator spec corresponding to T.  */
+@@ -3959,31 +4138,68 @@ print_destructor (pretty_printer *pp, tree t)
+ static void
+ print_assignment_operator (pretty_printer *pp, tree t, tree type)
+ {
+-  tree decl_name = DECL_NAME (TYPE_NAME (type));
+-
+-  pp_string (pp, "Assign_");
+-  pp_ada_tree_identifier (pp, decl_name, t, false);
+-
+-  if (cpp_check (t, GET_FUNCTION_QUALIFIERS)
+-	& CPP_FUNCTION_MOVE_ASSIGNMENT)
+-    pp_string (pp, "_Move");
++  tree type_decl = TYPE_NAME (type);
++  bool space_found = false;
++  char *source = to_ada_name (IDENTIFIER_POINTER (DECL_NAME (type_decl)),
++			      &space_found);
++  const char *base
++    = allocate_ada_name (source, DECL_NAME (type_decl), ADA_NAME_SOURCE,
++			 DECL_CONTEXT (type_decl),
++			 LOCATION_FILE (decl_sloc (type_decl, false)), "_Case_");
++  char *candidate
++    = concat ("Assign_", base,
++	      (cpp_check (t, GET_FUNCTION_QUALIFIERS)
++	       & CPP_FUNCTION_MOVE_ASSIGNMENT) ? "_Move" : "", NULL);
++  pp_string (pp, allocate_ada_name (candidate, t, ADA_NAME_ASSIGNMENT,
++				    DECL_CONTEXT (t),
++				    LOCATION_FILE (decl_sloc (t, false)), "_"));
++  free (candidate);
++  free (source);
+ }
+ 
+-/* Append the C++ method qualifiers that Ada profiles cannot represent.  */
++/* Return the complete Ada name of T, including distinctions Ada profiles
++   cannot express.  Allocate the complete name as one unit so it cannot
++   collide with a user-written identifier such as inspect_Const.  */
+ 
+-static void
+-print_method_qualifiers (pretty_printer *pp, tree t)
++static const char *
++allocated_method_name (tree t, tree type, unsigned int overload_suffix)
+ {
++  tree decl_name = DECL_NAME (t);
++  bool space_found = false;
++  char *base = to_ada_name (IDENTIFIER_POINTER (decl_name), &space_found);
+   const int qualifiers = cpp_check (t, GET_FUNCTION_QUALIFIERS);
++  const bool renamed
++    = (method_name_matches_visible_type (decl_name, type)
++	|| method_name_matches_destructor (decl_name));
++  const size_t length = strlen (base) + 96;
++  char *candidate = XNEWVEC (char, length);
++  strcpy (candidate, base);
+ 
+   if (qualifiers & CPP_FUNCTION_CONST)
+-    pp_string (pp, "_Const");
++    strcat (candidate, "_Const");
+   if (qualifiers & CPP_FUNCTION_VOLATILE)
+-    pp_string (pp, "_Volatile");
++    strcat (candidate, "_Volatile");
+   if (qualifiers & CPP_FUNCTION_LVALUE)
+-    pp_string (pp, "_Lvalue");
++    strcat (candidate, "_Lvalue");
+   else if (qualifiers & CPP_FUNCTION_RVALUE)
+-    pp_string (pp, "_Rvalue");
++    strcat (candidate, "_Rvalue");
++  if (renamed)
++    strcat (candidate, "_Method");
++  if (overload_suffix > 1)
++    snprintf (candidate + strlen (candidate),
++	      length - strlen (candidate), "%u", overload_suffix);
++
++  const bool generated = qualifiers || renamed || overload_suffix > 1;
++  const char *allocated
++    = allocate_ada_name (candidate, generated ? t : decl_name,
++			 generated ? (renamed ? ADA_NAME_RENAMED_METHOD
++				      : ADA_NAME_QUALIFIED_METHOD)
++				   : ADA_NAME_SOURCE,
++			 DECL_CONTEXT (t),
++			 LOCATION_FILE (decl_sloc (t, false)), "_");
++  free (candidate);
++  free (base);
++  return allocated;
+ }
+ 
+ /* Return true if METHOD_NAME collides with the enclosing class or another
+@@ -4182,8 +4398,8 @@ dump_ada_declaration (pretty_printer *pp, tree t, tree type, int spc)
+                 if (separate_class_package (t))
+ 		  {
+ 		    is_class = true;
+-		    pp_string (pp, "package Class_");
+-		    dump_ada_node (pp, t, type, spc, false, true);
++		    pp_string (pp, "package ");
++		    pp_string (pp, allocated_class_package_name (t));
+ 		    pp_string (pp, " is");
+ 		    spc += INDENT_INCR;
+ 		    newline_and_indent (pp, spc);
+@@ -4358,16 +4574,10 @@ dump_ada_declaration (pretty_printer *pp, tree t, tree type, int spc)
+       else
+ 	{
+ 	  const unsigned int suffix = overloading_index (decl_name);
+-	  pp_ada_tree_identifier (pp, decl_name, t, false);
+-	  if (is_method)
+-	    {
+-	      print_method_qualifiers (pp, t);
+-	      if (method_name_matches_visible_type (decl_name, type)
+-		  || method_name_matches_destructor (decl_name))
+-		pp_string (pp, "_Method");
+-	    }
+-	  if (suffix > 1)
+-	    pp_decimal_int (pp, suffix);
++	  if (is_method || suffix > 1)
++	    pp_string (pp, allocated_method_name (t, type, suffix));
++	  else
++	    pp_ada_tree_identifier (pp, decl_name, t, false);
+ 	}
+ 
+       dump_ada_function_declaration
+@@ -4533,8 +4743,8 @@ dump_ada_declaration (pretty_printer *pp, tree t, tree type, int spc)
+       newline_and_indent (pp, spc);
+       pp_string (pp, "end;");
+       newline_and_indent (pp, spc);
+-      pp_string (pp, "use Class_");
+-      dump_ada_node (pp, t, type, spc, false, true);
++      pp_string (pp, "use ");
++      pp_string (pp, allocated_class_package_name (t));
+       pp_semicolon (pp);
+       pp_newline (pp);
+ 
+@@ -4551,7 +4761,15 @@ dump_ada_declaration (pretty_printer *pp, tree t, tree type, int spc)
+ 
+   else
+     {
+-      pp_string (pp, ";  -- ");
++      const bool layout_terminated
++	= (TREE_CODE (t) == TYPE_DECL
++	   && RECORD_OR_UNION_TYPE_P (TREE_TYPE (t))
++	   && (needs_empty_class_layout (TREE_TYPE (t))
++	       || (((needs_tail_padding_layout (TREE_TYPE (t))
++		     || (cpp_check && cpp_check (TREE_TYPE (t), HAS_VIRTUAL_BASE))
++		     || has_concrete_nested_base (TREE_TYPE (t)))
++		    && has_constant_field_layout (TREE_TYPE (t))))));
++      pp_string (pp, layout_terminated ? "  -- " : ";  -- ");
+       dump_sloc (pp, t);
+ 
+       if (TREE_CODE (t) == TYPE_DECL
+@@ -4623,13 +4841,9 @@ dump_ada_structure (pretty_printer *pp, tree node, tree type, bool nested,
+ 		{
+ 		  INDENT (field_spc);
+ 
+-		  if (field_num == 0)
+-		    pp_string (pp, "parent : aliased ");
+-		  else
+-		    {
+-		      sprintf (buf, "field_%d : aliased ", field_num + 1);
+-		      pp_string (pp, buf);
+-		    }
++		  pp_string (pp, allocated_synthetic_field_name (node, tmp,
++								 field_num + 1));
++		  pp_string (pp, " : aliased ");
+ 		  dump_ada_record_field_type (pp, tmp);
+ 		  pp_semicolon (pp);
+ 		}
+diff --git a/gcc/testsuite/g++.dg/ada-spec/generated-name-identity.C b/gcc/testsuite/g++.dg/ada-spec/generated-name-identity.C
+new file mode 100644
+index 0000000000000000000000000000000000000000..5a866bead83d65e64904f21091f74cf860235d3c
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/ada-spec/generated-name-identity.C
+@@ -0,0 +1,107 @@
++/* { dg-do compile } */
++/* { dg-options "-fdump-ada-spec-slim" } */
++/* { dg-final { scan-file generated_name_identity_c.ads "function inspect_Const_2" } } */
++/* { dg-final { scan-file generated_name_identity_c.ads "function inspect_Const " } } */
++/* { dg-final { scan-file generated_name_identity_c.ads "package Box_int_2 is" } } */
++/* { dg-final { scan-file generated_name_identity_c.ads "subtype Box_int is Box_int_2.Box" } } */
++/* { dg-final { scan-file generated_name_identity_c.ads "the_Widget_2 : int; the_Widget : int" } } */
++/* { dg-final { scan-file generated_name_identity_c.ads "type Tail_Derived_As_Base_2" } } */
++/* { dg-final { scan-file generated_name_identity_c.ads "parent_Base_2 : aliased Left" } } */
++/* { dg-final { scan-file generated_name_identity_c.ads "field_2_Base_2 : aliased Right" } } */
++/* { dg-final { scan-file generated_name_identity_c.ads "package Class_Gadget_2 is" } } */
++/* { dg-final { scan-file generated_name_identity_c.ads "function New_Creator_2" } } */
++/* { dg-final { scan-file generated_name_identity_c.ads "procedure Delete_2" } } */
++/* { dg-final { scan-file generated_name_identity_c.ads "function Assign_Assigner_2" } } */
++
++class Methods
++{
++public:
++  int inspect () const;
++  int inspect_Const ();
++};
++
++template<typename T>
++struct Box
++{
++  T value;
++};
++
++typedef Box<int> Box_int;
++
++struct Widget
++{
++  int value;
++};
++
++Widget *make_widget (int Widget, int the_Widget);
++
++struct Tail_Base
++{
++  char bytes[2];
++};
++
++struct Tail_Derived_As_Base
++{
++  int value;
++};
++
++struct alignas(2) Tail_Derived : Tail_Base
++{
++  char extra;
++};
++
++struct Left
++{
++  int left;
++};
++
++struct Right
++{
++  int right;
++};
++
++struct Both : Left, Right
++{
++  int parent;
++  int field_2;
++};
++
++struct Class_Gadget
++{
++  int value;
++};
++
++class Gadget
++{
++public:
++  int ping ();
++};
++
++class Creator
++{
++public:
++  Creator ();
++  int New_Creator ();
++};
++
++class Destroyer
++{
++public:
++  ~Destroyer ();
++  static int Delete;
++};
++
++class Assigner
++{
++public:
++  Assigner &operator= (const Assigner &);
++  int Assign_Assigner ();
++};
++
++extern "C" int
++generated_name_identity_oracle ()
++{
++  return 73;
++}
++
++/* { dg-final { cleanup-ada-spec } } */

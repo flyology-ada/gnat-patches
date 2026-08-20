@@ -1,0 +1,276 @@
+diff --git a/gcc/c-family/c-ada-spec.cc b/gcc/c-family/c-ada-spec.cc
+index d979428e4..556c53a49 100644
+--- a/gcc/c-family/c-ada-spec.cc
++++ b/gcc/c-family/c-ada-spec.cc
+@@ -755,6 +755,19 @@ static bool bitfield_used = false;
+ static bool packed_layout = false;
+ static tree current_namespace = NULL_TREE;
+ 
++enum ada_name_role
++{
++  ADA_NAME_SOURCE,
++  ADA_NAME_QUALIFIED_METHOD,
++  ADA_NAME_RENAMED_METHOD,
++  ADA_NAME_TEMPLATE_INSTANCE,
++  ADA_NAME_AS_BASE,
++  ADA_NAME_SYNTHETIC_FIELD,
++  ADA_NAME_FORMAL
++};
++
++static const char *allocate_ada_name (const char *, tree, ada_name_role,
++				      tree, const char *, const char *);
+ static void pp_ada_namespace_name (pretty_printer *, tree);
+ 
+ /* Return the innermost named C++ namespace containing NODE.  Anonymous
+@@ -1513,7 +1526,11 @@ pp_ada_namespace_name (pretty_printer *pp, tree ns)
+   bool space_found = false;
+   char *name = to_ada_name (IDENTIFIER_POINTER (DECL_NAME (ns)),
+ 			    &space_found);
+-  pp_string (pp, name);
++  const char *allocated
++    = allocate_ada_name (name, DECL_NAME (ns), ADA_NAME_SOURCE,
++			 DECL_CONTEXT (ns),
++			 LOCATION_FILE (decl_sloc (ns, false)), "_Case_");
++  pp_string (pp, allocated);
+   free (name);
+ }
+ 
+@@ -1555,6 +1572,140 @@ static bool package_prefix = true;
+ static tree current_template = NULL_TREE;
+ static tree current_template_instance = NULL_TREE;
+ 
++struct allocated_ada_name
++{
++  hashval_t hash;
++  tree identity;
++  tree scope;
++  const char *file;
++  ada_name_role role;
++  char *name;
++
++  ~allocated_ada_name () { free (name); }
++};
++
++struct allocated_ada_name_hasher : delete_ptr_hash<allocated_ada_name>
++{
++  static inline hashval_t hash (allocated_ada_name *entry)
++    { return entry->hash; }
++  static inline bool equal (allocated_ada_name *a, allocated_ada_name *b)
++    {
++	return (a->identity == b->identity && a->scope == b->scope
++	      && a->file == b->file
++	      && a->role == b->role);
++    }
++};
++
++struct occupied_ada_name
++{
++  hashval_t hash;
++  tree scope;
++  const char *file;
++  char *name;
++
++  ~occupied_ada_name () { free (name); }
++};
++
++struct occupied_ada_name_hasher : delete_ptr_hash<occupied_ada_name>
++{
++  static inline hashval_t hash (occupied_ada_name *entry)
++    { return entry->hash; }
++  static inline bool equal (occupied_ada_name *a, occupied_ada_name *b)
++    {
++      return (a->scope == b->scope && a->file == b->file
++	      && !strcmp (a->name, b->name));
++    }
++};
++
++typedef hash_table<allocated_ada_name_hasher> allocated_ada_name_table;
++typedef hash_table<occupied_ada_name_hasher> occupied_ada_name_table;
++static allocated_ada_name_table *allocated_ada_names;
++static occupied_ada_name_table *occupied_ada_names;
++
++/* Return a lower-case copy of NAME for Ada-insensitive comparison.  */
++
++static char *
++fold_ada_name (const char *name)
++{
++  char *folded = xstrdup (name);
++  for (char *p = folded; *p; ++p)
++    *p = TOLOWER (*p);
++  return folded;
++}
++
++/* Allocate a stable Ada name for IDENTITY and ROLE in SCOPE.  PREFERRED is
++   retained when it is unique.  Only an actual collision receives SUFFIX and
++   a deterministic ordinal.  */
++
++static const char *
++allocate_ada_name (const char *preferred, tree identity, ada_name_role role,
++		   tree scope, const char *file, const char *suffix)
++{
++  allocated_ada_name query;
++  query.identity = identity;
++  query.scope = scope;
++  query.file = file;
++  query.role = role;
++  query.name = NULL;
++  query.hash = (htab_hash_pointer (identity) ^ htab_hash_pointer (scope)
++		^ htab_hash_pointer (file) ^ (hashval_t) role);
++  allocated_ada_name *existing
++    = allocated_ada_names->find_with_hash (&query, query.hash);
++  if (existing)
++    return existing->name;
++
++  char *candidate = xstrdup (preferred);
++  unsigned int ordinal = 1;
++  while (true)
++    {
++      char *folded = fold_ada_name (candidate);
++      occupied_ada_name occupied_query;
++      occupied_query.scope = scope;
++      occupied_query.file = file;
++      occupied_query.name = folded;
++      occupied_query.hash = (htab_hash_string (folded)
++			     ^ htab_hash_pointer (scope)
++			     ^ htab_hash_pointer (file));
++      occupied_ada_name *occupied_existing
++	= occupied_ada_names->find_with_hash (&occupied_query,
++					     occupied_query.hash);
++      if (!occupied_existing)
++	{
++	  occupied_ada_name **occupied_slot
++	    = occupied_ada_names->find_slot_with_hash (&occupied_query,
++						 occupied_query.hash, INSERT);
++	  occupied_query.name = NULL;
++	  occupied_ada_name *occupied = new occupied_ada_name;
++	  occupied->hash = occupied_query.hash;
++	  occupied->scope = scope;
++	  occupied->file = file;
++	  occupied->name = folded;
++	  *occupied_slot = occupied;
++	  break;
++	}
++
++      occupied_query.name = NULL;
++      free (folded);
++      free (candidate);
++      ++ordinal;
++      const size_t length = strlen (preferred) + strlen (suffix) + 24;
++      candidate = XNEWVEC (char, length);
++      snprintf (candidate, length, "%s%s%u", preferred, suffix, ordinal);
++    }
++
++  allocated_ada_name **slot
++    = allocated_ada_names->find_slot_with_hash (&query, query.hash, INSERT);
++  allocated_ada_name *allocated = new allocated_ada_name;
++  allocated->hash = query.hash;
++  allocated->identity = identity;
++  allocated->scope = scope;
++  allocated->file = file;
++  allocated->role = role;
++  allocated->name = candidate;
++  *slot = allocated;
++  return allocated->name;
++}
++
+ /* Dump in PP the name of an identifier NODE of type TYPE, following Ada
+    syntax.  LIMITED_ACCESS indicates whether NODE can be accessed through a
+    limited 'with' clause rather than a regular 'with' clause.  */
+@@ -1567,6 +1718,12 @@ pp_ada_tree_identifier (pretty_printer *pp, tree node, tree type,
+   bool space_found = false;
+   char *s = to_ada_name (name, &space_found);
+   tree decl = get_underlying_decl (type);
++  const char *allocated = s;
++  if (cpp_check && decl)
++    allocated = allocate_ada_name (s, node, ADA_NAME_SOURCE,
++				   DECL_CONTEXT (decl),
++				   LOCATION_FILE (decl_sloc (decl, false)),
++				   "_Case_");
+ 
+   bool external_decl = false;
+   if (decl)
+@@ -1614,7 +1771,7 @@ pp_ada_tree_identifier (pretty_printer *pp, tree node, tree type,
+ 	      || named_namespace_context (decl) != current_namespace))
+ 	{
+ 	  pp_string (pp, "Class_");
+-	  pp_string (pp, s);
++	  pp_string (pp, allocated);
+ 	  pp_dot (pp);
+ 	}
+     }
+@@ -1643,7 +1800,7 @@ pp_ada_tree_identifier (pretty_printer *pp, tree node, tree type,
+ 	  pp_string (pp, "unsigned_long_long");
+       }
+     else
+-      pp_string (pp, s);
++      pp_string (pp, allocated);
+   else
+     if (!strcmp (s, "u_Bool") || !strcmp (s, "bool"))
+       {
+@@ -1656,7 +1813,7 @@ pp_ada_tree_identifier (pretty_printer *pp, tree node, tree type,
+ 	  pp_string (pp, "bool");
+       }
+     else
+-      pp_string (pp, s);
++      pp_string (pp, allocated);
+ 
+   free (s);
+ }
+@@ -3960,6 +4117,8 @@ dump_ada_specs (void (*collect_all_refs)(const char *),
+   bitmap_obstack_initialize (NULL);
+ 
+   overloaded_names = init_overloaded_names ();
++  allocated_ada_names = new allocated_ada_name_table (64);
++  occupied_ada_names = new occupied_ada_name_table (64);
+ 
+   /* Iterate over the list of files to dump specs for.  */
+   for (int i = 0; i < source_refs_used; i++)
+@@ -3972,6 +4131,8 @@ dump_ada_specs (void (*collect_all_refs)(const char *),
+   /* Free various tables.  */
+   free (source_refs);
+   delete overloaded_names;
++  delete allocated_ada_names;
++  delete occupied_ada_names;
+ 
+   bitmap_obstack_release (NULL);
+ }
+diff --git a/gcc/testsuite/g++.dg/ada-spec/casefold-identity.C b/gcc/testsuite/g++.dg/ada-spec/casefold-identity.C
+new file mode 100644
+index 000000000..4ec7a2332
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/ada-spec/casefold-identity.C
+@@ -0,0 +1,34 @@
++/* { dg-do compile } */
++/* { dg-options "-fdump-ada-spec-slim" } */
++/* { dg-final { scan-file casefold_identity_c.ads "type ITEM_Case_2" } } */
++/* { dg-final { scan-file casefold_identity_c.ads "subtype ALIAS_Case_2" } } */
++/* { dg-final { scan-file casefold_identity_c.ads "VALUE_Case_2" } } */
++/* { dg-final { scan-file casefold_identity_c.ads "VaLuE_Case_3" } } */
++/* { dg-final { scan-file casefold_identity_c.ads "function MEASURE_Case_2" } } */
++
++struct Item
++{
++  int value;
++};
++
++struct ITEM
++{
++  double value;
++};
++
++using Alias = Item;
++using ALIAS = ITEM;
++
++struct Fields
++{
++  int value;
++  int VALUE;
++  int VaLuE;
++};
++
++int measure (Item item) { return item.value; }
++int MEASURE (ITEM item) { return static_cast<int> (item.value); }
++int combine (Fields fields)
++{ return fields.value + fields.VALUE + fields.VaLuE; }
++
++/* { dg-final { cleanup-ada-spec } } */

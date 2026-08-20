@@ -1,0 +1,328 @@
+diff --git a/gcc/c-family/c-ada-spec.cc b/gcc/c-family/c-ada-spec.cc
+index 1a189b377..cc7625c2a 100644
+--- a/gcc/c-family/c-ada-spec.cc
++++ b/gcc/c-family/c-ada-spec.cc
+@@ -753,6 +753,124 @@ static tree *to_dump = NULL;
+ static int to_dump_count = 0;
+ static bool bitfield_used = false;
+ static bool packed_layout = false;
++static tree current_namespace = NULL_TREE;
++
++static void pp_ada_namespace_name (pretty_printer *, tree);
++
++/* Return the innermost named C++ namespace containing NODE.  Anonymous
++   namespaces do not add an Ada package level.  */
++
++static tree
++named_namespace_context (tree node)
++{
++  tree context = NULL_TREE;
++  if (node && DECL_P (node))
++    context = DECL_CONTEXT (node);
++  else if (node && TYPE_P (node))
++    context = TYPE_CONTEXT (node);
++
++  while (context)
++    {
++      if (TREE_CODE (context) == NAMESPACE_DECL
++	  && DECL_NAME (context)
++	  && strcmp (IDENTIFIER_POINTER (DECL_NAME (context)), "::"))
++	return context;
++      if (DECL_P (context))
++	context = DECL_CONTEXT (context);
++      else if (TYPE_P (context))
++	context = TYPE_CONTEXT (context);
++      else
++	break;
++    }
++  return NULL_TREE;
++}
++
++/* Return the nearest named namespace containing NS.  */
++
++static tree
++parent_named_namespace (tree ns)
++{
++  return named_namespace_context (ns);
++}
++
++/* Return the direct namespace package below SCOPE that contains DECL.  */
++
++static tree
++direct_namespace_child (tree scope, tree decl)
++{
++  tree ns = named_namespace_context (decl);
++  if (!ns || ns == scope)
++    return NULL_TREE;
++
++  tree child = ns;
++  for (tree parent = parent_named_namespace (child); parent;
++	 parent = parent_named_namespace (child))
++    {
++      if (parent == scope)
++	return child;
++      child = parent;
++    }
++
++  return scope ? NULL_TREE : child;
++}
++
++/* Return true if CHILD was already encountered before LIMIT in SCOPE.  */
++
++static bool
++namespace_child_seen (tree scope, tree child, int limit)
++{
++  for (int i = 0; i < limit; ++i)
++    if (direct_namespace_child (scope, to_dump[i]) == child)
++      return true;
++  return false;
++}
++
++/* Dump all declarations and nested namespace packages directly in SCOPE.  */
++
++static void
++dump_ada_namespace_contents (pretty_printer *pp, tree scope, int spc)
++{
++  tree saved_namespace = current_namespace;
++  current_namespace = scope;
++
++  for (int i = 0; i < to_dump_count; ++i)
++    {
++      tree decl = to_dump[i];
++      tree ns = named_namespace_context (decl);
++      if (ns == scope)
++	{
++	  if (dump_ada_declaration (pp, decl, NULL_TREE, spc))
++	    {
++	      pp_newline (pp);
++	      pp_newline (pp);
++	    }
++	}
++      else
++	{
++	  tree child = direct_namespace_child (scope, decl);
++	  if (!child || namespace_child_seen (scope, child, i))
++	    continue;
++
++	  for (int indent = 0; indent < spc; ++indent)
++	    pp_space (pp);
++	  pp_string (pp, "package ");
++	  pp_ada_namespace_name (pp, child);
++	  pp_string (pp, " is");
++	  pp_newline (pp);
++	  pp_newline (pp);
++	  dump_ada_namespace_contents (pp, child, spc + INDENT_INCR);
++	  for (int indent = 0; indent < spc; ++indent)
++	    pp_space (pp);
++	  pp_string (pp, "end ");
++	  pp_ada_namespace_name (pp, child);
++	  pp_semicolon (pp);
++	  pp_newline (pp);
++	  pp_newline (pp);
++	}
++    }
++
++  current_namespace = saved_namespace;
++}
+ 
+ /* Collect a list of declarations from T relevant to SOURCE_FILE to be dumped
+    by a subsequent call to dump_ada_nodes.  */
+@@ -763,9 +880,8 @@ collect_ada_nodes (tree t, const char *source_file)
+   tree n;
+   int i = to_dump_count;
+ 
+-  /* Count the likely relevant nodes: do not dump builtins (they are irrelevant
+-     in the context of bindings) and namespaces (we do not handle them properly
+-     yet).  */
++  /* Count the likely relevant nodes.  Namespace declarations themselves are
++     represented by packages around their collected children.  */
+   for (n = t; n; n = TREE_CHAIN (n))
+     if (!DECL_IS_UNDECLARED_BUILTIN (n)
+ 	&& TREE_CODE (n) != NAMESPACE_DECL
+@@ -877,8 +993,32 @@ dump_ada_nodes (pretty_printer *pp, const char *source_file)
+ 	    {
+ 	      current_source_file = source_file;
+ 
+-	      if (dump_ada_declaration (pp, to_dump[i++], NULL_TREE,
+-					 INDENT_INCR))
++	      tree decl = to_dump[i++];
++	      tree child = direct_namespace_child (NULL_TREE, decl);
++	      if (child)
++		{
++		  if (!namespace_child_seen (NULL_TREE, child, i - 1))
++		    {
++		      for (int indent = 0; indent < INDENT_INCR; ++indent)
++			pp_space (pp);
++		      pp_string (pp, "package ");
++		      pp_ada_namespace_name (pp, child);
++		      pp_string (pp, " is");
++		      pp_newline (pp);
++		      pp_newline (pp);
++		      dump_ada_namespace_contents (pp, child,
++					   INDENT_INCR * 2);
++		      for (int indent = 0; indent < INDENT_INCR; ++indent)
++			pp_space (pp);
++		      pp_string (pp, "end ");
++		      pp_ada_namespace_name (pp, child);
++		      pp_semicolon (pp);
++		      pp_newline (pp);
++		      pp_newline (pp);
++		    }
++		}
++	      else if (dump_ada_declaration (pp, decl, NULL_TREE,
++					    INDENT_INCR))
+ 		{
+ 		  pp_newline (pp);
+ 		  pp_newline (pp);
+@@ -1370,6 +1510,42 @@ to_ada_name (const char *name, bool *space_found)
+   return s;
+ }
+ 
++/* Dump the Ada package name corresponding to named namespace NS.  */
++
++static void
++pp_ada_namespace_name (pretty_printer *pp, tree ns)
++{
++  bool space_found = false;
++  char *name = to_ada_name (IDENTIFIER_POINTER (DECL_NAME (ns)),
++			    &space_found);
++  pp_string (pp, name);
++  free (name);
++}
++
++/* Dump the complete nested Ada package path containing DECL, unless DECL is
++   already in the namespace package currently being emitted.  */
++
++static void
++pp_ada_namespace_path (pretty_printer *pp, tree ns)
++{
++  if (!ns)
++    return;
++
++  tree parent = parent_named_namespace (ns);
++  if (parent)
++    pp_ada_namespace_path (pp, parent);
++  pp_ada_namespace_name (pp, ns);
++  pp_dot (pp);
++}
++
++static void
++pp_ada_namespace_prefix (pretty_printer *pp, tree decl)
++{
++  tree ns = named_namespace_context (decl);
++  if (ns && ns != current_namespace)
++    pp_ada_namespace_path (pp, ns);
++}
++
+ /* Return true if DECL refers to a C++ class type for which a
+    separate enclosing package has been or should be generated.  */
+ 
+@@ -1397,6 +1573,7 @@ pp_ada_tree_identifier (pretty_printer *pp, tree node, tree type,
+   char *s = to_ada_name (name, &space_found);
+   tree decl = get_underlying_decl (type);
+ 
++  bool external_decl = false;
+   if (decl)
+     {
+       /* If the entity comes from another file, generate a package prefix.  */
+@@ -1404,6 +1581,7 @@ pp_ada_tree_identifier (pretty_printer *pp, tree node, tree type,
+ 
+       if (xloc.line && xloc.file && xloc.file != current_source_file)
+ 	{
++	  external_decl = true;
+ 	  switch (TREE_CODE (type))
+ 	    {
+ 	      case ENUMERAL_TYPE:
+@@ -1430,13 +1608,19 @@ pp_ada_tree_identifier (pretty_printer *pp, tree node, tree type,
+ 		break;
+ 	    }
+ 
+-	  /* Generate the additional package prefix for C++ classes.  */
+-	  if (separate_class_package (decl))
+-	    {
+-	      pp_string (pp, "Class_");
+-	      pp_string (pp, s);
+-	      pp_dot (pp);
+-	    }
++	}
++
++      pp_ada_namespace_prefix (pp, decl);
++
++      /* Generate the additional package prefix for C++ classes when the
++	 declaration is outside the namespace package currently being emitted.  */
++      if (separate_class_package (decl)
++	  && (external_decl
++	      || named_namespace_context (decl) != current_namespace))
++	{
++	  pp_string (pp, "Class_");
++	  pp_string (pp, s);
++	  pp_dot (pp);
+ 	}
+     }
+ 
+diff --git a/gcc/testsuite/g++.dg/ada-spec/namespace-identity.C b/gcc/testsuite/g++.dg/ada-spec/namespace-identity.C
+new file mode 100644
+index 000000000..38f4ff233
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/ada-spec/namespace-identity.C
+@@ -0,0 +1,60 @@
++/* { dg-do compile } */
++/* { dg-options "-fdump-ada-spec-slim" } */
++/* { dg-final { scan-file namespace_identity_c.ads "package first is" } } */
++/* { dg-final { scan-file namespace_identity_c.ads "package inner is" } } */
++/* { dg-final { scan-file namespace_identity_c.ads "function transform \(value : Item\) return Item" } } */
++/* { dg-final { scan-file namespace_identity_c.ads "package Class_Object is" } } */
++/* { dg-final { scan-file namespace_identity_c.ads "package a_b is" } } */
++/* { dg-final { scan-file namespace_identity_c.ads "package a is" } } */
++/* { dg-final { scan-file namespace_identity_c.ads "type Again is record" } } */
++/* { dg-final { scan-file-not namespace_identity_c.ads "package :: is" } } */
++
++namespace first::inner
++{
++  struct Item { int value; };
++  Item transform (Item value) { value.value += 1; return value; }
++
++  class Object
++  {
++  public:
++    int get () const;
++  private:
++    int value_;
++  };
++}
++
++namespace second::inner
++{
++  struct Item { double value; };
++  Item transform (Item value) { value.value += 2.0; return value; }
++
++  class Object
++  {
++  public:
++    int get () const;
++  private:
++    double value_;
++  };
++}
++
++namespace a_b
++{
++  struct Marker { int value; };
++}
++
++namespace a::b
++{
++  struct Marker { double value; };
++}
++
++namespace first::inner
++{
++  struct Again { long value; };
++}
++
++using First_Item = first::inner::Item;
++using Second_Item = second::inner::Item;
++
++extern "C" int namespace_identity_oracle () { return 73; }
++
++/* { dg-final { cleanup-ada-spec } } */

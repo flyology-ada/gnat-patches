@@ -1,0 +1,302 @@
+diff --git a/gcc/c-family/c-ada-spec.cc b/gcc/c-family/c-ada-spec.cc
+index ed40440..7a28cb6 100644
+--- a/gcc/c-family/c-ada-spec.cc
++++ b/gcc/c-family/c-ada-spec.cc
+@@ -39,6 +39,7 @@ static int  dump_ada_declaration (pretty_printer *, tree, tree, int);
+ static void dump_ada_structure (pretty_printer *, tree, tree, bool, int);
+ static void dump_nested_types (pretty_printer *, tree, int);
+ static char *to_ada_name (const char *, bool *);
++static bool needs_empty_class_layout (tree);
+ 
+ #define INDENT(SPACE) \
+   do { int i; for (i = 0; i<SPACE; i++) pp_space (pp); } while (0)
+@@ -2365,7 +2366,8 @@ dump_ada_template (pretty_printer *pp, tree t, int spc)
+ 	pp_string (pp, " is limited ");
+ 
+       dump_ada_node (pp, instance, t, spc, false, false);
+-      if (!has_nontrivial_methods (instance) && !has_static_fields (instance))
++      if (!has_nontrivial_methods (instance) && !has_static_fields (instance)
++	  && !needs_empty_class_layout (instance))
+ 	pp_semicolon (pp);
+       pp_newline (pp);
+       spc -= INDENT_INCR;
+@@ -2890,7 +2892,101 @@ needs_tail_padding_layout (tree node)
+-  return (data_size >= 0 && object_size > data_size)
+-	 || cpp_check (node, REUSES_BASE_TAIL_PADDING);
++  if ((data_size >= 0 && object_size > data_size)
++      || cpp_check (node, REUSES_BASE_TAIL_PADDING))
++    return true;
++
++  for (tree field = TYPE_FIELDS (node); field; field = TREE_CHAIN (field))
++    if (TREE_CODE (field) == FIELD_DECL
++	&& DECL_NAME (field)
++	&& DECL_FIELD_ABI_IGNORED (field))
++      return true;
++
++  return false;
+ }
+ 
++/* Return true if NODE is a C++ empty class.  Such a class has a nonzero
++   complete-object size but contributes no storage as an empty base.  */
++
++static bool
++needs_empty_class_layout (tree node)
++{
++  if (!cpp_check || !RECORD_OR_UNION_TYPE_P (node))
++    return false;
++
++  const int data_size = cpp_check (node, GET_AS_BASE_SIZE);
++  return data_size == 0 && int_size_in_bytes (node) > 0;
++}
++
++/* Return true if FIELD is an artificial empty C++ base, or a named empty
++   [[no_unique_address]] member whose storage overlaps another field.  Ada
++   cannot expose two overlapping record components, so omit only the member
++   that contributes no unique storage.  */
++
++static bool
++is_abi_ignored_empty_field (tree node, tree field)
++{
++  if (!cpp_check || TREE_CODE (field) != FIELD_DECL
++      || !DECL_FIELD_ABI_IGNORED (field)
++      || !RECORD_OR_UNION_TYPE_P (TREE_TYPE (field))
++      || cpp_check (TREE_TYPE (field), GET_AS_BASE_SIZE) != 0)
++    return false;
++
++  if (!DECL_NAME (field))
++    return true;
++
++  if (!DECL_FIELD_OFFSET (field) || !DECL_FIELD_BIT_OFFSET (field)
++      || !tree_fits_uhwi_p (DECL_FIELD_OFFSET (field))
++      || !tree_fits_uhwi_p (DECL_FIELD_BIT_OFFSET (field)))
++    return false;
++
++  const unsigned HOST_WIDE_INT field_first
++    = tree_to_uhwi (DECL_FIELD_OFFSET (field)) * BITS_PER_UNIT
++      + tree_to_uhwi (DECL_FIELD_BIT_OFFSET (field));
++  const unsigned HOST_WIDE_INT field_last
++    = field_first + int_size_in_bytes (TREE_TYPE (field)) * BITS_PER_UNIT;
++
++  for (tree other = TYPE_FIELDS (node); other; other = TREE_CHAIN (other))
++    if (other != field && TREE_CODE (other) == FIELD_DECL
++	&& !DECL_VIRTUAL_P (other) && DECL_FIELD_OFFSET (other)
++	&& DECL_FIELD_BIT_OFFSET (other) && DECL_SIZE (other)
++	&& tree_fits_uhwi_p (DECL_FIELD_OFFSET (other))
++	&& tree_fits_uhwi_p (DECL_FIELD_BIT_OFFSET (other))
++	&& tree_fits_uhwi_p (DECL_SIZE (other)))
++      {
++	const unsigned HOST_WIDE_INT other_first
++	  = tree_to_uhwi (DECL_FIELD_OFFSET (other)) * BITS_PER_UNIT
++	    + tree_to_uhwi (DECL_FIELD_BIT_OFFSET (other));
++	const unsigned HOST_WIDE_INT other_last
++	  = other_first + tree_to_uhwi (DECL_SIZE (other));
++	if (field_first < other_last && other_first < field_last)
++	  return true;
++      }
++
++  return false;
++}
++
++/* Dump the value and object sizes of an empty C++ class.  Ada's value size is
++   zero so an empty base consumes no storage, while Object_Size preserves the
++   byte occupied by a complete C++ object.  */
++
++static void
++dump_ada_empty_class_layout (pretty_printer *pp, tree node, tree type, int spc)
++{
++  const HOST_WIDE_INT object_size = int_size_in_bytes (node);
++
++  gcc_assert (object_size > 0);
++
++  newline_and_indent (pp, spc);
++  pp_string (pp, "for ");
++  dump_ada_node (pp, TYPE_NAME (node), type, spc, false, true);
++  pp_string (pp, "'Size use 0;");
++
++  newline_and_indent (pp, spc);
++  pp_string (pp, "for ");
++  dump_ada_node (pp, TYPE_NAME (node), type, spc, false, true);
++  pp_string (pp, "'Object_Size use ");
++  pp_wide_integer (pp, object_size * BITS_PER_UNIT);
++  pp_semicolon (pp);
++}
++
+ /* Return true if all of NODE's fields that are visible in the generated Ada
+    record have constant positions and sizes suitable for component clauses.  */
+ 
+@@ -3872,6 +3968,9 @@ dump_ada_structure (pretty_printer *pp, tree node, tree type, bool nested,
+   /* Print the non-static fields of the structure.  */
+   for (tree tmp = TYPE_FIELDS (node); tmp; tmp = TREE_CHAIN (tmp))
+     {
++      if (is_abi_ignored_empty_field (node, tmp))
++	continue;
++
+       /* Add parent field if needed.  */
+       if (!DECL_NAME (tmp))
+ 	{
+@@ -3992,7 +4091,19 @@ dump_ada_structure (pretty_printer *pp, tree node, tree type, bool nested,
+ 
+   need_semicolon = !dump_ada_methods (pp, node, spc);
+ 
+-  if (needs_tail_padding_layout (node) && has_constant_field_layout (node))
++  if (needs_empty_class_layout (node))
++    {
++      if (need_semicolon)
++	{
++	  need_semicolon = false;
++	  pp_semicolon (pp);
++	}
++
++      pp_newline (pp);
++      dump_ada_empty_class_layout (pp, node, type, spc);
++    }
++  else if (needs_tail_padding_layout (node)
++	   && has_constant_field_layout (node))
+     {
+       if (need_semicolon)
+ 	{
+diff --git a/gcc/testsuite/g++.dg/ada-spec/empty-class-storage.C b/gcc/testsuite/g++.dg/ada-spec/empty-class-storage.C
+new file mode 100644
+index 0000000..8bdd04c
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/ada-spec/empty-class-storage.C
+@@ -0,0 +1,139 @@
++/* { dg-do compile } */
++/* { dg-require-effective-target lp64 } */
++/* { dg-options "-std=c++20 -fdump-ada-spec-slim" } */
++/* { dg-final { scan-file empty_class_storage_c.ads "for Empty'Size use 0;" } } */
++/* { dg-final { scan-file empty_class_storage_c.ads "for Empty'Object_Size use 8;" } } */
++/* { dg-final { scan-file-not empty_class_storage_c.ads "parent : aliased Empty_Base;" } } */
++/* { dg-final { scan-file-not empty_class_storage_c.ads "ignored : aliased Empty;" } } */
++/* { dg-final { scan-file empty_class_storage_c.ads "first : aliased Empty;" } } */
++/* { dg-final { scan-file empty_class_storage_c.ads "second : aliased Empty;" } } */
++
++struct Empty
++{};
++
++struct Empty_Base
++{};
++
++struct With_Empty_Base : Empty_Base
++{
++  int value;
++};
++
++struct With_Empty_Member
++{
++  Empty member;
++  int value;
++};
++
++struct With_Empty_Array
++{
++  Empty values[3];
++};
++
++struct With_No_Unique_Address
++{
++  [[no_unique_address]] Empty ignored;
++  int value;
++};
++
++struct With_Repeated_No_Unique_Address
++{
++  [[no_unique_address]] Empty first;
++  [[no_unique_address]] Empty second;
++};
++
++struct Method_Empty
++{
++  Method_Empty ();
++  void ping ();
++};
++
++Method_Empty::Method_Empty () {}
++void Method_Empty::ping () {}
++
++extern "C" unsigned long cpp_empty_size () { return sizeof (Empty); }
++extern "C" unsigned long cpp_empty_align () { return alignof (Empty); }
++extern "C" unsigned long cpp_method_empty_size ()
++{
++  return sizeof (Method_Empty);
++}
++
++extern "C" unsigned long
++cpp_with_empty_base_size ()
++{
++  return sizeof (With_Empty_Base);
++}
++
++extern "C" unsigned long
++cpp_with_empty_base_value_offset ()
++{
++  return __builtin_offsetof (With_Empty_Base, value);
++}
++
++extern "C" unsigned long
++cpp_with_empty_member_size ()
++{
++  return sizeof (With_Empty_Member);
++}
++
++extern "C" unsigned long
++cpp_with_empty_member_member_offset ()
++{
++  return __builtin_offsetof (With_Empty_Member, member);
++}
++
++extern "C" unsigned long
++cpp_with_empty_member_value_offset ()
++{
++  return __builtin_offsetof (With_Empty_Member, value);
++}
++
++extern "C" unsigned long
++cpp_with_empty_array_size ()
++{
++  return sizeof (With_Empty_Array);
++}
++
++extern "C" unsigned long
++cpp_with_empty_array_values_offset ()
++{
++  return __builtin_offsetof (With_Empty_Array, values);
++}
++
++extern "C" unsigned long
++cpp_with_no_unique_address_size ()
++{
++  return sizeof (With_No_Unique_Address);
++}
++
++extern "C" unsigned long
++cpp_with_no_unique_address_value_offset ()
++{
++  return __builtin_offsetof (With_No_Unique_Address, value);
++}
++
++extern "C" unsigned long
++cpp_with_no_unique_address_ignored_offset ()
++{
++  return __builtin_offsetof (With_No_Unique_Address, ignored);
++}
++
++extern "C" unsigned long
++cpp_with_repeated_no_unique_address_size ()
++{
++  return sizeof (With_Repeated_No_Unique_Address);
++}
++
++extern "C" unsigned long
++cpp_with_repeated_no_unique_address_first_offset ()
++{
++  return __builtin_offsetof (With_Repeated_No_Unique_Address, first);
++}
++
++extern "C" unsigned long
++cpp_with_repeated_no_unique_address_second_offset ()
++{
++  return __builtin_offsetof (With_Repeated_No_Unique_Address, second);
++}
++
++/* { dg-final { cleanup-ada-spec } } */

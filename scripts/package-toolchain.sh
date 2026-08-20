@@ -55,6 +55,10 @@ reported=$("$toolchain/bin/gcc" -dumpfullversion)
   echo "error: toolchain has no executable gnatmake" >&2
   exit 1
 }
+[[ -x "$toolchain/bin/g++" ]] || {
+  echo "error: toolchain has no executable g++" >&2
+  exit 1
+}
 [[ -f "$source_dir/COPYING3" && -f "$source_dir/COPYING.RUNTIME" ]] || {
   echo "error: GCC source tree lacks required license notices" >&2
   exit 1

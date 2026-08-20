@@ -1,0 +1,223 @@
+diff --git a/gcc/c-family/c-ada-spec.cc b/gcc/c-family/c-ada-spec.cc
+index cfafae2..62137ec 100644
+--- a/gcc/c-family/c-ada-spec.cc
++++ b/gcc/c-family/c-ada-spec.cc
+@@ -3118,6 +3118,20 @@ is_abi_ignored_empty_field (tree node, tree field)
+   return false;
+ }
+ 
++/* Return true if FIELD is represented as a component in the generated Ada
++   record.  Keep this in step with dump_ada_structure.  */
++
++static bool
++is_ada_record_field (tree node, tree field)
++{
++  if (TREE_CODE (field) != FIELD_DECL
++      || DECL_VIRTUAL_P (field)
++      || is_abi_ignored_empty_field (node, field))
++    return false;
++
++  return DECL_NAME (field) || !is_tagged_type (TREE_TYPE (field));
++}
++
+ /* Dump the value and object sizes of an empty C++ class.  Ada's value size is
+    zero so an empty base consumes no storage, while Object_Size preserves the
+    byte occupied by a complete C++ object.  */
+@@ -2877,9 +2891,7 @@ static bool
+ has_constant_field_layout (tree node)
+ {
+   for (tree field = TYPE_FIELDS (node); field; field = TREE_CHAIN (field))
+-    if (TREE_CODE (field) == FIELD_DECL
+-	&& DECL_NAME (field)
+-	&& !DECL_VIRTUAL_P (field)
++    if (is_ada_record_field (node, field)
+ 	&& (!DECL_FIELD_OFFSET (field)
+ 	    || !DECL_FIELD_BIT_OFFSET (field)
+ 	    || !DECL_SIZE (field)
+@@ -2892,15 +2904,19 @@ has_constant_field_layout (tree node)
+   return true;
+ }
+ 
+-/* Dump the size and component clauses needed to preserve NODE's C++ tail
+-   padding layout.  TYPE is the declaration used for Ada name qualification.  */
++/* Dump the size and component clauses needed to preserve NODE's C++ layout.
++   For virtual inheritance the generated record contains the virtual bases and
++   therefore uses the complete-object size; other calls preserve the as-base
++   size needed for reusable tail padding.  TYPE is the declaration used for
++   Ada name qualification.  */
+ 
+ static void
+-dump_ada_tail_padding_layout (pretty_printer *buffer, tree node, tree type,
+-                              int spc)
++dump_ada_cpp_layout (pretty_printer *buffer, tree node, tree type, int spc,
++		     bool has_virtual_base)
+ {
+   const int data_size = cpp_check (node, GET_AS_BASE_SIZE);
+   const HOST_WIDE_INT object_size = int_size_in_bytes (node);
++  const HOST_WIDE_INT value_size = has_virtual_base ? object_size : data_size;
+ 
+   gcc_assert (data_size >= 0 && object_size >= 0);
+ 
+@@ -2908,7 +2924,7 @@ dump_ada_tail_padding_layout (pretty_printer *buffer, tree node, tree type,
+   pp_string (buffer, "for ");
+   dump_ada_node (buffer, TYPE_NAME (node), type, spc, false, true);
+   pp_string (buffer, "'Size use ");
+-  pp_wide_integer (buffer, (HOST_WIDE_INT) data_size * BITS_PER_UNIT);
++  pp_wide_integer (buffer, value_size * BITS_PER_UNIT);
+   pp_semicolon (buffer);
+ 
+   newline_and_indent (buffer, spc);
+@@ -2918,16 +2934,26 @@ dump_ada_tail_padding_layout (pretty_printer *buffer, tree node, tree type,
+   pp_wide_integer (buffer, object_size * BITS_PER_UNIT);
+   pp_semicolon (buffer);
+ 
++  if (has_virtual_base)
++    {
++      newline_and_indent (buffer, spc);
++      pp_string (buffer, "for ");
++      dump_ada_node (buffer, TYPE_NAME (node), type, spc, false, true);
++      pp_string (buffer, "'Alignment use ");
++      pp_decimal_int (buffer, TYPE_ALIGN (node) / BITS_PER_UNIT);
++      pp_semicolon (buffer);
++    }
++
+   newline_and_indent (buffer, spc);
+   pp_string (buffer, "for ");
+   dump_ada_node (buffer, TYPE_NAME (node), type, spc, false, true);
+   pp_string (buffer, " use record");
+ 
++  int field_num = 0;
+   for (tree field = TYPE_FIELDS (node); field; field = TREE_CHAIN (field))
+-    if (TREE_CODE (field) == FIELD_DECL
+-	&& DECL_NAME (field)
+-	&& !DECL_VIRTUAL_P (field))
++    if (is_ada_record_field (node, field))
+       {
++	field_num++;
+ 	const unsigned HOST_WIDE_INT bitpos
+ 	  = tree_to_uhwi (DECL_FIELD_OFFSET (field)) * BITS_PER_UNIT
+ 	    + tree_to_uhwi (DECL_FIELD_BIT_OFFSET (field));
+@@ -2937,7 +2963,16 @@ dump_ada_tail_padding_layout (pretty_printer *buffer, tree node, tree type,
+ 	  = first_bit + tree_to_uhwi (DECL_SIZE (field)) - 1;
+ 
+ 	newline_and_indent (buffer, spc + INDENT_INCR);
+-	dump_ada_decl_name (buffer, field, false);
++	if (DECL_NAME (field))
++	  dump_ada_decl_name (buffer, field, false);
++	else if (field_num == 1)
++	  pp_string (buffer, "parent");
++	else
++	  {
++	    char buf[32];
++	    sprintf (buf, "field_%d", field_num);
++	    pp_string (buffer, buf);
++	  }
+ 	pp_string (buffer, " at ");
+ 	pp_unsigned_wide_integer (buffer, position);
+ 	pp_string (buffer, " range ");
+@@ -3984,7 +4019,8 @@ dump_ada_structure (pretty_printer *buffer, tree node, tree type, bool nested,
+       pp_newline (buffer);
+       dump_ada_empty_class_layout (buffer, node, type, spc);
+     }
+-  else if (needs_tail_padding_layout (node)
++  else if ((needs_tail_padding_layout (node)
++	    || (cpp_check && cpp_check (node, HAS_VIRTUAL_BASE)))
+ 	   && has_constant_field_layout (node))
+     {
+       if (need_semicolon)
+@@ -3994,7 +4030,8 @@ dump_ada_structure (pretty_printer *buffer, tree node, tree type, bool nested,
+ 	}
+ 
+       pp_newline (buffer);
+-      dump_ada_tail_padding_layout (buffer, node, type, spc);
++      dump_ada_cpp_layout (buffer, node, type, spc,
++			   cpp_check (node, HAS_VIRTUAL_BASE));
+     }
+ 
+   /* Print the static fields of the structure, if any.  */
+diff --git a/gcc/c-family/c-ada-spec.h b/gcc/c-family/c-ada-spec.h
+index b197e8d..a621f58 100644
+--- a/gcc/c-family/c-ada-spec.h
++++ b/gcc/c-family/c-ada-spec.h
+@@ -27,6 +27,7 @@ along with GCC; see the file COPYING3.  If not see
+ enum cpp_operation {
+   GET_AS_BASE_SIZE,
+   GET_FUNCTION_QUALIFIERS,
++  HAS_VIRTUAL_BASE,
+   HAS_DEPENDENT_TEMPLATE_ARGS,
+   IS_ABSTRACT,
+   IS_ASSIGNMENT_OPERATOR,
+diff --git a/gcc/cp/decl2.cc b/gcc/cp/decl2.cc
+index febac61..9e9827c 100644
+--- a/gcc/cp/decl2.cc
++++ b/gcc/cp/decl2.cc
+@@ -4576,6 +4576,9 @@ cpp_check (tree t, cpp_operation op)
+ 
+ 	  return qualifiers;
+ 	}
++      case HAS_VIRTUAL_BASE:
++	return (CLASS_TYPE_P (t) && COMPLETE_TYPE_P (t)
++		&& CLASSTYPE_VBASECLASSES (t));
+       case HAS_DEPENDENT_TEMPLATE_ARGS:
+ 	{
+ 	  tree ti = CLASSTYPE_TEMPLATE_INFO (t);
+diff --git a/gcc/testsuite/g++.dg/ada-spec/virtual-inheritance-layout.C b/gcc/testsuite/g++.dg/ada-spec/virtual-inheritance-layout.C
+new file mode 100644
+index 0000000..514d8e4
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/ada-spec/virtual-inheritance-layout.C
+@@ -0,0 +1,54 @@
++/* { dg-do compile } */
++/* { dg-require-effective-target lp64 } */
++/* { dg-options "-fdump-ada-spec-slim" } */
++/* { dg-final { scan-file virtual_inheritance_layout_c.ads "for Virtual'Size use 128;" } } */
++/* { dg-final { scan-file virtual_inheritance_layout_c.ads "for Virtual'Object_Size use 128;" } } */
++/* { dg-final { scan-file virtual_inheritance_layout_c.ads "for Virtual'Alignment use 8;" } } */
++/* { dg-final { scan-file virtual_inheritance_layout_c.ads "derived_value at 8 range 0 .. 31;" } } */
++/* { dg-final { scan-file virtual_inheritance_layout_c.ads "field_2 at 12 range 0 .. 31;" } } */
++
++struct Root
++{
++  int root_value;
++};
++
++struct Virtual : virtual Root
++{
++  int derived_value;
++  Virtual (int root, int derived);
++};
++
++Virtual::Virtual (int root, int derived)
++  : Root {root}, derived_value {derived}
++{}
++
++extern "C" unsigned long cpp_root_size () { return sizeof (Root); }
++extern "C" unsigned long cpp_virtual_size () { return sizeof (Virtual); }
++extern "C" unsigned long cpp_virtual_alignment () { return alignof (Virtual); }
++extern "C" unsigned long cpp_derived_offset ()
++{
++  Virtual object (0, 0);
++  return reinterpret_cast<char *> (&object.derived_value)
++    - reinterpret_cast<char *> (&object);
++}
++extern "C" unsigned long cpp_root_offset ()
++{
++  Virtual object (0, 0);
++  return reinterpret_cast<char *> (&object.root_value)
++    - reinterpret_cast<char *> (&object);
++}
++extern "C" Virtual *cpp_create (int root, int derived)
++{
++  return new Virtual (root, derived);
++}
++extern "C" void cpp_delete (Virtual *object) { delete object; }
++extern "C" int cpp_root_value (const Virtual *object)
++{
++  return object->root_value;
++}
++extern "C" int cpp_derived_value (const Virtual *object)
++{
++  return object->derived_value;
++}
++
++/* { dg-final { cleanup-ada-spec } } */

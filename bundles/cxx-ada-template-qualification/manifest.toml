@@ -1,0 +1,36 @@
+schema = 1
+id = "cxx-ada-template-qualification"
+status = "accepted"
+standalone_patch = true
+introduced_in_patchset = "1.2.0"
+problem = "The C++ Ada spec dumper drops the generated package qualifier from references to concrete template instances, making specs with multiple instantiations ambiguous."
+upstream_issue = "Pending GCC Bugzilla filing."
+affected_versions = ["13.2.0", "14.2.0", "15.3.0", "16.1.0", "16.2.0"]
+known_good_versions = []
+source_provenance = "Repository-authored GCC patch and executable regression; exact application verified locally against the pinned Darwin release identities. Pinned FSF release application is required by Linux CI."
+files_modified = ["gcc/c-family/c-ada-spec.cc", "gcc/testsuite/g++.dg/ada-spec/template-instantiation-qualification.C"]
+regression_tests = ["gcc/testsuite/g++.dg/ada-spec/template-instantiation-qualification.C"]
+repository_fixture = "bundles/cxx-ada-template-qualification/tests/template_instantiation_qualification.C"
+fixture_sha256 = "25deb923ea065a63be87145af14a794da96340b832b63d5ac39c20e42ed45e62"
+repository_test_runner = "bundles/cxx-ada-template-qualification/run-test.sh"
+application_command = "patch --fuzz=0 -p1 -i bundles/cxx-ada-template-qualification/patches/VARIANT.patch"
+build_command = "PATH=/path/to/bootstrap/bin:$PATH ./scripts/build-gnat.sh SOURCE BUILD INSTALL"
+test_command = "./scripts/run-regressions.sh INSTALL 1.2.0 GCC_MAJOR patched"
+expected_failure_before_patch = "The generated Ada spec is rejected because Box from Box_int and Box_double is hidden by multiple use clauses."
+expected_success_after_patch = "The generated spec qualifies aliases, fields, parameters, and results; its Ada consumer prints PASS at -O0 and -O2."
+upstream_submission_state = "Not yet filed or submitted upstream."
+licensing = "GCC-derived compiler hunks remain GPL-3.0-or-later. The new test is proposed for the GCC testsuite under GCC project terms."
+
+[[variants]]
+id = "gcc-13-14"
+versions = ["13.2.0", "14.2.0"]
+source_flavors = ["linux", "darwin_arm64"]
+patch = "bundles/cxx-ada-template-qualification/patches/gcc-13-14.patch"
+sha256 = "06137cd0c8d608c964402803ef0ae788afd944d43a791387f7866d168d28295a"
+
+[[variants]]
+id = "gcc-15-16"
+versions = ["15.3.0", "16.1.0", "16.2.0"]
+source_flavors = ["linux", "darwin_arm64"]
+patch = "bundles/cxx-ada-template-qualification/patches/gcc-15-16.patch"
+sha256 = "f6dad26d76a5ef450e8294175ed65f2e337fbaf6e9998372fa4e65fe81512873"

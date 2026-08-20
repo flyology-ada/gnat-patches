@@ -53,15 +53,8 @@ gnatmake=$(find "$destination" -maxdepth 4 -type f -path '*/bin/gnatmake' -print
 [[ -n "$gnatmake" ]] || { echo "error: bootstrap archive has no gnatmake" >&2; exit 1; }
 bootstrap_root=$(dirname "$(dirname "$gnatmake")")
 if [[ "$os" == darwin ]]; then
-  fixed_count=0
-  while IFS= read -r fixed; do
-    mv "$fixed" "$fixed.bootstrap-sdk"
-    fixed_count=$((fixed_count + 1))
-  done < <(find "$bootstrap_root/lib/gcc" -type d -name include-fixed -print)
-  [[ $fixed_count -gt 0 ]] || {
-    echo "error: Darwin bootstrap has no SDK-derived include-fixed directory" >&2
-    exit 1
-  }
+  fixed_count=$("$root/scripts/quarantine-darwin-include-fixed.sh" \
+    "$bootstrap_root" bootstrap-sdk)
   echo "Darwin bootstrap: quarantined $fixed_count SDK-derived include-fixed directory" >&2
 fi
 (cd "$bootstrap_root" && pwd)

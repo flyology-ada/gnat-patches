@@ -8,6 +8,7 @@ python3 scripts/manifest.py validate
 ci/test-bootstrap-gnatmake.sh
 ci/test-generate-alire-index.sh
 ci/test-homebrew-gxx.sh
+ci/test-quarantine-darwin-include-fixed.sh
 
 if rg --hidden -n 'uses: [^#[:space:]]+@(v[0-9]+|main|master)([[:space:]]|$)' .github/workflows; then
   echo "error: GitHub Actions must use immutable commit SHAs" >&2
@@ -26,6 +27,15 @@ for script in scripts/*.sh scripts/*.py ci/*.sh; do
     exit 1
   fi
 done
+
+while IFS= read -r script; do
+  if [[ ! -x "$script" ]]; then
+    echo "error: $script is not executable" >&2
+    exit 1
+  fi
+done < <(find panels -type f \( -name '*.sh' -o -name '*.py' \) -print)
+
+PYTHONDONTWRITEBYTECODE=1 python3 panels/cxx-ada-spec/generated/coverage.py
 
 archive_test=$(mktemp -d "${TMPDIR:-/tmp}/gnat-patches-archive-test.XXXXXX")
 trap 'rm -rf "$archive_test"' EXIT

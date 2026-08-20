@@ -1,0 +1,36 @@
+schema = 1
+id = "cxx-ada-visible-type-method-names"
+status = "accepted"
+standalone_patch = false
+introduced_in_patchset = "1.2.0"
+problem = "A C++ method can collide with a type made use-visible from another generated class package, making later Ada profiles ambiguous."
+upstream_issue = "Pending GCC Bugzilla filing."
+affected_versions = ["13.2.0", "14.2.0", "15.3.0", "16.1.0", "16.2.0"]
+known_good_versions = []
+source_provenance = "Repository-authored GCC patch and executable regression; exact application verified locally against the pinned Darwin patchset inputs. Pinned FSF release application is required by Linux CI."
+files_modified = ["gcc/c-family/c-ada-spec.cc", "gcc/testsuite/g++.dg/ada-spec/visible-type-method-names.C"]
+regression_tests = ["gcc/testsuite/g++.dg/ada-spec/visible-type-method-names.C"]
+repository_fixture = "bundles/cxx-ada-visible-type-method-names/tests/visible-type-method-names.C"
+fixture_sha256 = "c1f347b7a4588c023f7c0e266f97966bc0f89ce377add6ac3cafbb9566776fca"
+repository_test_runner = "bundles/cxx-ada-visible-type-method-names/run-test.sh"
+application_command = "patch --fuzz=0 -p1 -i bundles/cxx-ada-visible-type-method-names/patches/VARIANT.patch"
+build_command = "PATH=/path/to/bootstrap/bin:$PATH ./scripts/build-gnat.sh SOURCE BUILD INSTALL"
+test_command = "./scripts/run-regressions.sh INSTALL 1.2.0 GCC_MAJOR patched"
+expected_failure_before_patch = "GNAT rejects a later profile because a method and a type from different generated class packages are both use-visible under the same Ada identifier."
+expected_success_after_patch = "Only a method matching any visible generated type receives a stable Method suffix, retains its C++ external symbol, and executes at -O0 and -O2."
+upstream_submission_state = "Not yet filed or submitted upstream."
+licensing = "GCC-derived compiler hunks remain GPL-3.0-or-later. The new test is proposed for the GCC testsuite under GCC project terms."
+
+[[variants]]
+id = "gcc-13-14"
+versions = ["13.2.0", "14.2.0"]
+source_flavors = ["linux", "darwin_arm64"]
+patch = "bundles/cxx-ada-visible-type-method-names/patches/gcc-13-14.patch"
+sha256 = "504c1639d8cb2068bc6e2f3fe46a74f9b2a7f8f18a600dfc7e7ee79323c6c02f"
+
+[[variants]]
+id = "gcc-15-16"
+versions = ["15.3.0", "16.1.0", "16.2.0"]
+source_flavors = ["linux", "darwin_arm64"]
+patch = "bundles/cxx-ada-visible-type-method-names/patches/gcc-15-16.patch"
+sha256 = "afbd2983b7d3f967c388db9a18c897659b92be96a742fdf230c19bec1f065149"

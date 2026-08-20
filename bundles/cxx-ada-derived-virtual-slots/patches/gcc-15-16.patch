@@ -1,0 +1,130 @@
+diff --git a/gcc/c-family/c-ada-spec.cc b/gcc/c-family/c-ada-spec.cc
+--- a/gcc/c-family/c-ada-spec.cc
++++ b/gcc/c-family/c-ada-spec.cc
+@@ -1645,6 +1645,18 @@ dump_ada_function_declaration (pretty_printer *pp, tree func,
+   tree t;
+   char buf[18];
+   int num, num_args = 0, have_args = true, have_ellipsis = false;
++  bool is_derived_destructor = false;
++
++  if (is_destructor)
++    for (tree field = TYPE_FIELDS (DECL_CONTEXT (func));
++         field;
++         field = TREE_CHAIN (field))
++      if (cpp_check && cpp_check (field, IS_PRIMARY_BASE_FIELD)
++          && is_tagged_type (TREE_TYPE (field)))
++        {
++          is_derived_destructor = true;
++          break;
++        }
+ 
+   /* Compute number of arguments.  */
+   if (arg)
+@@ -1740,2 +1752,4 @@ dump_ada_function_declaration (pretty_printer *pp, tree func,
+-	  && !(num == 1 && is_method && (DECL_VINDEX (func) || is_constructor)))
++	  && !(num == 1 && is_method
++	       && (DECL_VINDEX (func) || is_constructor)
++	       && !is_derived_destructor))
+ 	pp_string (pp, "'Class");
+@@ -3655,14 +3655,12 @@
+ /* Dump in PP destructor spec corresponding to T.  */
+ 
+ static void
+-print_destructor (pretty_printer *pp, tree t, tree type)
++print_destructor (pretty_printer *pp, tree t)
+ {
+-  tree decl_name = DECL_NAME (TYPE_NAME (type));
+-
+-  pp_string (pp, "Delete_");
+   if (startswith (IDENTIFIER_POINTER (DECL_NAME (t)), "__dt_del"))
+-    pp_string (pp, "And_Free_");
+-  pp_ada_tree_identifier (pp, decl_name, t, false);
++    pp_string (pp, "Delete_And_Free");
++  else
++    pp_string (pp, "Delete");
+ }
+ 
+ /* Dump in PP assignment operator spec corresponding to T.  */
+@@ -3717,6 +3715,18 @@
+   return false;
+ }
+ 
++/* Return true if METHOD_NAME would collide with a stable generated C++
++   destructor name.  These names must remain identical throughout a class
++   hierarchy so Ada assigns overriding destructors to their C++ vtable slots.  */
++
++static bool
++method_name_matches_destructor (tree method_name)
++{
++  const char *name = IDENTIFIER_POINTER (method_name);
++  return !strcasecmp (name, "Delete")
++    || !strcasecmp (name, "Delete_And_Free");
++}
++
+ /* Return the name of type T.  */
+ 
+ static const char *
+@@ -4051,7 +4061,7 @@
+       if (is_constructor)
+ 	print_constructor (pp, t, type);
+       else if (is_destructor)
+-	print_destructor (pp, t, type);
++	print_destructor (pp, t);
+       else if (is_assignment_operator)
+ 	print_assignment_operator (pp, t, type);
+       else
+@@ -4061,7 +4071,8 @@
+ 	  if (is_method)
+ 	    {
+ 	      print_method_qualifiers (pp, t);
+-	      if (method_name_matches_visible_type (decl_name, type))
++	      if (method_name_matches_visible_type (decl_name, type)
++		  || method_name_matches_destructor (decl_name))
+ 		pp_string (pp, "_Method");
+ 	    }
+ 	  if (suffix > 1)
+diff --git a/gcc/testsuite/g++.dg/ada-spec/derived-virtual-slots.C b/gcc/testsuite/g++.dg/ada-spec/derived-virtual-slots.C
+new file mode 100644
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/ada-spec/derived-virtual-slots.C
+@@ -0,0 +1,40 @@
++/* { dg-do compile } */
++/* { dg-options "-fdump-ada-spec-slim" } */
++/* { dg-final { scan-file derived_virtual_slots_c.ads "procedure Delete \(this : access Derived'Class\)" } } */
++/* { dg-final { scan-file derived_virtual_slots_c.ads "procedure Delete_And_Free \(this : access Derived'Class\)" } } */
++/* { dg-final { scan-file derived_virtual_slots_c.ads "function Delete_Method \(this : access Base'Class\)" } } */
++
++class Base
++{
++public:
++  Base (int base_value);
++  virtual ~Base () = default;
++  virtual int inherited_slot () { return base; }
++  int Delete () { return base; }
++  int base;
++  int reserved;
++};
++
++class Derived : public Base
++{
++public:
++  Derived (int base_value, int own_value);
++  ~Derived () override = default;
++  int inherited_slot () override { return base + own; }
++  virtual int added_slot () { return base + own + 5; }
++  int own;
++};
++
++Base::Base (int base_value) : base (base_value), reserved (0) {}
++Derived::Derived (int base_value, int own_value)
++  : Base (base_value), own (own_value) {}
++
++extern "C" Derived *create_derived () { return new Derived (10, 2); }
++extern "C" void delete_derived (Derived *object) { delete object; }
++extern "C" int cpp_call_inherited (Derived *object)
++{
++  return object->inherited_slot ();
++}
++extern "C" int cpp_call_added (Derived *object) { return object->added_slot (); }
++
++/* { dg-final { cleanup-ada-spec } } */

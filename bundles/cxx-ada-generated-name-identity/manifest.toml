@@ -1,0 +1,38 @@
+schema = 1
+id = "cxx-ada-generated-name-identity"
+status = "staged"
+standalone_patch = false
+staged_in_patchset = "1.2.0"
+staged_reason = "The name allocator renames the as-base types, synthetic base components, and destructor entities introduced by the staged ABI-layout bundles, and its patch does not apply without them. Held out of the published patchset for separate upstream review."
+staged_depends_on = ["cxx-ada-virtual-inheritance-layout", "cxx-ada-virtual-diamond-layout", "cxx-ada-concrete-multiple-inheritance", "cxx-ada-derived-virtual-slots"]
+problem = "Readable Ada names synthesized for C++ entities can collide with user-written identifiers and with each other."
+upstream_issue = "Pending GCC Bugzilla filing."
+affected_versions = ["13.2.0", "14.2.0", "15.3.0", "16.1.0", "16.2.0"]
+known_good_versions = []
+source_provenance = "Repository-authored GCC patch and executable regression; exact application verified locally against the pinned Darwin patchset inputs. Pinned FSF release application is required by Linux CI."
+files_modified = ["gcc/c-family/c-ada-spec.cc", "gcc/testsuite/g++.dg/ada-spec/generated-name-identity.C"]
+regression_tests = ["gcc/testsuite/g++.dg/ada-spec/generated-name-identity.C"]
+repository_fixture = "bundles/cxx-ada-generated-name-identity/tests/generated-name-identity.C"
+fixture_sha256 = "ec6926ba46b3c226429796fc6b0b53aafb56cd941678fd8ce296300bb4c07cbc"
+repository_test_runner = "bundles/cxx-ada-generated-name-identity/run-test.sh"
+application_command = "patch --fuzz=0 -p1 -i bundles/cxx-ada-generated-name-identity/patches/VARIANT.patch"
+build_command = "PATH=/path/to/bootstrap/bin:$PATH ./scripts/build-gnat.sh SOURCE BUILD INSTALL"
+test_command = "./scripts/run-regressions.sh INSTALL 1.2.0 GCC_MAJOR patched"
+expected_failure_before_patch = "GNAT rejects duplicate Ada declarations created by qualifier, template, formal, layout, class-package, constructor, destructor, or assignment names."
+expected_success_after_patch = "Source spellings retain readable names, only colliding generated entities receive deterministic numeric suffixes, and all references compile, link, and execute at -O0 and -O2."
+upstream_submission_state = "Not yet filed or submitted upstream."
+licensing = "GCC-derived compiler hunks remain GPL-3.0-or-later. The new test is proposed for the GCC testsuite under GCC project terms."
+
+[[variants]]
+id = "gcc-13-14"
+versions = ["13.2.0", "14.2.0"]
+source_flavors = ["linux", "darwin_arm64"]
+patch = "bundles/cxx-ada-generated-name-identity/patches/gcc-13-14.patch"
+sha256 = "09d1e9201d819c801c4e0f7e7814775c0cebd852e9feb626abab388a4a53e645"
+
+[[variants]]
+id = "gcc-15-16"
+versions = ["15.3.0", "16.1.0", "16.2.0"]
+source_flavors = ["linux", "darwin_arm64"]
+patch = "bundles/cxx-ada-generated-name-identity/patches/gcc-15-16.patch"
+sha256 = "3a37e47260e909a343891777ac74bd2a486a20ea42202d1f834cd86bcf00fc27"

@@ -1,0 +1,169 @@
+diff --git a/gcc/c-family/c-ada-spec.cc b/gcc/c-family/c-ada-spec.cc
+index c7ae03223..bcdfb60c3 100644
+--- a/gcc/c-family/c-ada-spec.cc
++++ b/gcc/c-family/c-ada-spec.cc
+@@ -1566,6 +1566,21 @@ dump_ada_import (pretty_printer *pp, tree t, int spc)
+   const bool is_stdcall
+     = TREE_CODE (t) == FUNCTION_DECL
+       && lookup_attribute ("stdcall", TYPE_ATTRIBUTES (TREE_TYPE (t)));
++  bool uses_vector_abi = false;
++  const bool is_cpp_method
++    = TREE_CODE (t) == FUNCTION_DECL
++      && TREE_CODE (TREE_TYPE (t)) == METHOD_TYPE;
++
++  if (TREE_CODE (t) == FUNCTION_DECL)
++    {
++      tree function_type = TREE_TYPE (t);
++
++      uses_vector_abi = TREE_CODE (TREE_TYPE (function_type)) == VECTOR_TYPE;
++      for (tree args = TYPE_ARG_TYPES (function_type);
++           args && !uses_vector_abi;
++           args = TREE_CHAIN (args))
++        uses_vector_abi = TREE_CODE (TREE_VALUE (args)) == VECTOR_TYPE;
++    }
+ 
+   pp_string (pp, "with Import => True, ");
+ 
+@@ -1573,6 +1588,12 @@ dump_ada_import (pretty_printer *pp, tree t, int spc)
+ 
+   if (is_stdcall)
+     pp_string (pp, "Convention => Stdcall, ");
++  else if (uses_vector_abi && !is_cpp_method)
++    /* GNAT foreign conventions can pass the representative Ada array by
++       reference before vector_type changes its machine mode.  Free functions
++       therefore use the Ada convention's native vector mode; C++ methods keep
++       CPP convention for their implicit object and dispatch-table slot.  */
++    pp_string (pp, "Convention => Ada, ");
+   else if (name[0] == '_' && name[1] == 'Z')
+     pp_string (pp, "Convention => CPP, ");
+   else
+@@ -2190,7 +2228,22 @@ dump_ada_node (pretty_printer *pp, tree node, tree type, int spc,
+       break;
+ 
+     case VECTOR_TYPE:
+-      pp_string (pp, "<vector>");
++      if (name_only && TYPE_NAME (node))
++	dump_ada_node (pp, TYPE_NAME (node), node, spc, limited_access, true);
++      else
++	{
++	  unsigned HOST_WIDE_INT subparts;
++	  if (!TYPE_VECTOR_SUBPARTS (node).is_constant (&subparts))
++	    pp_string (pp, "<scalable_vector>");
++	  else
++	    {
++	      pp_string (pp, "array (0 .. ");
++	      pp_unsigned_wide_integer (pp, subparts - 1);
++	      pp_string (pp, ") of ");
++	      dump_ada_node (pp, TREE_TYPE (node), node, spc, limited_access,
++			     true);
++	    }
++	}
+       break;
+ 
+     case COMPLEX_TYPE:
+@@ -3050,6 +3099,10 @@ dump_ada_declaration (pretty_printer *pp, tree t, tree type, int spc)
+ 	      pp_string (pp, "type ");
+ 	    break;
+ 
++	  case VECTOR_TYPE:
++	    pp_string (pp, "type ");
++	    break;
++
+ 	  case FUNCTION_TYPE:
+ 	    pp_string (pp, "--  skipped function type ");
+ 	    dump_ada_node (pp, t, type, spc, false, true);
+@@ -3381,6 +3434,21 @@ dump_ada_declaration (pretty_printer *pp, tree t, tree type, int spc)
+     {
+       pp_string (pp, ";  -- ");
+       dump_sloc (pp, t);
++
++      if (TREE_CODE (t) == TYPE_DECL
++	  && TREE_CODE (TREE_TYPE (t)) == VECTOR_TYPE)
++	{
++	  newline_and_indent (pp, spc);
++	  pp_string (pp, "for ");
++	  dump_ada_node (pp, t, type, spc, false, true);
++	  pp_string (pp, "'Alignment use ");
++	  pp_decimal_int (pp, TYPE_ALIGN (TREE_TYPE (t)) / BITS_PER_UNIT);
++	  pp_semicolon (pp);
++	  newline_and_indent (pp, spc);
++	  pp_string (pp, "pragma Machine_Attribute (");
++	  dump_ada_node (pp, t, type, spc, false, true);
++	  pp_string (pp, ", \"vector_type\");");
++	}
+     }
+ 
+   return 1;
+diff --git a/gcc/testsuite/g++.dg/ada-spec/vector-types.C b/gcc/testsuite/g++.dg/ada-spec/vector-types.C
+new file mode 100644
+index 000000000..445ba88ef
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/ada-spec/vector-types.C
+@@ -0,0 +1,49 @@
++/* { dg-do compile } */
++/* { dg-options "-fdump-ada-spec-slim" } */
++/* { dg-final { scan-file vector_types_c.ads "type Int_Vector is array \(0 .. 3\) of int;" } } */
++/* { dg-final { scan-file vector_types_c.ads "for Int_Vector'Alignment use 16;" } } */
++/* { dg-final { scan-file vector_types_c.ads "pragma Machine_Attribute \(Int_Vector, \"vector_type\"\);" } } */
++/* { dg-final { scan-file vector_types_c.ads "type Double_Vector is array \(0 .. 1\) of double;" } } */
++/* { dg-final { scan-file-times vector_types_c.ads "Convention => Ada" 3 } } */
++/* { dg-final { scan-file vector_types_c.ads "function cpp_transform_vector" } } */
++/* { dg-final { scan-file vector_types_c.ads "function transform" } } */
++
++typedef int Int_Vector __attribute__((vector_size(16)));
++typedef double Double_Vector __attribute__((vector_size(16)));
++
++Int_Vector
++vector_identity (Int_Vector value)
++{
++  return value;
++}
++
++Double_Vector
++double_vector_identity (Double_Vector value)
++{
++  return value;
++}
++
++class Vector_Object
++{
++public:
++  virtual ~Vector_Object () = default;
++  virtual Int_Vector transform (Int_Vector value) { return value; }
++};
++
++extern "C" Vector_Object *create_vector_object ()
++{
++  return new Vector_Object;
++}
++
++extern "C" void delete_vector_object (Vector_Object *object)
++{
++  delete object;
++}
++
++extern "C" Int_Vector
++cpp_transform_vector (Vector_Object *object, Int_Vector value)
++{
++  return object->transform (value);
++}
++
++/* { dg-final { cleanup-ada-spec } } */
+diff --git a/gcc/testsuite/g++.dg/ada-spec/scalable-vector.C b/gcc/testsuite/g++.dg/ada-spec/scalable-vector.C
+new file mode 100644
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/ada-spec/scalable-vector.C
+@@ -0,0 +1,13 @@
++/* { dg-do compile { target aarch64*-*-linux* } } */
++/* { dg-options "-march=armv8-a+sve -fdump-ada-spec-slim" } */
++/* { dg-final { scan-file scalable_vector_c.ads "<scalable_vector>" } } */
++
++#include <arm_sve.h>
++
++svint32_t
++scalable_identity (svint32_t value)
++{
++  return value;
++}
++
++/* { dg-final { cleanup-ada-spec } } */

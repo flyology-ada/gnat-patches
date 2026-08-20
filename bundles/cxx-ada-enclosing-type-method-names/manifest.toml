@@ -1,0 +1,36 @@
+schema = 1
+id = "cxx-ada-enclosing-type-method-names"
+status = "accepted"
+standalone_patch = false
+introduced_in_patchset = "1.2.0"
+problem = "The C++ Ada mapper emits a method whose name differs from its enclosing type only by case as an illegal duplicate Ada identifier."
+upstream_issue = "Pending GCC Bugzilla filing."
+affected_versions = ["13.2.0", "14.2.0", "15.3.0", "16.1.0", "16.2.0"]
+known_good_versions = []
+source_provenance = "Repository-authored GCC patch and executable regression; exact application verified locally against the pinned Darwin patchset inputs. Pinned FSF release application is required by Linux CI."
+files_modified = ["gcc/c-family/c-ada-spec.cc", "gcc/testsuite/g++.dg/ada-spec/enclosing-type-method-names.C"]
+regression_tests = ["gcc/testsuite/g++.dg/ada-spec/enclosing-type-method-names.C"]
+repository_fixture = "bundles/cxx-ada-enclosing-type-method-names/tests/enclosing-type-method-names.C"
+fixture_sha256 = "f3b5b4fb482a9bfd5472436033250b0b4bccf578f9b730f4866af69e85546192"
+repository_test_runner = "bundles/cxx-ada-enclosing-type-method-names/run-test.sh"
+application_command = "patch --fuzz=0 -p1 -i bundles/cxx-ada-enclosing-type-method-names/patches/VARIANT.patch"
+build_command = "PATH=/path/to/bootstrap/bin:$PATH ./scripts/build-gnat.sh SOURCE BUILD INSTALL"
+test_command = "./scripts/run-regressions.sh INSTALL 1.2.0 GCC_MAJOR patched"
+expected_failure_before_patch = "GNAT rejects each generated class package because the method identifier conflicts with the enclosing type identifier."
+expected_success_after_patch = "Only a colliding method receives a stable Method suffix, retains its C++ external symbol, and compiles, links, and executes at -O0 and -O2."
+upstream_submission_state = "Not yet filed or submitted upstream."
+licensing = "GCC-derived compiler hunks remain GPL-3.0-or-later. The new test is proposed for the GCC testsuite under GCC project terms."
+
+[[variants]]
+id = "gcc-13-14"
+versions = ["13.2.0", "14.2.0"]
+source_flavors = ["linux", "darwin_arm64"]
+patch = "bundles/cxx-ada-enclosing-type-method-names/patches/gcc-13-14.patch"
+sha256 = "37a6a27d2096228da345ab892187cde301fa510a490445956a257d286fa0bbed"
+
+[[variants]]
+id = "gcc-15-16"
+versions = ["15.3.0", "16.1.0", "16.2.0"]
+source_flavors = ["linux", "darwin_arm64"]
+patch = "bundles/cxx-ada-enclosing-type-method-names/patches/gcc-15-16.patch"
+sha256 = "f016b7142d267aad9eb3513c9158d969681bbff1608d8f0dd740bdbfcd725978"

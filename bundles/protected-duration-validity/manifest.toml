@@ -1,6 +1,7 @@
 schema = 1
 id = "protected-duration-validity"
 status = "accepted"
+standalone_patch = true
 introduced_in_patchset = "1.1.0"
 problem = "Automatically selected lock-free protected bodies retain invalid Duration validity checks."
 upstream_issue = "https://github.com/flyology-ada/flyology/issues/21"
