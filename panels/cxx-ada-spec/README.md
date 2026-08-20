@@ -79,6 +79,12 @@ subobjects also compiles, so the case requires the primary base as Ada
 inheritance and the secondary base as its own storage view; a compiler without
 the staged bundle reports `spec-mismatch`, not a false `pass`.
 
+Its C++ classes declare virtual destructors deliberately. Without one the
+mapper emits no base list at all, so both base subobjects vanish from the Ada
+record even with the staged layout bundles applied. That is a distinct gap from
+the one this probe characterizes and is recorded under `coverage.toml` limits;
+it has no bundle yet.
+
 The confirmed-history ledger is larger than that residual atomic count:
 twenty-two independent C++ mapper defects have bundles introduced for 1.2.0 —
 fifteen accepted into the patchset and seven staged — and no confirmed

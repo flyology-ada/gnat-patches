@@ -190,6 +190,7 @@ not_yet_covered = [
   "portable recovery of a propagated exception's C++ language identity across GNAT runtime versions",
   "Linux AArch64 long double call interoperability on GNAT releases whose Ada and C++ target conventions disagree",
   "direct Ada dispatch to vector-bearing C++ methods; use a C++ wrapper so method dispatch stays under the C++ ABI",
+  "concrete base classes of a C++ class with no virtual destructor: the mapper emits no base list at all, so both base subobjects vanish from the Ada record even with the staged layout bundles applied",
   "instrumented branch coverage measurement for c-ada-spec.cc",
   "mutation testing that proves each mapper branch has a sensitive oracle",
   "coverage-guided grammar fuzzing with automatic failure minimization",

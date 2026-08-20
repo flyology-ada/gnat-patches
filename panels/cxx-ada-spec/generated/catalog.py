@@ -233,8 +233,13 @@ double f_double(double v); long double f_long_double(long double v);
         (r"type Diamond",),
     ),
     "concrete_multiple_inheritance": (
-        "struct Left { virtual int left(); int l; }; "
-        "struct Right { virtual int right(); int r; }; "
+        # The virtual destructors are load-bearing: without one the mapper
+        # emits no base list at all, which is a separate gap tracked under
+        # coverage.toml limits rather than this probe's subject.
+        "struct Left { virtual ~Left() = default; virtual int left_value(); "
+        "int l; }; "
+        "struct Right { virtual ~Right() = default; virtual int right_value(); "
+        "int r; }; "
         "struct Both : Left, Right { int both; };\n",
         # Legal Ada alone is not evidence here: dropping both base subobjects
         # also compiles.  Require the primary base as Ada inheritance and the
