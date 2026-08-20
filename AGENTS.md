@@ -39,6 +39,18 @@ artifacts.
   it in the patchset's `staged_bundles`, and never in `bundles` or
   `control_tests`. A `patched` regression or panel run must make no claim about
   a staged subject.
+- `standalone_patch` describes application to pristine source, not isolation.
+  Staged patch text is authored against the accumulated tree, so a later
+  bundle's hunk context can be a line an earlier bundle added. Moving a bundle
+  between `bundles` and `staged_bundles` changes that tree for everything
+  applied after it, and a bundle nothing depends on can still be depended upon.
+  Never treat such a move as a manifest edit alone: order the bundle in
+  `staged_bundles` where its patch context requires, record the coupling in the
+  dependent bundle's `staged_depends_on` and `staged_reason`, and prove it by
+  running `scripts/apply-patchset.sh` then `scripts/apply-staged.sh` against the
+  pinned source of every affected GCC major before pushing.
+  `scripts/manifest.py` validates list membership, not application order; only
+  applying the patches does.
 - Patchset publication is gated by both patchset version and GCC major. Do not
   publish from a tag alone and do not overwrite an existing release.
 - Alire toolchain assets are outputs of successful source-build lanes, not
