@@ -30,7 +30,6 @@ integer_128 = "ada-reject"
 alias_template = "pass"
 anonymous_enum = "pass"
 casefold_collision = "pass"
-complex_and_vector = "pass"
 copy_move_constructors = "pass"
 constrained_template = "pass"
 data_member_pointer = "pass"
@@ -48,6 +47,7 @@ template_template_parameter = "pass"
 
 # A staged compiler adds the curated bundles that patchset 1.2.0 holds back.
 [staged]
+complex_and_vector = "pass"
 concrete_multiple_inheritance = "pass"
 
 [diagnostics]

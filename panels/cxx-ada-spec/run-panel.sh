@@ -56,8 +56,6 @@ bundle_state=$state
   "$toolchain" "$version" "$bundle_state"
 "$root/bundles/cxx-ada-int128-types/run-test.sh" \
   "$toolchain" "$version" "$bundle_state"
-"$root/bundles/cxx-ada-vector-types/run-test.sh" \
-  "$toolchain" "$version" "$bundle_state"
 "$root/bundles/cxx-ada-member-pointers/run-test.sh" \
   "$toolchain" "$version" "$bundle_state"
 "$root/bundles/cxx-ada-enclosing-type-method-names/run-test.sh" \
@@ -71,7 +69,7 @@ bundle_state=$state
 # bundles, so a patched-only compiler is not asked to satisfy them and the
 # panel makes no claim about them in that state.
 if [[ "$state" == patched ]]; then
-  echo "staged C++ Ada suites: SKIP 8 suites (not in patchset 1.2.0, GCC $version)"
+  echo "staged C++ Ada suites: SKIP 9 suites (not in patchset 1.2.0, GCC $version)"
 else
   "$root/panels/cxx-ada-spec/cases/recursive-secondary-base/run-test.sh" \
     "$toolchain" "$version" "$bundle_state"
@@ -88,6 +86,8 @@ else
   "$root/bundles/cxx-ada-derived-virtual-slots/run-test.sh" \
     "$toolchain" "$version" "$bundle_state"
   "$root/bundles/cxx-ada-generated-name-identity/run-test.sh" \
+    "$toolchain" "$version" "$bundle_state"
+  "$root/bundles/cxx-ada-vector-types/run-test.sh" \
     "$toolchain" "$version" "$bundle_state"
 fi
 

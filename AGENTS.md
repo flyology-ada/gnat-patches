@@ -22,6 +22,15 @@ artifacts.
   tree identity. Do not substitute a nearby tag or branch tip.
 - A patchset release contains every accepted bundle applicable to its declared
   GCC major. `scripts/manifest.py validate-patchset` is authoritative.
+- A bundle is `accepted` only if every binding its patch makes the mapper
+  emit is either proven by an executable regression or explicitly
+  non-callable. Whatever the patch cannot prove must fail closed: an explicit
+  unsupported marker that keeps the generated spec from compiling, or an
+  opaque representation Ada cannot invoke. A patch that emits a callable
+  binding it does not exercise is `staged`, however complete the rest of it
+  is, because it replaces a loud compile-time rejection with a silently wrong
+  value. Needing a hand-written C++ wrapper is not by itself a staging
+  reason; emitting a binding that hides the need for one is.
 - A bundle held out of the published patchset is `status = "staged"`. Staging
   changes nothing about the evidence: the bundle still needs patch variants for
   every affected release, an executable `-O0`/`-O2` before/after regression, a

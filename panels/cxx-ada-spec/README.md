@@ -36,7 +36,7 @@ The executable panel currently has four layers:
   translation unit, with periodic inheritance and overload clusters. They
   exercise higher-order interactions in the currently representable subset and
   alternate full and slim dump modes.
-- Twenty-two shipped runtime suites, plus eight staged ones, link C++ and Ada at
+- Twenty-one shipped runtime suites, plus nine staged ones, link C++ and Ada at
   `-O0` and `-O2`. They check scalar,
   enum, record, union, pointer, reference, and callback calling conventions;
   object size, alignment, and field offsets; ordinary, interface, and concrete
@@ -46,8 +46,7 @@ The executable panel currently has four layers:
   alignment, namespace and method identity—including enclosing-type,
   use-visible type/method, and subprogram-profile collisions—anonymous
   enumeration values, and
-  `char8_t`, 128-bit integers, machine vectors through a C++ method wrapper,
-  and opaque pointer-to-member
+  `char8_t`, 128-bit integers, and opaque pointer-to-member
   values; uninstantiated-template emission, a nontrivial standard-library value
   facade, C++ exception propagation into an Ada handler; and the exact behavior
   of known defects.
@@ -69,10 +68,10 @@ multiple-inheritance layout drift, unsigned 128-bit integer failures on GCC 13
 and 14 before patching, and several version- or type-specific omissions.
 Independent problems must become independent patch bundles.
 
-The coverage summary reports all three baselines. Patchset `1.2.0` leaves one
-atomic case classified non-passing on every supported major:
-`concrete_multiple_inheritance`, whose subject is staged. A staged compiler
-passes all 63.
+The coverage summary reports all three baselines. Patchset `1.2.0` leaves two
+atomic cases classified non-passing on every supported major:
+`concrete_multiple_inheritance` and `complex_and_vector`, whose subjects are
+staged. A staged compiler passes all 63.
 
 That atomic case does not merely require legal Ada. Dropping both base
 subobjects also compiles, so the case requires the primary base as Ada
@@ -87,7 +86,7 @@ it has no bundle yet.
 
 The confirmed-history ledger is larger than that residual atomic count:
 twenty-two independent C++ mapper defects have bundles introduced for 1.2.0 —
-fifteen accepted into the patchset and seven staged — and no confirmed
+fourteen accepted into the patchset and eight staged — and no confirmed
 fixed-layout runtime defect remains. Every linked bundle, accepted or staged,
 contains the offending C++, the unpatched Ada output, the corrected Ada output,
 and an executable `-O0`/`-O2` before/after regression:
@@ -102,7 +101,6 @@ and an executable `-O0`/`-O2` before/after regression:
 - [`cxx-ada-anonymous-enums`](../../bundles/cxx-ada-anonymous-enums/README.md): top-level anonymous enumerators and their synthetic type are omitted;
 - [`cxx-ada-char8-type`](../../bundles/cxx-ada-char8-type/README.md): `char8_t` maps to a nonexistent Ada identifier;
 - [`cxx-ada-int128-types`](../../bundles/cxx-ada-int128-types/README.md): GCC 13 and 14 fail to recognize the unsigned internal 128-bit type name;
-- [`cxx-ada-vector-types`](../../bundles/cxx-ada-vector-types/README.md): machine vectors map to placeholders that cannot appear in profiles;
 - [`cxx-ada-member-pointers`](../../bundles/cxx-ada-member-pointers/README.md): data- and function-member pointer representations are emitted without Ada types;
 - [`cxx-ada-enclosing-type-method-names`](../../bundles/cxx-ada-enclosing-type-method-names/README.md): a method collides case-insensitively with its enclosing Ada type;
 - [`cxx-ada-profile-formal-type-names`](../../bundles/cxx-ada-profile-formal-type-names/README.md): a formal hides its own, a later formal's, or the result type;
@@ -112,7 +110,7 @@ and an executable `-O0`/`-O2` before/after regression:
 
 Patchset `1.2.0` does not ship these. They carry the same evidence as an
 accepted bundle and run in the panel's `staged` state; a `patched` run skips
-them and their eight runtime suites.
+them and their nine runtime suites.
 
 - [`cxx-ada-inherited-tail-padding`](../../bundles/cxx-ada-inherited-tail-padding/README.md): Ada inheritance prevents C++ reuse of base tail padding and moves derived fields;
 - [`cxx-ada-empty-class-storage`](../../bundles/cxx-ada-empty-class-storage/README.md): empty complete objects receive zero storage while overlapping empty subobjects are represented as ordinary fields;
@@ -120,7 +118,8 @@ them and their eight runtime suites.
 - [`cxx-ada-virtual-diamond-layout`](../../bundles/cxx-ada-virtual-diamond-layout/README.md): direct diamond bases incorrectly include their shared virtual base as complete storage;
 - [`cxx-ada-concrete-multiple-inheritance`](../../bundles/cxx-ada-concrete-multiple-inheritance/README.md): additional concrete bases are emitted as illegal Ada progenitors instead of nested ABI storage;
 - [`cxx-ada-derived-virtual-slots`](../../bundles/cxx-ada-derived-virtual-slots/README.md): class-specific destructor names shift later derived virtuals away from their C++ vtable slots;
-- [`cxx-ada-generated-name-identity`](../../bundles/cxx-ada-generated-name-identity/README.md): readable synthesized names collide with user-written methods, aliases, formals, layout helpers, class packages, and special members.
+- [`cxx-ada-generated-name-identity`](../../bundles/cxx-ada-generated-name-identity/README.md): readable synthesized names collide with user-written methods, aliases, formals, layout helpers, class packages, and special members;
+- [`cxx-ada-vector-types`](../../bundles/cxx-ada-vector-types/README.md): machine vectors map to placeholders that cannot appear in profiles.
 
 The following list is only the work still open or intentionally bounded, not
 the complete defect history.
@@ -136,7 +135,9 @@ The remaining confirmed inventory is deliberately explicit:
   Linux AArch64 `long double` interoperability on affected GNAT releases is a
   compiler call-ABI boundary, not a mapper-spelling success. Direct Ada
   dispatch to vector-bearing C++ methods likewise requires a C++ wrapper,
-  because tested GNAT versions do not classify that method ABI consistently.
+  because tested GNAT versions do not classify that method ABI consistently;
+  the vector bundle is staged rather than shipped because its printer fix
+  still emits that unproven method binding as callable Ada.
 
 Run the complete current panel against a compiler root:
 

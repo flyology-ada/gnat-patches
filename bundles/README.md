@@ -72,7 +72,6 @@ the [C++ to Ada mapper panel](../panels/cxx-ada-spec/README.md).
 | [`char8_t` type](cxx-ada-char8-type/README.md) | 13.2–16.2 | Maps `char8_t` without referring to a nonexistent `Interfaces.C` type. |
 | [128-bit integers](cxx-ada-int128-types/README.md) | 13.2–14.2 | Replaces GCC's internal unsigned 128-bit name with a valid Ada type. |
 | [Member pointers](cxx-ada-member-pointers/README.md) | 13.2–16.2 | Emits usable representations for data-member and member-function pointers. |
-| [Vector types](cxx-ada-vector-types/README.md) | 13.2–16.2 | Replaces invalid vector placeholders with usable Ada machine-vector types and profiles. |
 
 ## Staged: C++ object layout and vtable identity
 
@@ -99,3 +98,25 @@ primary-base component that the virtual-base layout path emits, and
 | [Concrete multiple inheritance](cxx-ada-concrete-multiple-inheritance/README.md) | 13.2–16.2 | Keeps the primary base as Ada inheritance and emits concrete secondary bases as exact nested as-base storage. |
 | [Derived virtual slots](cxx-ada-derived-virtual-slots/README.md) | 13.2–16.2 | Stabilizes destructor identities so new derived virtuals retain their C++ vtable slots, including through nested secondary bases. |
 | [Generated-name identity](cxx-ada-generated-name-identity/README.md) | 13.2–16.2 | Allocates readable synthesized names without colliding with source names or other generated entities. |
+
+## Staged: unproven vector method ABI
+
+This bundle is **not** part of patchset `1.2.0` either, for a different
+reason. Its patch is standalone, and the free-function half of it is proven:
+fixed-size vectors become exact Ada machine-vector arrays that round-trip by
+value at `-O0` and `-O2`. But the same `VECTOR_TYPE` printer fix also makes a
+vector-bearing C++ method print as a callable `Convention => CPP` binding, and
+no tested GNAT release classifies that method ABI consistently. Where the
+unpatched mapper rejected the spec at compile time, that binding compiles and
+can return a wrong value; direct dispatch needs an `extern "C"` C++ wrapper.
+
+The same patch already fails closed for scalable SVE/RVV vectors, which have no
+compile-time lane count, by emitting an explicit `<scalable_vector>` marker. The
+bundle ships once the method binding it cannot prove fails closed the same way.
+Removing the declaration outright is not that fix: primitive declaration order
+assigns the dispatch slot, so dropping a virtual would displace every virtual
+declared after it.
+
+| Staged bundle | GCC releases | Summary |
+| --- | --- | --- |
+| [Vector types](cxx-ada-vector-types/README.md) | 13.2–16.2 | Replaces invalid vector placeholders with exact Ada machine-vector types, proven for free-function and `extern "C"` profiles. |

@@ -1,8 +1,10 @@
 schema = 1
 id = "cxx-ada-vector-types"
-status = "accepted"
+status = "staged"
 standalone_patch = true
-introduced_in_patchset = "1.2.0"
+staged_in_patchset = "1.2.0"
+staged_reason = "Fixing the VECTOR_TYPE printer also makes vector-bearing C++ methods print as callable Convention => CPP bindings, and no tested GNAT release classifies that method ABI consistently, so a binding this bundle cannot prove replaces a compile-time rejection with a silently wrong value. Direct dispatch requires an extern \"C\" C++ wrapper. Held out of the published patchset until the unproven method binding fails closed the way the scalable-vector guard already does."
+staged_depends_on = []
 problem = "Fixed-size C++ vector typedefs and signatures are emitted as invalid <vector> placeholders, with no usable Ada machine type or calling convention."
 upstream_issue = "Pending GCC Bugzilla filing."
 affected_versions = ["13.2.0", "14.2.0", "15.3.0", "16.1.0", "16.2.0"]

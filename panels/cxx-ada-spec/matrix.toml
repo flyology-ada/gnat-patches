@@ -9,8 +9,8 @@ atomic_cases = 63
 pairwise_cases = 16
 pairwise_value_pairs = 88
 grammar_cases = 32
-runtime_suites = 22
-staged_runtime_suites = 8
+runtime_suites = 21
+staged_runtime_suites = 9
 dump_modes = ["full", "slim"]
 
 [[features]]
@@ -274,9 +274,9 @@ note = "Patchset 1.2.0 maps C++20 char8_t to ABI-equivalent Interfaces.C.unsigne
 [[features]]
 id = "complex-vector-types"
 category = "type-system"
-state = "patched-with-method-wrapper-boundary"
+state = "staged"
 evidence = "bundles/cxx-ada-vector-types,generated/catalog.py:complex_and_vector"
-note = "Complex float types already mapped to Ada.Numerics complex units. Patchset 1.2.0 replaces vector placeholders with aligned GNAT machine-vector arrays. Free and C-wrapper profiles use the direct vector calling convention; direct Ada dispatch to a vector-bearing C++ method is not portable across the tested compiler/target matrix."
+note = "Complex float types already map to Ada.Numerics complex units without a patch. The staged bundle replaces vector placeholders with aligned GNAT machine-vector arrays, and free and C-wrapper profiles use the direct vector calling convention. Patchset 1.2.0 does not ship it: the same printer fix also emits a callable Convention => CPP binding for a vector-bearing C++ method, and direct Ada dispatch through it is not portable across the tested compiler/target matrix."
 
 [[features]]
 id = "anonymous-enum-constants"

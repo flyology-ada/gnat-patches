@@ -25,11 +25,11 @@ checksum-pinned upstream sources and proves them with source builds.
 ## Current patchset
 
 Patchset `1.2.0` is the current repository candidate for GCC 13, 14, 15, and
-16. It contains eighteen independent corrections, each with its own executable
+16. It contains seventeen independent corrections, each with its own executable
 regression. Patchset `1.1.0` remains the latest published release until the
 `1.2.0` validation and publication workflows complete.
 
-Seven further C++ mapper bundles are curated here but deliberately held out of
+Eight further C++ mapper bundles are curated here but deliberately held out of
 `1.2.0`; see [staged bundles](#staged-bundles) below.
 
 - `storage-model-actuals`: selected and indexed actuals rooted at a
@@ -78,10 +78,6 @@ Seven further C++ mapper bundles are curated here but deliberately held out of
   unsigned `__int128` as the undefined Ada identifier `uu_int128_unsigned`.
   Prefix recognition maps both forms to `Interfaces.C.Extensions`; GCC 15 and
   16 are known-good controls.
-- `cxx-ada-vector-types`: fixed-size C++ vectors are printed as `<vector>`.
-  Exact Ada machine-vector arrays, target alignment, and direct vector ABI
-  classification make integer and floating vectors callable. GCC 13 through
-  16 are affected.
 - `cxx-ada-member-pointers`: data-member offsets and member-function pointer
   records contain blank Ada types. Itanium ABI representations preserve data,
   nonvirtual, virtual, and null values as opaque callable-through-C++ values.
@@ -117,7 +113,6 @@ Seven further C++ mapper bundles are curated here but deliberately held out of
 | `cxx-ada-anonymous-enums` | affected | affected | affected | affected |
 | `cxx-ada-char8-type` | affected | affected | affected | affected |
 | `cxx-ada-member-pointers` | affected | affected | affected | affected |
-| `cxx-ada-vector-types` | affected | affected | affected | affected |
 | `cxx-ada-enclosing-type-method-names` | affected | affected | affected | affected |
 | `cxx-ada-profile-formal-type-names` | affected | affected | affected | affected |
 | `cxx-ada-visible-type-method-names` | affected | affected | affected | affected |
@@ -143,12 +138,24 @@ accepted one: it has patch variants for every affected release, an executable
 both the current and the corrected Ada, and an entry in the panel ledger.
 It is simply not part of the published patchset yet.
 
-Patchset `1.2.0` stages the C++ object-layout and vtable-identity work. These
-patches are coupled to Itanium C++ ABI facts—as-base versus complete-object
-sizes, secondary base offsets, virtual-base sharing, and vtable slot
-identity—and cannot be expressed as native Ada inheritance, so they need
+Patchset `1.2.0` stages two different kinds of work.
+
+The first seven bundles are the C++ object-layout and vtable-identity series.
+These patches are coupled to Itanium C++ ABI facts—as-base versus
+complete-object sizes, secondary base offsets, virtual-base sharing, and vtable
+slot identity—and cannot be expressed as native Ada inheritance, so they need
 separate upstream review before they ship in a toolchain. They form one ordered
 series, not seven independent patches.
+
+`cxx-ada-vector-types` is staged on its own and for a different reason. Its
+patch is standalone, and its free-function vector mapping is proven by an
+executable regression, but the same `VECTOR_TYPE` printer fix also makes a
+vector-bearing C++ method print as a callable `Convention => CPP` binding. No
+tested GNAT release classifies that method ABI consistently, so the generated
+binding compiles and can return wrong values where the unpatched mapper failed
+loudly at compile time. Direct dispatch needs an `extern "C"` C++ wrapper. The
+bundle ships once that unproven binding fails closed, the way the same patch
+already handles scalable SVE/RVV vectors.
 
 | Staged bundle | 13.2.0 | 14.2.0 | 15.3.0 | 16.2.0 |
 | --- | --- | --- | --- | --- |
@@ -159,8 +166,9 @@ series, not seven independent patches.
 | `cxx-ada-concrete-multiple-inheritance` | affected | affected | affected | affected |
 | `cxx-ada-derived-virtual-slots` | affected | affected | affected | affected |
 | `cxx-ada-generated-name-identity` | affected | affected | affected | affected |
+| `cxx-ada-vector-types` | affected | affected | affected | affected |
 
-Two of the seven are staged by dependency rather than by ABI judgement.
+Two of the layout series are staged by dependency rather than by ABI judgement.
 `cxx-ada-inherited-tail-padding` decides *when* to nest a primary-base
 component, but the virtual-base layout path is what emits it, so on its own the
 patch does not produce the corrected record. CI proved that by building it.

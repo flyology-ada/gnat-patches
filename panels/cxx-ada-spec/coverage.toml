@@ -26,7 +26,6 @@ suites = [
   "bundles/cxx-ada-anonymous-enums",
   "bundles/cxx-ada-char8-type",
   "bundles/cxx-ada-int128-types",
-  "bundles/cxx-ada-vector-types",
   "bundles/cxx-ada-member-pointers",
   "bundles/cxx-ada-enclosing-type-method-names",
   "bundles/cxx-ada-profile-formal-type-names",
@@ -43,6 +42,7 @@ staged_suites = [
   "bundles/cxx-ada-concrete-multiple-inheritance",
   "bundles/cxx-ada-derived-virtual-slots",
   "bundles/cxx-ada-generated-name-identity",
+  "bundles/cxx-ada-vector-types",
 ]
 oracles = [
   "generated Ada compiles",
