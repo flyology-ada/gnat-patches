@@ -499,7 +499,6 @@ class GenerationTest(unittest.TestCase):
             ("patches.json",),
             ("llms.txt",),
             (".nojekyll",),
-            ("CNAME",),
             ("assets", "styles", "patches.css"),
             ("flyology-logo.svg",),
         ):
@@ -528,11 +527,14 @@ class GenerationTest(unittest.TestCase):
                 with self.subTest(patch=variant["patch"]):
                     self.assertEqual(model.sha256(hosted), variant["sha256"])
 
-    def test_the_served_host_matches_the_canonical_links(self):
-        host = self.site("CNAME").read_text(encoding="utf-8").strip()
-        self.assertEqual(f"https://{host}/", model.CANONICAL_URL)
+    def test_pages_are_canonical_to_the_published_domain(self):
         home = self.site("index.html").read_text(encoding="utf-8")
-        self.assertIn(f'<link rel="canonical" href="https://{host}/">', home)
+        self.assertIn(f'<link rel="canonical" href="{model.CANONICAL_URL}">', home)
+        bundle = self.site("bundles", "cxx-ada-char8-type", "index.html").read_text(encoding="utf-8")
+        self.assertIn(
+            f'<link rel="canonical" href="{model.CANONICAL_URL}bundles/cxx-ada-char8-type/">',
+            bundle,
+        )
 
     def test_offline_generation_claims_no_publication(self):
         catalog = json.loads(self.site("patches.json").read_text(encoding="utf-8"))

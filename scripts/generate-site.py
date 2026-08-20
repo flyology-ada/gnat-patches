@@ -16,7 +16,6 @@ import shutil
 import sys
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlparse
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
@@ -191,10 +190,6 @@ def write_assets(root: Path, output: Path) -> None:
 def write_text_resources(output: Path, catalog: dict[str, Any]) -> None:
     (output / ".nojekyll").write_text("", encoding="utf-8")
     (output / "llms.txt").write_text(render_llms(catalog), encoding="utf-8")
-    #  The host is taken from the same constant the canonical links use, so the
-    #  domain Pages serves and the domain the pages claim cannot drift apart.
-    host = urlparse(catalog["canonical_url"]).netloc
-    (output / "CNAME").write_text(f"{host}\n", encoding="utf-8")
 
 
 def render_llms(catalog: dict[str, Any]) -> str:

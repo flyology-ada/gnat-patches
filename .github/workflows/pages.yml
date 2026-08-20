@@ -39,10 +39,10 @@ jobs:
         with:
           python-version: '3.12'
 
-      # The Pages site itself is created once with an administrative token;
-      # GITHUB_TOKEN cannot create it, so enablement stays off here and this
-      # step only reads the configuration. The served domain comes from the
-      # CNAME file the generator writes, not from this step.
+      # The Pages site and its custom domain are repository configuration, set
+      # once with an administrative token. GITHUB_TOKEN can neither create the
+      # site nor set the domain, and a CNAME file in the artifact is ignored by
+      # Actions-based deployments, so this step only reads that configuration.
       - name: Configure Pages
         uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
 
