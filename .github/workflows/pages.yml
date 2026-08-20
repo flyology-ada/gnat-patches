@@ -1,0 +1,76 @@
+name: Pages
+
+on:
+  push:
+    branches: [main]
+  release:
+    types: [published, released, prereleased, unpublished, deleted]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    name: Build patch catalog
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    concurrency:
+      group: gnat-patches-pages-build
+      cancel-in-progress: true
+    steps:
+      - name: Check out patchsets
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Check out website kit
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          repository: flyology-ada/website-kit
+          ref: 7428fe9f3197c5f32ba64e460ff1c711c3ae102f
+          path: vendor/website-kit
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+
+      - name: Configure Pages
+        uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
+
+      - name: Test the generator
+        run: ./ci/test-generate-site.sh
+
+      # The manifests do not record which patchsets are released, so the
+      # generator reads that from this repository's releases. Without the
+      # query it would print an Alire selection for a compiler nobody can
+      # install, so a failed query fails the build.
+      - name: Build site
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: ./scripts/build-site.sh
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4
+        with:
+          path: build/site
+
+  deploy:
+    name: Publish patch catalog
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: gnat-patches-pages-deploy
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4

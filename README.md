@@ -231,9 +231,41 @@ patched it requires success at both `-O0` and `-O2` everywhere.
   holes, representation boundaries, and planned probes.
 - `scripts/`: fetch, verification, application, build, test, and packaging
   entry points.
+- `website/`: design and product notes, brand marks, and the catalog
+  stylesheet for the published site.
+- `tests/`: unit tests for the site generator.
 - [`flyology-ada/alire-index`](https://github.com/flyology-ada/alire-index):
   release-generated `gnat_flyology_native` compiler entries; compiler binaries
   remain immutable release assets in this repository.
+
+## Website
+
+[gnat-patches.flyology.org](https://gnat-patches.flyology.org/) publishes this
+repository: the current patchset and what each compiler receives, every bundle
+with its explanation, diffs, tests, and complete metadata, the staged bundles
+as an unreleased set, and the coverage panels. Every page is generated from the
+manifests, patches, tests, and READMEs in this repository.
+
+Generation is fail-closed. It recomputes every recorded patch and fixture
+checksum, resolves every reference between a patchset and a bundle, and refuses
+to publish when a bundle's status disagrees with its patchset membership. The
+manifests do not record which patchsets are released, so publication state is
+read from this repository's releases at build time; an Alire selection is shown
+only for a compiler that actually exists.
+
+Build it locally against a checkout of
+[`flyology-ada/website-kit`](https://github.com/flyology-ada/website-kit):
+
+```sh
+git clone https://github.com/flyology-ada/website-kit.git vendor/website-kit
+./scripts/build-site.sh
+```
+
+Pass `--offline` to skip the release query; the site then makes no claim about
+what is installable. The result is written to `build/site` and is also
+published as JSON: `patches.json` for the whole catalog, and
+`patchsets/<version>.json`, `bundles/<id>.json`, and `panels/<id>.json` for
+their parts.
 
 ## Source baselines
 
