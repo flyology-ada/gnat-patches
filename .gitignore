@@ -1,3 +1,6 @@
+/.agents/
+/.claude/rules/
+/.claude/skills/
 .cache/
 build/
 vendor/
@@ -8,3 +11,4 @@ work/
 *.orig
 __pycache__/
 *.pyc
+apm_modules/
