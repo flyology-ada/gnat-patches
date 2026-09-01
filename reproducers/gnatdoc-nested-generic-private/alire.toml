@@ -1,0 +1,8 @@
+name = "gnatdoc_nested_generic_private"
+description = "Minimal GNATdoc nested generic private package reproducer"
+version = "0.1.0-dev"
+licenses = "MIT"
+authors = ["Flyology contributors"]
+maintainers = ["Flyology contributors <noreply@flyology.org>"]
+maintainers-logins = ["flyology-ada"]
+project-files = ["reproducer.gpr"]

@@ -243,6 +243,8 @@ patched it requires success at both `-O0` and `-O2` everywhere.
 - `patchsets/<version>/gcc-<major>.toml`: ordered aggregate for one GCC major.
 - `panels/cxx-ada-spec/`: executable C++ feature inventory, confirmed mapper
   holes, representation boundaries, and planned probes.
+- `reproducers/`: independently runnable failures in GNAT-adjacent tools that
+  are not complete GCC patch bundles.
 - `scripts/`: fetch, verification, application, build, test, and packaging
   entry points.
 - `website/`: design and product notes, brand marks, and the catalog
