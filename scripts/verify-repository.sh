@@ -10,11 +10,8 @@ ci/test-generate-alire-index.sh
 ci/test-generate-site.sh
 ci/test-homebrew-gxx.sh
 ci/test-quarantine-darwin-include-fixed.sh
-
-if rg --hidden -n 'uses: [^#[:space:]]+@(v[0-9]+|main|master)([[:space:]]|$)' .github/workflows; then
-  echo "error: GitHub Actions must use immutable commit SHAs" >&2
-  exit 1
-fi
+ci/test-workflow-action-pins.sh
+scripts/check-workflow-action-pins.sh
 
 if find . -type f \( -name '*.orig' -o -name '*.rej' \) -print -quit | grep -q .; then
   echo "error: patch residue is present" >&2
