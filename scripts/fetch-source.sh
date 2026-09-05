@@ -48,7 +48,14 @@ if [[ "$flavor" == linux ]]; then
   tar -xf "$path" --strip-components=1 -C "$destination"
 elif [[ "$flavor" == darwin_arm64 ]]; then
   repository=$(python3 "$manifest" source "$version" darwin_arm64.repository)
-  tag=$(python3 "$manifest" source "$version" darwin_arm64.tag)
+  if ref=$(python3 "$manifest" source "$version" darwin_arm64.ref 2>/dev/null); then
+    fetch_ref=$ref
+    cache_ref="refs/heads/gnat-patches-source"
+  else
+    tag=$(python3 "$manifest" source "$version" darwin_arm64.tag)
+    fetch_ref="refs/tags/$tag"
+    cache_ref=$fetch_ref
+  fi
   commit=$(python3 "$manifest" source "$version" darwin_arm64.commit)
   tree=$(python3 "$manifest" source "$version" darwin_arm64.tree)
   cache=${GNAT_PATCHES_CACHE:-"$root/.cache"}
@@ -57,9 +64,11 @@ elif [[ "$flavor" == darwin_arm64 ]]; then
     mkdir -p "$cache/sources"
     git init --bare "$cache_repo"
   fi
-  if ! git --git-dir "$cache_repo" cat-file -e "$commit^{commit}" 2>/dev/null; then
+  if ! git --git-dir "$cache_repo" show-ref --verify --quiet "$cache_ref" \
+    || [[ $(git --git-dir "$cache_repo" rev-parse "$cache_ref^{commit}") != "$commit" ]]
+  then
     git --git-dir "$cache_repo" fetch --depth=1 "$repository" \
-      "refs/tags/$tag:refs/tags/$tag"
+      "+$fetch_ref:$cache_ref"
   fi
   git clone --no-checkout "$cache_repo" "$destination"
   git -C "$destination" checkout --detach "$commit"

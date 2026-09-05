@@ -13,7 +13,7 @@ itself into an existing bundle's patch.
 Separate directories are not the same as separate patches. A bundle records
 whether its patch applies to pristine upstream source with
 `standalone_patch`, and `scripts/check-standalone.sh` proves that claim against
-the pinned source in CI. Fourteen of the twenty-four bundles are standalone.
+the pinned source in CI. Sixteen of the twenty-six bundles are standalone.
 The other ten form an ordered series: their patch text is expressed against the
 accumulated tree, so upstream submission means either regenerating them against
 trunk or sending them as a declared series. `patchsets/<version>/gcc-<major>.toml`
@@ -25,7 +25,7 @@ checksum-pinned upstream sources and proves them with source builds.
 ## Current patchset
 
 Patchset `1.2.0` is the current repository candidate for GCC 13, 14, 15, and
-16. It contains seventeen independent corrections, each with its own executable
+16. It contains eighteen independent corrections, each with its own executable
 regression. Patchset `1.1.0` remains the latest published release until the
 `1.2.0` validation and publication workflows complete.
 
@@ -38,6 +38,10 @@ Eight further C++ mapper bundles are curated here but deliberately held out of
 - `protected-duration-validity`: an automatically selected lock-free protected
   body retains validity checks inserted before the protected type was marked
   lock-free. GCC 13 through 16 are affected.
+- `controlled-subpool-allocator`: a controlled aggregate allocator loses its
+  explicitly named subpool while GNAT synthesizes a custom allocation
+  procedure. Exact GCC 13.2, 14.2, and 15.1 sources are affected; GCC 15.3
+  and 16 are known-good controls. GCC 15.2 is not classified.
 - `cxx-ada-template-qualification`: the C++ Ada spec dumper emits concrete
   template instances in nested packages but drops those package qualifiers
   from aliases, fields, parameters, and results. Two instantiations therefore
@@ -103,6 +107,7 @@ Eight further C++ mapper bundles are curated here but deliberately held out of
 | --- | --- | --- | --- | --- |
 | `storage-model-actuals` | known-good control | affected | affected | affected |
 | `protected-duration-validity` | affected | affected | affected | affected |
+| `controlled-subpool-allocator` | affected | affected | known-good control | known-good control |
 | `cxx-ada-template-qualification` | affected | affected | affected | affected |
 | `cxx-ada-template-record-termination` | affected | affected | affected | affected |
 | `cxx-ada-explicit-alignment` | affected | affected | affected | affected |
@@ -285,18 +290,23 @@ their parts.
 
 Linux uses [official FSF release tarballs](https://gcc.gnu.org/releases.html), verified by the
 published SHA-512 checksum and cross-checked against the release tag commit and
-tree. macOS arm64 uses pinned public Darwin GCC tags derived from
+tree. macOS arm64 uses pinned public Darwin GCC source identities derived from
 [Iain Sandoe's branches](https://github.com/iains), the same public source
 family used by [Alire's `GNAT-FSF-builds`](https://github.com/alire-project/GNAT-FSF-builds/blob/main/specs/gcc.anod).
+Released baselines use immutable tags. The GNAT-FSF 15.1 build instead names a
+release branch, so this repository binds that branch to the exact commit and
+tree matching the packaged compiler's datestamp rather than trusting its
+moving tip.
 The GCC 16.2 candidate preserves Iain's complete AArch64 Darwin history and
 merges the signed FSF 16.2 release in the public
 [`flyology-ada/gcc-16-branch`](https://github.com/flyology-ada/gcc-16-branch)
-fork. Every checkout is verified by an exact tag, commit, and tree identity.
+fork. Every checkout is verified by an exact source ref, commit, and tree
+identity.
 
 This split is required. FSF GCC 16.1 and 16.2 do not provide an
 `aarch64-*-darwin` target in `gcc/config.gcc`; substituting the unmodified FSF
 tarball would create a lane that cannot build GNAT for Apple Silicon. The
-Darwin tags are public source, so the macOS arm64 lane is real and
+The Darwin sources are public, so the macOS arm64 lane is real and
 redistributable. CI intentionally has no macOS x86_64 matrix.
 
 GitHub's [documented public-runner labels](https://github.com/actions/runner-images#available-images) used here are `ubuntu-24.04`,

@@ -1,0 +1,36 @@
+schema = 1
+id = "controlled-subpool-allocator"
+status = "accepted"
+standalone_patch = true
+introduced_in_patchset = "1.2.0"
+problem = "Controlled aggregate allocators drop an explicitly named subpool while synthesizing their custom allocation procedure."
+upstream_issue = "https://github.com/flyology-ada/flyology/issues/220"
+affected_versions = ["13.2.0", "14.2.0", "15.1.0"]
+known_good_versions = ["15.3.0", "16.1.0", "16.2.0"]
+source_provenance = "Narrow backport of GCC commit 5dd4b922bb341aa3b821e600ff2e46aa6ed6e850, derived against and verified on the pinned GCC 13.2.0, 14.2.0, and 15.1.0 FSF and Darwin sources."
+files_modified = ["gcc/ada/exp_ch4.adb", "gcc/testsuite/gnat.dg/controlled_subpool_allocator.adb"]
+regression_tests = ["gcc/testsuite/gnat.dg/controlled_subpool_allocator.adb"]
+repository_fixture = "bundles/controlled-subpool-allocator/tests/controlled_subpool_allocator.adb"
+fixture_sha256 = "b48022218005001c318f3ea582d4c130e42a145c043f8afc9579b8032755ecb0"
+repository_test_runner = "bundles/controlled-subpool-allocator/run-test.sh"
+application_command = "./scripts/apply-bundle.sh controlled-subpool-allocator GCC_VERSION SOURCE"
+build_command = "PATH=/path/to/bootstrap/bin:$PATH ./scripts/build-gnat.sh SOURCE BUILD INSTALL"
+test_command = "./scripts/run-regressions.sh INSTALL 1.2.0 GCC_MAJOR patched"
+expected_failure_before_patch = "At -O0 and -O2, allocation of a controlled aggregate in an explicitly named subpool raises PROGRAM_ERROR from System.Storage_Pools.Subpools.Default_Subpool_For_Pool because the generated custom allocator passes a null subpool."
+expected_success_after_patch = "At -O0 and -O2, the plain object and both controlled objects allocate in the named subpool, each subpool selector is evaluated once, and releasing the subpool finalizes both controlled objects exactly once."
+upstream_submission_state = "Fixed upstream by GCC commit 5dd4b922bb341aa3b821e600ff2e46aa6ed6e850; this bundle is the focused backport for the exact affected GCC 13.2.0, 14.2.0, and 15.1.0 sources."
+licensing = "GCC-derived compiler hunks remain GPL-3.0-or-later. The new test is proposed for the GCC testsuite under GCC project terms."
+
+[[variants]]
+id = "gcc-13-14"
+versions = ["13.2.0", "14.2.0"]
+source_flavors = ["linux", "darwin_arm64"]
+patch = "bundles/controlled-subpool-allocator/patches/gcc-13-14.patch"
+sha256 = "b4b33ed8436718ae87efd8acc286b43f611c8801d97518c108832adbd2de3489"
+
+[[variants]]
+id = "gcc-15.1"
+versions = ["15.1.0"]
+source_flavors = ["linux", "darwin_arm64"]
+patch = "bundles/controlled-subpool-allocator/patches/gcc-15.1.patch"
+sha256 = "fa8a454e2070507cae4585ef4887c26b13ffe071f42cf6477817826449851660"
