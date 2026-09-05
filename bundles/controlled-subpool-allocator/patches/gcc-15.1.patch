@@ -1,0 +1,175 @@
+diff --git a/gcc/ada/exp_ch4.adb b/gcc/ada/exp_ch4.adb
+index 82978c7..b87f597 100644
+--- a/gcc/ada/exp_ch4.adb
++++ b/gcc/ada/exp_ch4.adb
+@@ -659,7 +659,9 @@ package body Exp_Ch4 is
+              Object_Definition   => New_Occurrence_Of (Typ, Loc),
+              Expression          =>
+                Make_Allocator (Loc,
+-                 Expression => New_Occurrence_Of (Etype (Exp), Loc)));
++                 Subpool_Handle_Name =>
++                   Relocate_Node (Subpool_Handle_Name (N)),
++                 Expression          => New_Occurrence_Of (Etype (Exp), Loc)));
+
+       begin
+          --  Prevent default initialization of the allocator
+@@ -698,7 +700,9 @@ package body Exp_Ch4 is
+              Object_Definition   => New_Occurrence_Of (Typ, Loc),
+              Expression          =>
+                Make_Allocator (Loc,
+-                 Expression => New_Occurrence_Of (Etype (Exp), Loc)));
++                 Subpool_Handle_Name =>
++                   Relocate_Node (Subpool_Handle_Name (N)),
++                 Expression          => New_Occurrence_Of (Etype (Exp), Loc)));
+
+       begin
+          --  Prevent default initialization of the allocator
+diff --git a/gcc/testsuite/gnat.dg/controlled_subpool_allocator.adb b/gcc/testsuite/gnat.dg/controlled_subpool_allocator.adb
+new file mode 100644
+index 000000000..2844080f8
+--- /dev/null
++++ b/gcc/testsuite/gnat.dg/controlled_subpool_allocator.adb
+@@ -0,0 +1,143 @@
++--  { dg-do run }
++--  { dg-options "-gnata" }
++
++with Ada.Finalization;
++with Ada.Text_IO; use Ada.Text_IO;
++with Ada.Unchecked_Deallocate_Subpool;
++with System;
++with System.Storage_Elements; use System.Storage_Elements;
++with System.Storage_Pools.Subpools; use System.Storage_Pools.Subpools;
++
++procedure Controlled_Subpool_Allocator is
++   Finalizations : Natural := 0;
++
++   type Test_Subpool is new Root_Subpool with null record;
++   type Test_Interface is limited interface;
++
++   type Test_Pool is new Root_Storage_Pool_With_Subpools with record
++      Region      : aliased Test_Subpool;
++      Storage     : aliased Storage_Array (1 .. 4_096);
++      Next        : Storage_Offset := 1;
++      Allocations : Natural := 0;
++      Releases    : Natural := 0;
++   end record;
++
++   overriding
++   function Create_Subpool
++     (Pool : in out Test_Pool) return not null Subpool_Handle;
++
++   overriding
++   procedure Allocate_From_Subpool
++     (Pool                     : in out Test_Pool;
++      Storage_Address          : out System.Address;
++      Size_In_Storage_Elements : Storage_Count;
++      Alignment                : Storage_Count;
++      Subpool                  : not null Subpool_Handle);
++
++   overriding
++   procedure Deallocate_Subpool
++     (Pool : in out Test_Pool; Subpool : in out Subpool_Handle);
++
++   type Tracked is new Ada.Finalization.Limited_Controlled
++     and Test_Interface with record
++      Value : Natural := 0;
++   end record;
++
++   overriding procedure Finalize (Object : in out Tracked);
++
++   overriding
++   function Create_Subpool
++     (Pool : in out Test_Pool) return not null Subpool_Handle
++   is
++      Result : constant not null Subpool_Handle :=
++        Pool.Region'Unchecked_Access;
++   begin
++      Set_Pool_Of_Subpool (Result, Pool);
++      return Result;
++   end Create_Subpool;
++
++   overriding
++   procedure Allocate_From_Subpool
++     (Pool                     : in out Test_Pool;
++      Storage_Address          : out System.Address;
++      Size_In_Storage_Elements : Storage_Count;
++      Alignment                : Storage_Count;
++      Subpool                  : not null Subpool_Handle)
++   is
++      Current : System.Address := Pool.Storage (Pool.Next)'Address;
++   begin
++      if Subpool /= Pool.Region'Unchecked_Access then
++         raise Program_Error with "allocation used an unexpected subpool";
++      end if;
++
++      while Current mod Alignment /= 0 loop
++         Pool.Next := Pool.Next + 1;
++         Current := Pool.Storage (Pool.Next)'Address;
++      end loop;
++
++      Storage_Address := Current;
++      Pool.Next := Pool.Next + Storage_Offset (Size_In_Storage_Elements);
++      Pool.Allocations := Pool.Allocations + 1;
++   end Allocate_From_Subpool;
++
++   overriding
++   procedure Deallocate_Subpool
++     (Pool : in out Test_Pool; Subpool : in out Subpool_Handle)
++   is
++   begin
++      Pool.Releases := Pool.Releases + 1;
++      Subpool := null;
++   end Deallocate_Subpool;
++
++   overriding procedure Finalize (Object : in out Tracked) is
++   begin
++      if Object.Value /= 7 then
++         raise Program_Error with "controlled object value was not preserved";
++      end if;
++      Finalizations := Finalizations + 1;
++   end Finalize;
++
++   Pool       : Test_Pool;
++   Region     : Subpool_Handle := Create_Subpool (Pool);
++   Selections : Natural := 0;
++
++   function Select_Region return not null Subpool_Handle is
++   begin
++      Selections := Selections + 1;
++      return Region;
++   end Select_Region;
++
++   type Plain_Access is access Integer with Storage_Pool => Pool;
++   type Tracked_Access is access Tracked with Storage_Pool => Pool;
++   type Interface_Access is access Test_Interface'Class
++     with Storage_Pool => Pool;
++
++   Plain_Object     : Plain_Access := new (Region) Integer'(3);
++   Tracked_Object   : Tracked_Access :=
++     new (Select_Region) Tracked'
++       (Ada.Finalization.Limited_Controlled with Value => 7);
++   Interface_Object : Interface_Access :=
++     new (Select_Region) Tracked'
++       (Ada.Finalization.Limited_Controlled with Value => 7);
++
++begin
++   if Plain_Object.all /= 3 or else Tracked_Object.Value /= 7 then
++      raise Program_Error with "allocated values were not preserved";
++   end if;
++   if Interface_Object = null or else Pool.Allocations /= 3 then
++      raise Program_Error with "named subpool did not receive all allocations";
++   end if;
++   if Selections /= 2 then
++      raise Program_Error with "subpool expressions were not evaluated once";
++   end if;
++
++   Ada.Unchecked_Deallocate_Subpool (Region);
++   if Region /= null or else Pool.Releases /= 1 or else Finalizations /= 2 then
++      raise Program_Error with "subpool release did not finalize both objects";
++   end if;
++
++   Plain_Object := null;
++   Tracked_Object := null;
++   Interface_Object := null;
++   Put_Line ("PASS controlled named subpool allocator");
++end Controlled_Subpool_Allocator;

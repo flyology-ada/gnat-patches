@@ -6,6 +6,7 @@ cd "$root"
 
 python3 scripts/manifest.py validate
 ci/test-bootstrap-gnatmake.sh
+ci/test-controlled-subpool-classification.sh
 ci/test-generate-alire-index.sh
 ci/test-generate-site.sh
 ci/test-homebrew-gxx.sh

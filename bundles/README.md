@@ -9,7 +9,7 @@ README is the best starting point for reviewing an individual change.
 Each bundle addresses an independent problem, but the patches are not all
 independent of each other. `standalone_patch` in the manifest records whether a
 bundle's patch applies with zero fuzz to pristine upstream source;
-`scripts/check-standalone.sh` proves it in CI. Fourteen bundles are standalone.
+`scripts/check-standalone.sh` proves it in CI. Sixteen bundles are standalone.
 The rest apply only in the order recorded in
 `patchsets/<version>/gcc-<major>.toml`, because their patch text is expressed
 against the accumulated tree — sometimes only as line-offset context, sometimes
@@ -31,6 +31,7 @@ These bundles fix GNAT expansion paths outside the C++ binding generator.
 | Bundle | GCC releases | Summary |
 | --- | --- | --- |
 | [Protected `Duration` validity](protected-duration-validity/README.md) | 13.2–16.2 | Removes invalid `Duration` validity checks retained by automatically selected lock-free protected bodies. |
+| [Controlled allocator named subpools](controlled-subpool-allocator/README.md) | 13.2, 14.2, 15.1 | Preserves an allocator's explicit subpool while building the controlled object's custom allocation procedure. |
 | [Storage-model actuals](storage-model-actuals/README.md) | 14.2–16.2 | Routes selected and indexed designated-storage-model actuals through `Copy_From` and `Copy_To`. |
 
 ## C++ to Ada mapper
