@@ -199,11 +199,15 @@ jobs:
             --name=community
           alr -s "$alire_settings" -n toolchain --select --local \
             "gnat_flyology_native=$source_version-patchset.$patchset" \
-            gprbuild
+            gprbuild=26.0.1
           gnatmake=$(alr -s "$alire_settings" exec -- which gnatmake)
           toolchain=$(cd "$(dirname "$gnatmake")/.." && pwd)
           "$GITHUB_WORKSPACE/scripts/run-regressions.sh" "$toolchain" \
             "$patchset" "$major" patched
+          gprbuild=$(alr -s "$alire_settings" exec -- which gprbuild)
+          gprbuild_root=$(cd "$(dirname "$gprbuild")/.." && pwd)
+          "$GITHUB_WORKSPACE/ci/test-packaged-toolchain.sh" "$toolchain" \
+            "$gprbuild_root" "${{ matrix.platform }}"
 
   publish:
     name: Promote validated release

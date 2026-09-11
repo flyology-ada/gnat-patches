@@ -331,9 +331,11 @@ development packages; macOS builds need Xcode command-line tools plus GMP,
 MPFR, and MPC from Homebrew.
 
 `fetch-bootstrap.sh` checksum-verifies the bootstrap URL declared for each
-host before extraction. GCC 16.2 uses the published
-`16.1.0-patchset.1.1.0` Flyology compiler only as stage zero; CI builds a
-separate unpatched 16.2 compiler for the before-patch controls.
+host before extraction. GCC 16.2 uses a published 16.1 compiler only as stage
+zero; Linux AArch64 uses stock `gnat_native=16.1.0` so the bootstrap and the
+explicit `aarch64-linux-gnu` build alias agree, while the other hosts use the
+`16.1.0-patchset.1.1.0` Flyology compiler. CI builds a separate unpatched 16.2
+compiler for the before-patch controls.
 On Darwin it then quarantines the archive's `include-fixed` directory: those
 headers are generated from the Xcode SDK used to build the bootstrap and are
 not valid inputs for a later runner SDK. The compiler build consequently reads
@@ -401,6 +403,9 @@ retain compact test and configuration logs.
 
 Each successful source-build lane also creates a relocatable native C, C++, and
 Ada compiler archive and reruns the same executable regression from a fresh extraction.
+Linux AArch64 builds use explicit, identical `aarch64-linux-gnu` build, host,
+and target tuples. The packager rejects a Linux compiler whose
+`gcc -dumpmachine` result does not match its established native tuple.
 These are the only compiler binaries eligible for a release; bootstrap
 archives are never republished as patched toolchains. The archives include the
 non-system GMP, MPFR, and MPC-family libraries used by the compiler build; the
@@ -416,6 +421,13 @@ The corresponding Binutils source archive and checksum accompany every
 release. Its linker is configured with the host's native multiarch library
 directories plus the conventional Linux library directories, so relocation
 does not retain a CI installation prefix.
+
+The relocated archive is also tested with the checksum-pinned maintained
+GPRbuild 26.0.1 package for its host. That regression checks
+`gcc -dumpmachine`, builds a one-source, one-main GPR project, requires the
+executable to exist, and runs it. This catches a successful compile-and-bind
+result that omits the final link because GPRconfig did not select a native
+archive/linker configuration.
 
 Linux consumers still need their distribution's normal C development files
 (startup objects, libc headers, and linker scripts), just as they do for the
@@ -444,28 +456,35 @@ exactly one top-level directory, as required by Alire's binary-origin
 deployment.
 
 After a release is published, add the Flyology index once and, from an Alire
-workspace, select the desired patched compiler locally:
+workspace, select the desired patched compiler locally. For example, on Linux
+x86-64 or macOS AArch64:
 
 ```sh
 alr index --add \
   git+https://github.com/flyology-ada/alire-index.git \
   --name flyology --before community
 alr -n toolchain --select --local \
-  gnat_flyology_native=16.2.0-patchset.1.1.0
+  gnat_flyology_native=16.1.0-patchset.1.1.0
 ```
 
-Patchset `1.1.0` currently publishes four compiler versions:
+Patchset `1.1.0` publishes five compiler versions:
 
 ```text
 gnat_flyology_native=13.2.0-patchset.1.1.0
 gnat_flyology_native=14.2.0-patchset.1.1.0
 gnat_flyology_native=15.3.0-patchset.1.1.0
 gnat_flyology_native=16.1.0-patchset.1.1.0
+gnat_flyology_native=16.2.0-patchset.1.1.0
 ```
 
-The GCC 16.2 validation candidate will add
-`gnat_flyology_native=16.2.0-patchset.1.1.0` without replacing the immutable
-16.1 release.
+The Linux AArch64 origins for `16.1.0-patchset.1.1.0` and
+`16.2.0-patchset.1.1.0` are affected by
+[issue 26](https://github.com/flyology-ada/gnat-patches/issues/26): their
+compilers report `aarch64-unknown-linux-gnu`, so GPRbuild can complete without
+linking an executable. Do not select either version on Linux AArch64. For GCC
+16.2, the corrective immutable successor will be
+`16.2.0-patchset.1.2.0` after patchset `1.2.0` is published; it is not
+available from the index yet.
 
 Patchset `1.2.0` adds the `predicate-conditional-aggregate-box` correction on
 top of those two bundles and is not published yet. Its releases will add

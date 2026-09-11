@@ -37,6 +37,14 @@ case $host_os in
   Darwin|Linux) ;;
   *) echo "error: unsupported build host" >&2; exit 1 ;;
 esac
+if [[ $host_os == Linux && $(uname -m) =~ ^(arm64|aarch64)$ ]]; then
+  native_triplet=$("$root/scripts/linux-aarch64-triplet.sh")
+  configure+=(
+    "--build=$native_triplet"
+    "--host=$native_triplet"
+    "--target=$native_triplet"
+  )
+fi
 fallback_host_cxx() {
   if [[ $host_os == Darwin ]]; then
     "$root/scripts/homebrew-gxx.sh"
