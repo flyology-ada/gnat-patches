@@ -20,6 +20,19 @@ case "$platform" in
   *) echo "error: unsupported Alire toolchain platform: $platform" >&2; exit 2 ;;
 esac
 
+case "$platform" in
+  linux-x86_64) expected_target=x86_64-pc-linux-gnu ;;
+  linux-aarch64) expected_target=aarch64-linux-gnu ;;
+  macos-aarch64) expected_target= ;;
+esac
+if [[ -n "$expected_target" ]]; then
+  reported_target=$("$toolchain/bin/gcc" -dumpmachine)
+  [[ "$reported_target" == "$expected_target" ]] || {
+    echo "error: $platform toolchain reports $reported_target, expected $expected_target" >&2
+    exit 1
+  }
+fi
+
 if [[ "$platform" == linux-* ]]; then
   [[ "$binutils_arg" != - ]] || {
     echo "error: Linux toolchains require source-built Binutils helpers" >&2
@@ -225,6 +238,7 @@ printf '%s\n' \
   "Patchset version: $patchset" \
   "GCC major aggregate: $major" \
   "Platform: $platform" \
+  "Compiler target: $("$toolchain/bin/gcc" -dumpmachine)" \
   "The embedded patchset archive records source provenance, ordered patches, tests, and checksums." \
   >"$metadata/SOURCE_PROVENANCE.txt"
 

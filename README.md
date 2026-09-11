@@ -401,6 +401,9 @@ retain compact test and configuration logs.
 
 Each successful source-build lane also creates a relocatable native C, C++, and
 Ada compiler archive and reruns the same executable regression from a fresh extraction.
+Linux AArch64 builds use explicit, identical `aarch64-linux-gnu` build, host,
+and target tuples. The packager rejects a Linux compiler whose
+`gcc -dumpmachine` result does not match its established native tuple.
 These are the only compiler binaries eligible for a release; bootstrap
 archives are never republished as patched toolchains. The archives include the
 non-system GMP, MPFR, and MPC-family libraries used by the compiler build; the
@@ -416,6 +419,13 @@ The corresponding Binutils source archive and checksum accompany every
 release. Its linker is configured with the host's native multiarch library
 directories plus the conventional Linux library directories, so relocation
 does not retain a CI installation prefix.
+
+The relocated archive is also tested with the checksum-pinned maintained
+GPRbuild 26.0.1 package for its host. That regression checks
+`gcc -dumpmachine`, builds a one-source, one-main GPR project, requires the
+executable to exist, and runs it. This catches a successful compile-and-bind
+result that omits the final link because GPRconfig did not select a native
+archive/linker configuration.
 
 Linux consumers still need their distribution's normal C development files
 (startup objects, libc headers, and linker scripts), just as they do for the

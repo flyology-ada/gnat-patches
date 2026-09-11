@@ -245,6 +245,10 @@ jobs:
             1.2.0 "${{ matrix.major }}" patched
           ./panels/cxx-ada-spec/run-panel.sh "work/relocated/$archive_root" \
             "${{ matrix.version }}" patched
+          gprbuild=$(./scripts/fetch-gprbuild.sh \
+            "${{ matrix.alire_platform }}" work/gprbuild)
+          ./ci/test-packaged-toolchain.sh "work/relocated/$archive_root" \
+            "$gprbuild" "${{ matrix.alire_platform }}"
 
       - name: Retain validated Alire toolchain
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7

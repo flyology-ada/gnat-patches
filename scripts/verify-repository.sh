@@ -10,6 +10,7 @@ ci/test-controlled-subpool-classification.sh
 ci/test-generate-alire-index.sh
 ci/test-generate-site.sh
 ci/test-homebrew-gxx.sh
+ci/test-linux-aarch64-triplet.sh
 ci/test-quarantine-darwin-include-fixed.sh
 ci/test-workflow-action-pins.sh
 scripts/check-workflow-action-pins.sh
