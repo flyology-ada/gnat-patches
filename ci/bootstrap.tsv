@@ -11,5 +11,5 @@
 16.1.0	linux	arm64	https://github.com/alire-project/GNAT-FSF-builds/releases/download/gnat-16.1.0-1/gnat-aarch64-linux-16.1.0-1.tar.gz	8e297497f2d6d6845920a363a277b6ef5bc454e48a66d0d606b89d71e31ee623
 16.1.0	darwin	arm64	https://github.com/alire-project/GNAT-FSF-builds/releases/download/gnat-16.1.0-1/gnat-aarch64-darwin-16.1.0-1.tar.gz	657cf254323eb91f79768918e8bd8887d6da7ac6056732a38f21e2848267da18
 16.2.0	linux	x86_64	https://github.com/flyology-ada/gnat-patches/releases/download/patchset-1.1.0-gcc-16/gnat-flyology-native-gcc-16.1.0-patchset-1.1.0-linux-x86_64.tar.gz	8183fe2b1f05fa2f22a756602abfac6061494935e888b20e1c706f9d0561dc9b
-16.2.0	linux	arm64	https://github.com/flyology-ada/gnat-patches/releases/download/patchset-1.1.0-gcc-16/gnat-flyology-native-gcc-16.1.0-patchset-1.1.0-linux-aarch64.tar.gz	9ce2bf1ae68fadd03bb5aa12c958ca7a00bf68e1ab23ac7e65d6603d5495884f
+16.2.0	linux	arm64	https://github.com/alire-project/GNAT-FSF-builds/releases/download/gnat-16.1.0-1/gnat-aarch64-linux-16.1.0-1.tar.gz	8e297497f2d6d6845920a363a277b6ef5bc454e48a66d0d606b89d71e31ee623
 16.2.0	darwin	arm64	https://github.com/flyology-ada/gnat-patches/releases/download/patchset-1.1.0-gcc-16/gnat-flyology-native-gcc-16.1.0-patchset-1.1.0-macos-aarch64.tar.gz	99030227cc1e49a2679aabea8f35ccdec27adf26e13a08e7782500e729023b5d
