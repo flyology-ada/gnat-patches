@@ -94,18 +94,27 @@ jobs:
           - {patchset: 1.2.0, version: 14.2.0, platform: linux-x86_64, alire_platform: linux-x86_64, runner: ubuntu-24.04}
           - {patchset: 1.2.0, version: 15.3.0, platform: linux-x86_64, alire_platform: linux-x86_64, runner: ubuntu-24.04}
           - {patchset: 1.2.0, version: 16.2.0, platform: linux-x86_64, alire_platform: linux-x86_64, runner: ubuntu-24.04}
+          - {patchset: 1.1.1, version: 13.2.0, platform: linux-x86_64, alire_platform: linux-x86_64, runner: ubuntu-24.04}
+          - {patchset: 1.1.1, version: 14.2.0, platform: linux-x86_64, alire_platform: linux-x86_64, runner: ubuntu-24.04}
+          - {patchset: 1.1.1, version: 15.3.0, platform: linux-x86_64, alire_platform: linux-x86_64, runner: ubuntu-24.04}
           - {patchset: 1.1.1, version: 16.1.0, platform: linux-x86_64, alire_platform: linux-x86_64, runner: ubuntu-24.04}
           - {patchset: 1.1.1, version: 16.2.0, platform: linux-x86_64, alire_platform: linux-x86_64, runner: ubuntu-24.04}
           - {patchset: 1.2.0, version: 13.2.0, platform: linux-arm64, alire_platform: linux-aarch64, runner: ubuntu-24.04-arm}
           - {patchset: 1.2.0, version: 14.2.0, platform: linux-arm64, alire_platform: linux-aarch64, runner: ubuntu-24.04-arm}
           - {patchset: 1.2.0, version: 15.3.0, platform: linux-arm64, alire_platform: linux-aarch64, runner: ubuntu-24.04-arm}
           - {patchset: 1.2.0, version: 16.2.0, platform: linux-arm64, alire_platform: linux-aarch64, runner: ubuntu-24.04-arm}
+          - {patchset: 1.1.1, version: 13.2.0, platform: linux-arm64, alire_platform: linux-aarch64, runner: ubuntu-24.04-arm}
+          - {patchset: 1.1.1, version: 14.2.0, platform: linux-arm64, alire_platform: linux-aarch64, runner: ubuntu-24.04-arm}
+          - {patchset: 1.1.1, version: 15.3.0, platform: linux-arm64, alire_platform: linux-aarch64, runner: ubuntu-24.04-arm}
           - {patchset: 1.1.1, version: 16.1.0, platform: linux-arm64, alire_platform: linux-aarch64, runner: ubuntu-24.04-arm}
           - {patchset: 1.1.1, version: 16.2.0, platform: linux-arm64, alire_platform: linux-aarch64, runner: ubuntu-24.04-arm}
           - {patchset: 1.2.0, version: 13.2.0, platform: macos-arm64, alire_platform: macos-aarch64, runner: macos-14, xcode: '15.4'}
           - {patchset: 1.2.0, version: 14.2.0, platform: macos-arm64, alire_platform: macos-aarch64, runner: macos-15, xcode: '16.4'}
           - {patchset: 1.2.0, version: 15.3.0, platform: macos-arm64, alire_platform: macos-aarch64, runner: macos-15, xcode: '16.4'}
           - {patchset: 1.2.0, version: 16.2.0, platform: macos-arm64, alire_platform: macos-aarch64, runner: macos-15, xcode: '16.4'}
+          - {patchset: 1.1.1, version: 13.2.0, platform: macos-arm64, alire_platform: macos-aarch64, runner: macos-14, xcode: '15.4'}
+          - {patchset: 1.1.1, version: 14.2.0, platform: macos-arm64, alire_platform: macos-aarch64, runner: macos-15, xcode: '16.4'}
+          - {patchset: 1.1.1, version: 15.3.0, platform: macos-arm64, alire_platform: macos-aarch64, runner: macos-15, xcode: '16.4'}
           - {patchset: 1.1.1, version: 16.1.0, platform: macos-arm64, alire_platform: macos-aarch64, runner: macos-15, xcode: '16.4'}
           - {patchset: 1.1.1, version: 16.2.0, platform: macos-arm64, alire_platform: macos-aarch64, runner: macos-15, xcode: '16.4'}
     runs-on: ${{ matrix.runner }}

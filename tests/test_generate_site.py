@@ -449,18 +449,21 @@ class RepositoryCatalogTest(unittest.TestCase):
         self.assertEqual(versions, sorted(versions, key=model.version_key, reverse=True))
         self.assertTrue(self.catalog["patchsets"][0]["latest"])
 
-    def test_patchset_1_1_1_has_two_exact_gcc_16_targets(self):
+    def test_patchset_1_1_1_has_every_compatible_target(self):
         patchset = next(
             patchset for patchset in self.catalog["patchsets"]
             if patchset["version"] == "1.1.1"
         )
         self.assertEqual(
             [target["target_id"] for target in patchset["targets"]],
-            ["16.1.0", "16.2.0"],
+            ["13.2.0", "14.2.0", "15.3.0", "16.1.0", "16.2.0"],
         )
         for bundle in self.catalog["bundles"]:
             roles = bundle["roles"]["1.1.1"]
-            self.assertEqual(set(roles), {"16.1.0", "16.2.0"})
+            self.assertEqual(
+                set(roles),
+                {"13.2.0", "14.2.0", "15.3.0", "16.1.0", "16.2.0"},
+            )
 
     def test_a_bundle_can_be_patched_and_a_control_in_one_patchset(self):
         """The site exists to show this: a bundle is not the same on every major."""
@@ -547,10 +550,11 @@ class GenerationTest(unittest.TestCase):
             with self.subTest(page=page):
                 self.assertTrue(self.site(*page).is_file())
 
-    def test_exact_gcc_16_targets_have_unique_pages_and_json_roles(self):
+    def test_patchset_1_1_1_targets_have_unique_pages_and_json_roles(self):
         page = self.site("patchsets", "1.1.1", "index.html").read_text(encoding="utf-8")
-        self.assertEqual(page.count('id="gcc-16.1.0"'), 1)
-        self.assertEqual(page.count('id="gcc-16.2.0"'), 1)
+        for version in ("13.2.0", "14.2.0", "15.3.0", "16.1.0", "16.2.0"):
+            with self.subTest(version=version):
+                self.assertEqual(page.count(f'id="gcc-{version}"'), 1)
 
         catalog = json.loads(self.site("patches.json").read_text(encoding="utf-8"))
         self.assertEqual(catalog["schema_version"], 2)
@@ -560,7 +564,7 @@ class GenerationTest(unittest.TestCase):
         )
         self.assertEqual(
             set(protected["roles"]["1.1.1"]),
-            {"16.1.0", "16.2.0"},
+            {"13.2.0", "14.2.0", "15.3.0", "16.1.0", "16.2.0"},
         )
 
     def test_every_bundle_has_a_page_its_patch_and_its_tests(self):

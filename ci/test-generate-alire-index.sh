@@ -5,7 +5,7 @@ root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 test_dir=$(mktemp -d "${TMPDIR:-/tmp}/alire-index-generator-test.XXXXXX")
 trap 'rm -rf "$test_dir"' EXIT
 
-for version in 16.1.0 16.2.0; do
+for version in 13.2.0 14.2.0 15.3.0 16.1.0 16.2.0; do
   toolchains="$test_dir/toolchains-$version"
   mkdir -p "$toolchains"
   for platform in linux-x86_64 linux-aarch64 macos-aarch64; do

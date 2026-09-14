@@ -27,10 +27,11 @@ checksum-pinned upstream sources and proves them with source builds.
 Patchset `1.2.0` is the current repository candidate for GCC 13, 14, 15, and
 16. It contains eighteen independent corrections, each with its own executable
 regression, and remains unreleased. Patchset `1.1.1` is a packaging-only
-corrective line for the published GCC 16.1.0 and 16.2.0 compilers. It carries
-the same two accepted GNAT patches as `1.1.0`; its only compiler-build change
-is the already merged Linux AArch64 native tuple correction. Patchset `1.1.0`
-remains the latest published release until the `1.1.1` candidates complete.
+corrective line for all five compilers published by `1.1.0`. It preserves each
+compiler's accepted-patch and control-test membership; its only compiler-build
+change is the already merged Linux AArch64 native tuple correction. Patchset
+`1.1.0` remains the latest published release until the `1.1.1` candidates
+complete.
 
 Eight further C++ mapper bundles are curated here but deliberately held out of
 `1.2.0`; see [staged bundles](#staged-bundles) below.
@@ -393,8 +394,8 @@ before touching a source tree.
 
 Validation builds GCC/GNAT from source on Linux x86_64, Linux AArch64, and
 macOS AArch64. Twelve lanes retain the complete `1.2.0` GCC 13-through-16
-matrix, while six exact-target lanes build the packaging-only `1.1.1`
-correction for GCC 16.1.0 and 16.2.0 on all three hosts. Each lane applies its
+matrix, while fifteen exact-target lanes build the packaging-only `1.1.1`
+correction for GCC 13.2.0 through 16.2.0 on all three hosts. Each lane applies its
 declared aggregate, builds the compiler, and runs every applicable bundle's
 executable regression at `-O0` and `-O2`. The `1.2.0` lanes also check that the
 staged bundles still apply with zero fuzz on top of that release's patchset;
@@ -490,9 +491,10 @@ The Linux AArch64 origins for `16.1.0-patchset.1.1.0` and
 compilers report `aarch64-unknown-linux-gnu`, so GPRbuild can complete without
 linking an executable. Do not select either version on Linux AArch64.
 
-Patchset `1.1.1` prepares the separate immutable successors
-`16.1.0-patchset.1.1.1` and `16.2.0-patchset.1.1.1`. Both keep the `1.1.0`
-GNAT patch content exactly and normalize only the Linux AArch64 compiler target
+Patchset `1.1.1` prepares separate immutable successors for all five `1.1.0`
+compiler versions, from `13.2.0-patchset.1.1.1` through
+`16.2.0-patchset.1.1.1`. Each keeps its corresponding `1.1.0` GNAT patch and
+control content exactly and normalizes only the Linux AArch64 compiler target
 to `aarch64-linux-gnu`. They remain unavailable until their exact source-build
 and non-publishing release-candidate workflows pass and a maintainer separately
 authorizes publication.
