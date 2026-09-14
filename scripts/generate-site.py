@@ -251,13 +251,15 @@ with Access-Control-Allow-Origin: *. `{canonical}patchsets/<version>.json` is on
 patchset, `{canonical}bundles/<id>.json` is one bundle, and
 `{canonical}panels/<id>.json` is one coverage panel.
 
-A patchset target carries `bundles`, `control_tests`, and `staged_bundles`. A
+A patchset target is identified by its exact `source_version` and carries
+`gcc_major`, `bundles`, `control_tests`, and `staged_bundles`. A
 bundle in `bundles` is patched on that compiler. A bundle in `control_tests` is
 not patched there: that release does not have the defect, and the bundle's
 regression runs against the unpatched compiler as a control. A bundle in
 `staged_bundles` is held back, and no patched run makes a claim about it. A
-bundle's `roles` field is that relationship inverted: `roles[patchset][major]`
-gives the role and, when the role is patched, the patch variant that applies.
+bundle's `roles` field is that relationship inverted:
+`roles[patchset][source_version]` gives the role and, when the role is patched,
+the patch variant that applies.
 
 `release` is null when no toolchain release carries that patchset for that
 compiler; otherwise `alire_crate` and `alire_version` give the exact Alire

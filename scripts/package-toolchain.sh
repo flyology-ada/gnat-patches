@@ -2,7 +2,7 @@
 set -euo pipefail
 
 if [[ $# -ne 7 ]]; then
-  echo "usage: $0 TOOLCHAIN_ROOT GCC_SOURCE BINUTILS_ROOT_OR_DASH PATCHSET_VERSION GCC_MAJOR PLATFORM OUTPUT_DIR" >&2
+  echo "usage: $0 TOOLCHAIN_ROOT GCC_SOURCE BINUTILS_ROOT_OR_DASH PATCHSET_VERSION GCC_TARGET PLATFORM OUTPUT_DIR" >&2
   exit 2
 fi
 
@@ -10,7 +10,7 @@ toolchain=$(cd "$1" && pwd)
 source_dir=$(cd "$2" && pwd)
 binutils_arg=$3
 patchset=$4
-major=$5
+target=$5
 platform=$6
 output=$7
 root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
@@ -57,8 +57,9 @@ elif [[ "$binutils_arg" != - ]]; then
   exit 1
 fi
 
-python3 "$root/scripts/manifest.py" validate --patchset "$patchset" --gcc "$major" >/dev/null
-source_version=$(python3 "$root/scripts/manifest.py" patchset "$patchset" "$major" source_version)
+python3 "$root/scripts/manifest.py" validate --patchset "$patchset" --gcc "$target" >/dev/null
+source_version=$(python3 "$root/scripts/manifest.py" patchset "$patchset" "$target" source_version)
+major=$(python3 "$root/scripts/manifest.py" patchset "$patchset" "$target" gcc_major)
 reported=$("$toolchain/bin/gcc" -dumpfullversion)
 [[ "$reported" == "$source_version" ]] || {
   echo "error: toolchain reports GCC $reported, expected $source_version" >&2
@@ -229,7 +230,7 @@ cp "$root/LICENSE" "$metadata/PATCHSET-LICENSE"
 
 aggregate=$(mktemp -d "${TMPDIR:-/tmp}/gnat-patches-aggregate.XXXXXX")
 trap 'rm -rf "$aggregate"' EXIT
-"$root/scripts/package-patchset.sh" "$patchset" "$major" "$aggregate/package" >/dev/null
+"$root/scripts/package-patchset.sh" "$patchset" "$target" "$aggregate/package" >/dev/null
 cp "$aggregate/package/"*.tar.gz "$metadata/"
 cp "$aggregate/package/"*.tar.gz.sha256 "$metadata/"
 printf '%s\n' \

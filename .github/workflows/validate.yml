@@ -84,24 +84,30 @@ jobs:
           if-no-files-found: warn
 
   compiler:
-    name: GCC ${{ matrix.version }} · ${{ matrix.platform }}
+    name: Patchset ${{ matrix.patchset }} · GCC ${{ matrix.version }} · ${{ matrix.platform }}
     needs: [repository, binutils]
     strategy:
       fail-fast: false
       matrix:
         include:
-          - {version: 13.2.0, major: 13, platform: linux-x86_64, alire_platform: linux-x86_64, runner: ubuntu-24.04}
-          - {version: 14.2.0, major: 14, platform: linux-x86_64, alire_platform: linux-x86_64, runner: ubuntu-24.04}
-          - {version: 15.3.0, major: 15, platform: linux-x86_64, alire_platform: linux-x86_64, runner: ubuntu-24.04}
-          - {version: 16.2.0, major: 16, platform: linux-x86_64, alire_platform: linux-x86_64, runner: ubuntu-24.04}
-          - {version: 13.2.0, major: 13, platform: linux-arm64, alire_platform: linux-aarch64, runner: ubuntu-24.04-arm}
-          - {version: 14.2.0, major: 14, platform: linux-arm64, alire_platform: linux-aarch64, runner: ubuntu-24.04-arm}
-          - {version: 15.3.0, major: 15, platform: linux-arm64, alire_platform: linux-aarch64, runner: ubuntu-24.04-arm}
-          - {version: 16.2.0, major: 16, platform: linux-arm64, alire_platform: linux-aarch64, runner: ubuntu-24.04-arm}
-          - {version: 13.2.0, major: 13, platform: macos-arm64, alire_platform: macos-aarch64, runner: macos-14, xcode: '15.4'}
-          - {version: 14.2.0, major: 14, platform: macos-arm64, alire_platform: macos-aarch64, runner: macos-15, xcode: '16.4'}
-          - {version: 15.3.0, major: 15, platform: macos-arm64, alire_platform: macos-aarch64, runner: macos-15, xcode: '16.4'}
-          - {version: 16.2.0, major: 16, platform: macos-arm64, alire_platform: macos-aarch64, runner: macos-15, xcode: '16.4'}
+          - {patchset: 1.2.0, version: 13.2.0, platform: linux-x86_64, alire_platform: linux-x86_64, runner: ubuntu-24.04}
+          - {patchset: 1.2.0, version: 14.2.0, platform: linux-x86_64, alire_platform: linux-x86_64, runner: ubuntu-24.04}
+          - {patchset: 1.2.0, version: 15.3.0, platform: linux-x86_64, alire_platform: linux-x86_64, runner: ubuntu-24.04}
+          - {patchset: 1.2.0, version: 16.2.0, platform: linux-x86_64, alire_platform: linux-x86_64, runner: ubuntu-24.04}
+          - {patchset: 1.1.1, version: 16.1.0, platform: linux-x86_64, alire_platform: linux-x86_64, runner: ubuntu-24.04}
+          - {patchset: 1.1.1, version: 16.2.0, platform: linux-x86_64, alire_platform: linux-x86_64, runner: ubuntu-24.04}
+          - {patchset: 1.2.0, version: 13.2.0, platform: linux-arm64, alire_platform: linux-aarch64, runner: ubuntu-24.04-arm}
+          - {patchset: 1.2.0, version: 14.2.0, platform: linux-arm64, alire_platform: linux-aarch64, runner: ubuntu-24.04-arm}
+          - {patchset: 1.2.0, version: 15.3.0, platform: linux-arm64, alire_platform: linux-aarch64, runner: ubuntu-24.04-arm}
+          - {patchset: 1.2.0, version: 16.2.0, platform: linux-arm64, alire_platform: linux-aarch64, runner: ubuntu-24.04-arm}
+          - {patchset: 1.1.1, version: 16.1.0, platform: linux-arm64, alire_platform: linux-aarch64, runner: ubuntu-24.04-arm}
+          - {patchset: 1.1.1, version: 16.2.0, platform: linux-arm64, alire_platform: linux-aarch64, runner: ubuntu-24.04-arm}
+          - {patchset: 1.2.0, version: 13.2.0, platform: macos-arm64, alire_platform: macos-aarch64, runner: macos-14, xcode: '15.4'}
+          - {patchset: 1.2.0, version: 14.2.0, platform: macos-arm64, alire_platform: macos-aarch64, runner: macos-15, xcode: '16.4'}
+          - {patchset: 1.2.0, version: 15.3.0, platform: macos-arm64, alire_platform: macos-aarch64, runner: macos-15, xcode: '16.4'}
+          - {patchset: 1.2.0, version: 16.2.0, platform: macos-arm64, alire_platform: macos-aarch64, runner: macos-15, xcode: '16.4'}
+          - {patchset: 1.1.1, version: 16.1.0, platform: macos-arm64, alire_platform: macos-aarch64, runner: macos-15, xcode: '16.4'}
+          - {patchset: 1.1.1, version: 16.2.0, platform: macos-arm64, alire_platform: macos-aarch64, runner: macos-15, xcode: '16.4'}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 360
     env:
@@ -166,10 +172,10 @@ jobs:
         if: matrix.version != '16.2.0'
         run: |
           ./scripts/run-regressions.sh "$BOOTSTRAP_ROOT" \
-            1.2.0 "${{ matrix.major }}" unpatched
+            "${{ matrix.patchset }}" "${{ matrix.version }}" unpatched
 
       - name: Run unpatched C++ Ada feature panel
-        if: matrix.version != '16.2.0'
+        if: matrix.patchset == '1.2.0' && matrix.version != '16.2.0'
         run: |
           ./panels/cxx-ada-spec/run-panel.sh "$BOOTSTRAP_ROOT" \
             "${{ matrix.version }}" unpatched
@@ -178,32 +184,32 @@ jobs:
         run: ./scripts/fetch-source.sh "${{ matrix.version }}" work/source
 
       - name: Build unpatched GCC 16.2 control
-        if: matrix.version == '16.2.0'
+        if: matrix.patchset == '1.2.0' && matrix.version == '16.2.0'
         run: ./scripts/build-gnat.sh work/source build/control install/control
 
       - name: Run unpatched GCC 16.2 controls
-        if: matrix.version == '16.2.0'
+        if: matrix.patchset == '1.2.0' && matrix.version == '16.2.0'
         run: |
           ./scripts/run-regressions.sh install/control \
-            1.2.0 "${{ matrix.major }}" unpatched
+            "${{ matrix.patchset }}" "${{ matrix.version }}" unpatched
 
       - name: Run unpatched GCC 16.2 C++ Ada feature panel
-        if: matrix.version == '16.2.0'
+        if: matrix.patchset == '1.2.0' && matrix.version == '16.2.0'
         run: |
           ./panels/cxx-ada-spec/run-panel.sh install/control \
             "${{ matrix.version }}" unpatched
 
       - name: Discard unpatched GCC 16.2 control build
-        if: matrix.version == '16.2.0'
+        if: matrix.patchset == '1.2.0' && matrix.version == '16.2.0'
         run: rm -rf build/control install/control
 
       # Dry-run only: proves each bundle's declared standalone_patch against the
       # pristine tree before anything is applied to it.
       - name: Check standalone patch claims
-        run: ./scripts/check-standalone.sh 1.2.0 "${{ matrix.major }}" work/source
+        run: ./scripts/check-standalone.sh "${{ matrix.patchset }}" "${{ matrix.version }}" work/source
 
       - name: Apply complete patchset
-        run: ./scripts/apply-patchset.sh 1.2.0 "${{ matrix.major }}" work/source
+        run: ./scripts/apply-patchset.sh "${{ matrix.patchset }}" "${{ matrix.version }}" work/source
 
       - name: Build GCC and GNAT from source
         run: ./scripts/build-gnat.sh work/source build/gcc install/gcc
@@ -211,9 +217,10 @@ jobs:
       - name: Run built-compiler regressions
         run: |
           ./scripts/run-regressions.sh install/gcc \
-            1.2.0 "${{ matrix.major }}" patched
+            "${{ matrix.patchset }}" "${{ matrix.version }}" patched
 
       - name: Run built-compiler C++ Ada feature panel
+        if: matrix.patchset == '1.2.0'
         run: |
           ./panels/cxx-ada-spec/run-panel.sh install/gcc \
             "${{ matrix.version }}" patched
@@ -236,15 +243,17 @@ jobs:
           binutils=-
           [[ "${{ runner.os }}" != Linux ]] || binutils=work/binutils
           archive=$(./scripts/package-toolchain.sh install/gcc work/source "$binutils" \
-            1.2.0 "${{ matrix.major }}" "${{ matrix.alire_platform }}" \
+            "${{ matrix.patchset }}" "${{ matrix.version }}" "${{ matrix.alire_platform }}" \
             dist/toolchain)
           archive_root=$(./scripts/verify-alire-archive.py "$archive")
           mkdir -p work/relocated
           tar -xzf "$archive" -C work/relocated
           ./scripts/run-regressions.sh "work/relocated/$archive_root" \
-            1.2.0 "${{ matrix.major }}" patched
-          ./panels/cxx-ada-spec/run-panel.sh "work/relocated/$archive_root" \
-            "${{ matrix.version }}" patched
+            "${{ matrix.patchset }}" "${{ matrix.version }}" patched
+          if [[ "${{ matrix.patchset }}" == 1.2.0 ]]; then
+            ./panels/cxx-ada-spec/run-panel.sh "work/relocated/$archive_root" \
+              "${{ matrix.version }}" patched
+          fi
           gprbuild=$(./scripts/fetch-gprbuild.sh \
             "${{ matrix.alire_platform }}" work/gprbuild)
           ./ci/test-packaged-toolchain.sh "work/relocated/$archive_root" \
@@ -253,7 +262,7 @@ jobs:
       - name: Retain validated Alire toolchain
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: toolchain-patchset-1.2.0-gcc-${{ matrix.major }}-${{ matrix.alire_platform }}
+          name: toolchain-patchset-${{ matrix.patchset }}-gcc-${{ matrix.version }}-${{ matrix.alire_platform }}
           path: dist/toolchain/*.tar.gz*
           retention-days: 30
           if-no-files-found: error
@@ -263,7 +272,8 @@ jobs:
       # pinned source this lane already checked out. The source tree is no
       # longer read after packaging.
       - name: Verify staged bundles apply to the patched source
-        run: ./scripts/apply-staged.sh 1.2.0 "${{ matrix.major }}" work/source
+        if: matrix.patchset == '1.2.0'
+        run: ./scripts/apply-staged.sh "${{ matrix.patchset }}" "${{ matrix.version }}" work/source
 
       - name: Collect failure logs
         if: failure()
@@ -273,7 +283,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: failure-${{ matrix.version }}-${{ matrix.platform }}
+          name: failure-${{ matrix.patchset }}-gcc-${{ matrix.version }}-${{ matrix.platform }}
           path: logs/
           retention-days: 14
           if-no-files-found: error
@@ -325,10 +335,10 @@ jobs:
         run: ./scripts/fetch-source.sh "${{ matrix.version }}" work/source
 
       - name: Apply complete patchset
-        run: ./scripts/apply-patchset.sh 1.2.0 "${{ matrix.major }}" work/source
+        run: ./scripts/apply-patchset.sh 1.2.0 "${{ matrix.version }}" work/source
 
       - name: Apply staged bundles
-        run: ./scripts/apply-staged.sh 1.2.0 "${{ matrix.major }}" work/source
+        run: ./scripts/apply-staged.sh 1.2.0 "${{ matrix.version }}" work/source
 
       - name: Build GCC and GNAT from source
         run: ./scripts/build-gnat.sh work/source build/gcc install/gcc
@@ -336,7 +346,7 @@ jobs:
       - name: Run staged regressions
         run: |
           ./scripts/run-regressions.sh install/gcc \
-            1.2.0 "${{ matrix.major }}" staged
+            1.2.0 "${{ matrix.version }}" staged
 
       - name: Run staged C++ Ada feature panel
         run: |
