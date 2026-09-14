@@ -231,11 +231,29 @@ class ReleaseTest(unittest.TestCase):
         self.assertEqual(found["alire_version"], "16.2.0-patchset.1.1.0")
 
     def test_major_tag_is_accepted_for_earlier_patchsets(self):
-        releases = {"patchset-1.0.1-gcc-15": self.release("patchset-1.0.1-gcc-15")}
+        releases = {
+            "patchset-1.0.1-gcc-15": self.release(
+                "patchset-1.0.1-gcc-15",
+                assets=[
+                    "gnat-flyology-native-gcc-15.3.0-patchset-1.0.1-linux-x86_64.tar.gz"
+                ],
+            )
+        }
         self.assertEqual(
             model.release_for(releases, "1.0.1", 15, "15.3.0")["tag"],
             "patchset-1.0.1-gcc-15",
         )
+
+    def test_major_tag_is_rejected_for_a_different_source_release(self):
+        releases = {
+            "patchset-1.1.0-gcc-16": self.release(
+                "patchset-1.1.0-gcc-16",
+                assets=[
+                    "gnat-flyology-native-gcc-16.1.0-patchset-1.1.0-linux-aarch64.tar.gz"
+                ],
+            )
+        }
+        self.assertIsNone(model.release_for(releases, "1.1.0", 16, "16.2.0"))
 
     def test_absent_release_is_none(self):
         self.assertIsNone(model.release_for({}, "1.2.0", 16, "16.2.0"))
@@ -356,15 +374,26 @@ staged_bundles = {json.dumps(list(staged))}
         catalog = self.load()
         self.assertEqual(catalog["latest_patchset"], "1.0.0")
         self.assertEqual(catalog["bundles"][0]["title"], "Demo bundle")
-        self.assertEqual(catalog["bundles"][0]["roles"]["1.0.0"]["13"]["role"], model.PATCHED)
-        self.assertEqual(catalog["bundles"][0]["roles"]["1.0.0"]["13"]["variant"], "gcc-13")
+        self.assertEqual(
+            catalog["bundles"][0]["roles"]["1.0.0"]["13.2.0"]["role"],
+            model.PATCHED,
+        )
+        self.assertEqual(
+            catalog["bundles"][0]["roles"]["1.0.0"]["13.2.0"]["variant"],
+            "gcc-13",
+        )
         self.assertFalse(catalog["publication_checked"])
 
     def test_a_control_test_is_not_patched(self):
         self.write_patchset(controls=["demo"])
         catalog = self.load()
-        self.assertEqual(catalog["bundles"][0]["roles"]["1.0.0"]["13"]["role"], model.CONTROL)
-        self.assertIsNone(catalog["bundles"][0]["roles"]["1.0.0"]["13"]["variant"])
+        self.assertEqual(
+            catalog["bundles"][0]["roles"]["1.0.0"]["13.2.0"]["role"],
+            model.CONTROL,
+        )
+        self.assertIsNone(
+            catalog["bundles"][0]["roles"]["1.0.0"]["13.2.0"]["variant"]
+        )
 
     def test_a_wrong_patch_checksum_stops_the_build(self):
         self.write_manifest(patch_sha="0" * 64)
@@ -419,6 +448,19 @@ class RepositoryCatalogTest(unittest.TestCase):
         versions = [patchset["version"] for patchset in self.catalog["patchsets"]]
         self.assertEqual(versions, sorted(versions, key=model.version_key, reverse=True))
         self.assertTrue(self.catalog["patchsets"][0]["latest"])
+
+    def test_patchset_1_1_1_has_two_exact_gcc_16_targets(self):
+        patchset = next(
+            patchset for patchset in self.catalog["patchsets"]
+            if patchset["version"] == "1.1.1"
+        )
+        self.assertEqual(
+            [target["target_id"] for target in patchset["targets"]],
+            ["16.1.0", "16.2.0"],
+        )
+        for bundle in self.catalog["bundles"]:
+            roles = bundle["roles"]["1.1.1"]
+            self.assertEqual(set(roles), {"16.1.0", "16.2.0"})
 
     def test_a_bundle_can_be_patched_and_a_control_in_one_patchset(self):
         """The site exists to show this: a bundle is not the same on every major."""
@@ -504,6 +546,22 @@ class GenerationTest(unittest.TestCase):
         ):
             with self.subTest(page=page):
                 self.assertTrue(self.site(*page).is_file())
+
+    def test_exact_gcc_16_targets_have_unique_pages_and_json_roles(self):
+        page = self.site("patchsets", "1.1.1", "index.html").read_text(encoding="utf-8")
+        self.assertEqual(page.count('id="gcc-16.1.0"'), 1)
+        self.assertEqual(page.count('id="gcc-16.2.0"'), 1)
+
+        catalog = json.loads(self.site("patches.json").read_text(encoding="utf-8"))
+        self.assertEqual(catalog["schema_version"], 2)
+        protected = next(
+            bundle for bundle in catalog["bundles"]
+            if bundle["id"] == "protected-duration-validity"
+        )
+        self.assertEqual(
+            set(protected["roles"]["1.1.1"]),
+            {"16.1.0", "16.2.0"},
+        )
 
     def test_every_bundle_has_a_page_its_patch_and_its_tests(self):
         catalog = json.loads(self.site("patches.json").read_text(encoding="utf-8"))

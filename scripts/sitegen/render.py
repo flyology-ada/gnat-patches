@@ -329,18 +329,18 @@ def role_matrix(
     *,
     caption: str,
 ) -> str:
-    majors = [target["gcc_major"] for target in patchset["targets"]]
     head = "".join(
-        f'<th scope="col">GCC {escape(major)}<span>{escape(target["source_version"])}</span></th>'
-        for major, target in zip(majors, patchset["targets"])
+        f'<th scope="col">GCC {escape(target["gcc_major"])}'
+        f'<span>{escape(target["source_version"])}</span></th>'
+        for target in patchset["targets"]
     )
 
     rows = []
     for bundle in bundles:
         cells = []
         entries = bundle["roles"][patchset["version"]]
-        for major in majors:
-            entry = entries[str(major)]
+        for target in patchset["targets"]:
+            entry = entries[target["target_id"]]
             role = entry["role"]
             variant = entry["variant"]
             detail = f'<span class="role-variant">{escape(variant)}</span>' if variant else ""
@@ -591,7 +591,7 @@ def render_patchset_index(catalog: dict[str, Any]) -> str:
       <header class="page-hero">
         <p class="eyebrow">Releases</p>
         <h1>Patchsets.</h1>
-        <p>Each patchset pins one GCC source release per supported major and records which bundles it applies, which it runs as controls, and which it holds back.</p>
+        <p>Each patchset pins one or more exact GCC source releases and records which bundles it applies, which it runs as controls, and which it holds back.</p>
       </header>
       <div class="patchset-grid">{"".join(rows)}</div>
     </main>"""
@@ -642,7 +642,7 @@ def render_patchset(
         pin += definition("Release tree", code(source.get("release_tree", "")))
         cards.append(
             f"""
-        <article class="target-card" id="gcc-{escape(target['gcc_major'])}">
+        <article class="target-card" id="gcc-{attribute(target['target_id'])}">
           <header>
             <h2>GCC {escape(target['gcc_major'])}</h2>
             <p>Source release <code>{escape(target['source_version'])}</code></p>
@@ -660,7 +660,7 @@ def render_patchset(
       <header class="page-hero">
         <p class="eyebrow">{"Latest patchset" if patchset["latest"] else "Earlier patchset"}</p>
         <h1>Patchset {escape(version)}.</h1>
-        <p>One pinned GCC source release per supported major, with the bundles this patchset applies to each.</p>
+        <p>Pinned GCC source releases, with the bundles this patchset applies to each exact target.</p>
       </header>
       {banner}
       {index_panel(patchset, checked=checked)}
@@ -929,15 +929,25 @@ def bundle_role_table(
     catalog: dict[str, Any], bundle: dict[str, Any], prefix: str
 ) -> str:
     patchsets = catalog["patchsets"]
-    majors = sorted({target["gcc_major"] for patchset in patchsets for target in patchset["targets"]})
-    head = "".join(f'<th scope="col">GCC {escape(major)}</th>' for major in majors)
+    targets = sorted(
+        {
+            (target["gcc_major"], target["source_version"])
+            for patchset in patchsets
+            for target in patchset["targets"]
+        },
+        key=lambda target: (target[0], model.version_key(target[1])),
+    )
+    head = "".join(
+        f'<th scope="col">GCC {escape(major)}<span>{escape(source_version)}</span></th>'
+        for major, source_version in targets
+    )
 
     rows = []
     for patchset in patchsets:
         cells = []
         entries = bundle["roles"][patchset["version"]]
-        for major in majors:
-            entry = entries.get(str(major))
+        for _, source_version in targets:
+            entry = entries.get(source_version)
             if entry is None:
                 cells.append('<td class="role-cell role-absent"><span class="role-label">Not covered</span></td>')
                 continue
@@ -958,7 +968,7 @@ def bundle_role_table(
     return f"""
         <div class="table-scroll">
           <table class="role-table role-table-bundle">
-            <caption>How each patchset treats this bundle on each GCC major</caption>
+            <caption>How each patchset treats this bundle on each exact GCC target</caption>
             <thead><tr><th scope="col">Patchset</th>{head}</tr></thead>
             <tbody>{"".join(rows)}</tbody>
           </table>

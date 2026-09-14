@@ -10,8 +10,8 @@ Each bundle addresses an independent problem, but the patches are not all
 independent of each other. `standalone_patch` in the manifest records whether a
 bundle's patch applies with zero fuzz to pristine upstream source;
 `scripts/check-standalone.sh` proves it in CI. Sixteen bundles are standalone.
-The rest apply only in the order recorded in
-`patchsets/<version>/gcc-<major>.toml`, because their patch text is expressed
+The rest apply only in the order recorded in the applicable
+`patchsets/<version>/gcc-<target>.toml`, because their patch text is expressed
 against the accumulated tree — sometimes only as line-offset context, sometimes
 because they genuinely extend a helper an earlier bundle introduced.
 

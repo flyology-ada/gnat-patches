@@ -16,8 +16,8 @@ whether its patch applies to pristine upstream source with
 the pinned source in CI. Sixteen of the twenty-six bundles are standalone.
 The other ten form an ordered series: their patch text is expressed against the
 accumulated tree, so upstream submission means either regenerating them against
-trunk or sending them as a declared series. `patchsets/<version>/gcc-<major>.toml`
-records the order they apply in.
+trunk or sending them as a declared series. Patchset target manifests record
+the order they apply in.
 
 This repository is not a GCC fork. It curates patches against unmodified,
 checksum-pinned upstream sources and proves them with source builds.
@@ -26,8 +26,11 @@ checksum-pinned upstream sources and proves them with source builds.
 
 Patchset `1.2.0` is the current repository candidate for GCC 13, 14, 15, and
 16. It contains eighteen independent corrections, each with its own executable
-regression. Patchset `1.1.0` remains the latest published release until the
-`1.2.0` validation and publication workflows complete.
+regression, and remains unreleased. Patchset `1.1.1` is a packaging-only
+corrective line for the published GCC 16.1.0 and 16.2.0 compilers. It carries
+the same two accepted GNAT patches as `1.1.0`; its only compiler-build change
+is the already merged Linux AArch64 native tuple correction. Patchset `1.1.0`
+remains the latest published release until the `1.1.1` candidates complete.
 
 Eight further C++ mapper bundles are curated here but deliberately held out of
 `1.2.0`; see [staged bundles](#staged-bundles) below.
@@ -245,7 +248,10 @@ patched it requires success at both `-O0` and `-O2` everywhere.
 - `bundles/<id>/tests/`: byte-identical, directly runnable copies of the
   regression programs.
 - `sources/`: exact FSF release and Darwin source identities.
-- `patchsets/<version>/gcc-<major>.toml`: ordered aggregate for one GCC major.
+- `patchsets/<version>/gcc-<target>.toml`: ordered aggregate for one exact GCC
+  source release. Legacy single-source patchsets use the GCC major as their
+  target filename; a patchset with multiple releases in one major uses exact
+  versions such as `gcc-16.1.0.toml` and `gcc-16.2.0.toml`.
 - `panels/cxx-ada-spec/`: executable C++ feature inventory, confirmed mapper
   holes, representation boundaries, and planned probes.
 - `scripts/`: fetch, verification, application, build, test, and packaging
@@ -385,13 +391,14 @@ before touching a source tree.
 
 ## CI and releases
 
-Validation builds GCC/GNAT from source on Linux x86_64, Linux arm64, and macOS
-arm64 for GCC 13 through 16, which is twelve independent source-build lanes.
-Each lane proves the unpatched controls, applies the complete `1.2.0`
-aggregate to the declared source baseline, builds the compiler, and runs every
-applicable bundle's executable regression at `-O0` and `-O2`. Each lane then
-checks that the staged bundles still apply with zero fuzz on top of that
-release's patchset; it does not rebuild for them. A separate GCC 16.2 Linux
+Validation builds GCC/GNAT from source on Linux x86_64, Linux AArch64, and
+macOS AArch64. Twelve lanes retain the complete `1.2.0` GCC 13-through-16
+matrix, while six exact-target lanes build the packaging-only `1.1.1`
+correction for GCC 16.1.0 and 16.2.0 on all three hosts. Each lane applies its
+declared aggregate, builds the compiler, and runs every applicable bundle's
+executable regression at `-O0` and `-O2`. The `1.2.0` lanes also check that the
+staged bundles still apply with zero fuzz on top of that release's patchset;
+they do not rebuild for them. A separate GCC 16.2 Linux
 x86_64 lane builds a staged compiler and runs the staged regressions and the
 staged panel, so the staged bundles keep executable before/after evidence
 without entering a shipped toolchain. When the
@@ -435,17 +442,17 @@ community `gnat_native` toolchain. The package does not embed or replace the
 host libc.
 
 Release publication is a separate manual workflow. The operator supplies both
-`patchset_version` and `gcc_major` and explicitly confirms publication. Before
-creating `patchset-<version>-gcc-<gcc-version>`, the workflow proves that the
-aggregate lists every accepted applicable bundle, checks the source baseline,
-applies the aggregate with zero fuzz, and packages the series, manifests,
-patches, and tests with a SHA-256 inventory. Existing releases are never
-replaced. A `publish=false` dispatch performs the same release-candidate checks
-and retains the archive without creating a release. A publishing dispatch also
-requires a successful full validation workflow for the exact commit being
-released. The release also contains native toolchain archives for Linux
-x86-64, Linux AArch64, and macOS AArch64. CI generates an Alire index entry
-whose version is `<gcc-version>-patchset.<patchset-version>` and whose
+`patchset_version` and exact `gcc_version` and explicitly confirms publication.
+Before creating `patchset-<version>-gcc-<gcc-version>`, the workflow proves
+that the aggregate lists every accepted applicable bundle, checks the source
+baseline, applies the aggregate with zero fuzz, and packages the series, manifests,
+patches, and tests with a SHA-256 inventory. Existing releases and tags are
+never replaced. A `publish=false` dispatch performs the same release-candidate
+checks and retains the archive without creating a release. A publishing
+dispatch also requires a successful full validation workflow for the exact
+commit being released. The release also contains native toolchain archives for
+Linux x86-64, Linux AArch64, and macOS AArch64. CI generates an Alire index
+entry whose version is `<gcc-version>-patchset.<patchset-version>` and whose
 `provides` field exposes the underlying GNAT version.
 
 A publishing dispatch first creates an immutable prerelease candidate. Alire
@@ -481,15 +488,19 @@ The Linux AArch64 origins for `16.1.0-patchset.1.1.0` and
 `16.2.0-patchset.1.1.0` are affected by
 [issue 26](https://github.com/flyology-ada/gnat-patches/issues/26): their
 compilers report `aarch64-unknown-linux-gnu`, so GPRbuild can complete without
-linking an executable. Do not select either version on Linux AArch64. For GCC
-16.2, the corrective immutable successor will be
-`16.2.0-patchset.1.2.0` after patchset `1.2.0` is published; it is not
-available from the index yet.
+linking an executable. Do not select either version on Linux AArch64.
+
+Patchset `1.1.1` prepares the separate immutable successors
+`16.1.0-patchset.1.1.1` and `16.2.0-patchset.1.1.1`. Both keep the `1.1.0`
+GNAT patch content exactly and normalize only the Linux AArch64 compiler target
+to `aarch64-linux-gnu`. They remain unavailable until their exact source-build
+and non-publishing release-candidate workflows pass and a maintainer separately
+authorizes publication.
 
 Patchset `1.2.0` adds the `predicate-conditional-aggregate-box` correction on
 top of those two bundles and is not published yet. Its releases will add
 `gnat_flyology_native=<gcc-version>-patchset.1.2.0` entries without replacing
-any immutable `1.1.0` release.
+any immutable `1.1.0` or `1.1.1` release.
 
 The Alire crate configures `PATH` and the platform library paths. A project may
 select `gprbuild` separately through its usual Alire toolchain configuration.

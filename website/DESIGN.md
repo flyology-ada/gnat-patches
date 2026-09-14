@@ -48,9 +48,9 @@ crate index: compiler diffs, per-release role matrices, and manifest metadata.
 ## Information hierarchy
 
 Five routes carry the site. The home page states the current patchset and the
-role every accepted bundle plays on every supported GCC major. `/patchsets/`
-lists releases newest first; a patchset page pins one GCC source release per
-major, carries its publication state, and links each bundle it applies,
+role every accepted bundle plays on every supported GCC target. `/patchsets/`
+lists releases newest first; a patchset page pins one or more exact GCC source
+releases, carries each publication state, and links each bundle it applies,
 controls, or stages. `/bundles/` lists every bundle, and a bundle page is the
 deep view: role matrix, rendered explanation, per-variant diffs, test sources,
 commands, and complete manifest metadata. `/unreleased/` is the staged set with

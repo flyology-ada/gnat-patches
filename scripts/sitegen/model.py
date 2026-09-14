@@ -37,7 +37,7 @@ REPOSITORY_URL = f"https://github.com/{REPOSITORY}"
 RELEASES_API = f"https://api.github.com/repos/{REPOSITORY}/releases"
 ALIRE_CRATE = "gnat_flyology_native"
 ALIRE_INDEX_URL = "git+https://github.com/flyology-ada/alire-index.git"
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 PATCHED = "patched"
 CONTROL = "control"
@@ -170,6 +170,11 @@ def release_for(
     ):
         release = releases.get(tag)
         if release is None:
+            continue
+        if tag == f"patchset-{patchset}-gcc-{major}" and not any(
+            f"-gcc-{source_version}-patchset-{patchset}-" in asset
+            for asset in release.assets
+        ):
             continue
         platforms = [
             label
@@ -347,8 +352,9 @@ def load_patchsets(
     releases: dict[str, Release] | None,
 ) -> list[dict[str, Any]]:
     known = {bundle["id"] for bundle in bundles}
-    source_versions = {source["version"] for source in sources}
+    sources_by_version = {source["version"]: source for source in sources}
     grouped: dict[str, list[dict[str, Any]]] = {}
+    identities = set()
 
     for path in sorted((root / "patchsets").glob("*/gcc-*.toml")):
         data = load_toml(path)
@@ -358,8 +364,20 @@ def load_patchsets(
                 f"{path}: declares patchset {version} inside directory {path.parent.name}"
             )
         source_version = data["source_version"]
-        if source_version not in source_versions:
+        if source_version not in sources_by_version:
             raise CatalogError(f"{path}: no source manifest for GCC {source_version}")
+        major = int(data["gcc_major"])
+        if int(sources_by_version[source_version]["major"]) != major:
+            raise CatalogError(f"{path}: source major does not match GCC {major}")
+        if path.name not in {f"gcc-{major}.toml", f"gcc-{source_version}.toml"}:
+            raise CatalogError(
+                f"{path}: filename does not identify GCC {major} or {source_version}"
+            )
+        identity = (version, major, source_version)
+        if identity in identities:
+            raise CatalogError(f"{path}: duplicate patchset target GCC {source_version}")
+        identities.add(identity)
+        data["target_id"] = source_version
 
         for key in ("bundles", "control_tests", "staged_bundles"):
             for identifier in data.get(key, []):
@@ -387,7 +405,12 @@ def load_patchsets(
 
     patchsets = []
     for version, targets in grouped.items():
-        targets.sort(key=lambda target: target["gcc_major"])
+        targets.sort(
+            key=lambda target: (
+                target["gcc_major"],
+                version_key(target["source_version"]),
+            )
+        )
         patchsets.append(
             {
                 "version": version,
@@ -404,7 +427,7 @@ def load_patchsets(
 
 
 def assign_roles(bundles: list[dict[str, Any]], patchsets: list[dict[str, Any]]) -> None:
-    """Record how every patchset treats every bundle on every GCC major."""
+    """Record how every patchset treats every bundle on every exact GCC target."""
     for bundle in bundles:
         roles: dict[str, dict[str, Any]] = {}
         for patchset in patchsets:
@@ -419,8 +442,9 @@ def assign_roles(bundles: list[dict[str, Any]], patchsets: list[dict[str, Any]])
                     role = STAGED
                 else:
                     role = ABSENT
-                entries[str(target["gcc_major"])] = {
+                entries[target["target_id"]] = {
                     "role": role,
+                    "gcc_major": target["gcc_major"],
                     "source_version": target["source_version"],
                     "variant": variant_for(bundle, target["source_version"])
                     if role == PATCHED
