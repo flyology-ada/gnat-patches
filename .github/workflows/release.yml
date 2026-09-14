@@ -7,14 +7,19 @@ on:
         description: Exact patchset version to publish
         required: true
         type: string
-        default: 1.2.0
-      gcc_major:
-        description: GCC major targeted by the aggregate
+        default: 1.1.1
+      gcc_version:
+        description: Exact GCC source version targeted by the aggregate
         required: true
-        type: choice
-        options: ['13', '14', '15', '16']
+        type: string
+        default: 16.2.0
       publish:
         description: Confirm creation of a new public GitHub release
+        required: true
+        type: boolean
+        default: false
+      make_latest:
+        description: Mark the validated stable release as the repository latest
         required: true
         type: boolean
         default: false
@@ -24,12 +29,12 @@ permissions:
   contents: write
 
 concurrency:
-  group: release-${{ inputs.patchset_version }}-gcc-${{ inputs.gcc_major }}
+  group: release-${{ inputs.patchset_version }}-gcc-${{ inputs.gcc_version }}
   cancel-in-progress: false
 
 jobs:
   release:
-    name: Patchset ${{ inputs.patchset_version }} for GCC ${{ inputs.gcc_major }}
+    name: Patchset ${{ inputs.patchset_version }} for GCC ${{ inputs.gcc_version }}
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     outputs:
@@ -59,30 +64,31 @@ jobs:
           echo "VALIDATION_RUN_ID=$run_id" >> "$GITHUB_ENV"
 
       - name: Prove aggregate completeness
-        run: ./scripts/manifest.py validate --patchset "${{ inputs.patchset_version }}" --gcc "${{ inputs.gcc_major }}"
+        run: ./scripts/manifest.py validate --patchset "${{ inputs.patchset_version }}" --gcc "${{ inputs.gcc_version }}"
 
       - name: Restore verified source download
         uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
         with:
           path: .cache
-          key: release-source-${{ inputs.patchset_version }}-gcc-${{ inputs.gcc_major }}-${{ hashFiles('sources/*.toml', 'patchsets/**/*.toml', 'bundles/**/manifest.toml') }}
+          key: release-source-${{ inputs.patchset_version }}-gcc-${{ inputs.gcc_version }}-${{ hashFiles('sources/*.toml', 'patchsets/**/*.toml', 'bundles/**/manifest.toml') }}
 
       - name: Resolve source version
         id: source-version
         run: |
-          source_version=$(./scripts/manifest.py patchset "${{ inputs.patchset_version }}" "${{ inputs.gcc_major }}" source_version)
+          source_version=$(./scripts/manifest.py patchset "${{ inputs.patchset_version }}" "${{ inputs.gcc_version }}" source_version)
+          [[ "$source_version" == "${{ inputs.gcc_version }}" ]]
           echo "SOURCE_VERSION=$source_version" >> "$GITHUB_ENV"
           echo "value=$source_version" >> "$GITHUB_OUTPUT"
 
       - name: Check aggregate against pinned source
         run: |
           ./scripts/fetch-source.sh "$SOURCE_VERSION" work/source
-          ./scripts/apply-patchset.sh "${{ inputs.patchset_version }}" "${{ inputs.gcc_major }}" work/source
+          ./scripts/apply-patchset.sh "${{ inputs.patchset_version }}" "$SOURCE_VERSION" work/source
 
       - name: Package complete aggregate
         run: |
           ./scripts/package-patchset.sh \
-            "${{ inputs.patchset_version }}" "${{ inputs.gcc_major }}" dist/release
+            "${{ inputs.patchset_version }}" "$SOURCE_VERSION" dist/release
           ./scripts/fetch-binutils-source.sh work/binutils-source
           archive=$(./scripts/manifest.py helper 2.46.1 archive)
           expected=$(./scripts/manifest.py helper 2.46.1 sha512)
@@ -96,7 +102,7 @@ jobs:
             destination="dist/toolchains/$platform"
             mkdir -p "$destination"
             gh run download "$VALIDATION_RUN_ID" \
-              --name "toolchain-patchset-${{ inputs.patchset_version }}-gcc-${{ inputs.gcc_major }}-$platform" \
+              --name "toolchain-patchset-${{ inputs.patchset_version }}-gcc-$SOURCE_VERSION-$platform" \
               --dir "$destination"
             (cd "$destination" && shasum -a 256 -c ./*.sha256)
           done
@@ -104,7 +110,7 @@ jobs:
       - name: Generate Alire toolchain index entry
         run: |
           ./scripts/generate-alire-index.py \
-            "${{ inputs.patchset_version }}" "${{ inputs.gcc_major }}" \
+            "${{ inputs.patchset_version }}" "$SOURCE_VERSION" \
             dist/toolchains dist/alire-index
 
       - name: Retain release candidate
@@ -125,6 +131,10 @@ jobs:
           tag="patchset-${{ inputs.patchset_version }}-gcc-$SOURCE_VERSION"
           if gh release view "$tag" >/dev/null 2>&1; then
             echo "error: release already exists: $tag" >&2
+            exit 1
+          fi
+          if gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$tag" >/dev/null 2>&1; then
+            echo "error: tag already exists: $tag" >&2
             exit 1
           fi
           printf '%s\n' \
@@ -175,8 +185,7 @@ jobs:
       - name: Build candidate index
         run: |
           patchset="${{ inputs.patchset_version }}"
-          major="${{ inputs.gcc_major }}"
-          source_version=$(./scripts/manifest.py patchset "$patchset" "$major" source_version)
+          source_version="${{ inputs.gcc_version }}"
           tag="patchset-$patchset-gcc-$source_version"
           mkdir -p work/index/index/gn/gnat_flyology_native
           printf 'version = "1.4.0"\n' >work/index/index/index.toml
@@ -186,8 +195,7 @@ jobs:
       - name: Select locally and run the regression
         run: |
           patchset="${{ inputs.patchset_version }}"
-          major="${{ inputs.gcc_major }}"
-          source_version=$(./scripts/manifest.py patchset "$patchset" "$major" source_version)
+          source_version="${{ inputs.gcc_version }}"
           alire_settings="$RUNNER_TEMP/alire-settings"
           mkdir -p "$alire_settings"
           alr -s "$alire_settings" -n -q init --bin consumer
@@ -203,7 +211,7 @@ jobs:
           gnatmake=$(alr -s "$alire_settings" exec -- which gnatmake)
           toolchain=$(cd "$(dirname "$gnatmake")/.." && pwd)
           "$GITHUB_WORKSPACE/scripts/run-regressions.sh" "$toolchain" \
-            "$patchset" "$major" patched
+            "$patchset" "$source_version" patched
           gprbuild=$(alr -s "$alire_settings" exec -- which gprbuild)
           gprbuild_root=$(cd "$(dirname "$gprbuild")/.." && pwd)
           "$GITHUB_WORKSPACE/ci/test-packaged-toolchain.sh" "$toolchain" \
@@ -223,7 +231,5 @@ jobs:
       - name: Promote without changing assets
         run: |
           tag="patchset-${{ inputs.patchset_version }}-gcc-${{ needs.release.outputs.source_version }}"
-          latest=false
-          [[ "${{ inputs.gcc_major }}" != 16 ]] || latest=true
           gh release edit "$tag" --repo "$GITHUB_REPOSITORY" \
-            --prerelease=false --latest="$latest"
+            --prerelease=false --latest="${{ inputs.make_latest }}"

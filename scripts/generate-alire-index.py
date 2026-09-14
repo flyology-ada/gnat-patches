@@ -28,13 +28,20 @@ def digest(path: pathlib.Path) -> str:
 def main() -> int:
     if len(sys.argv) != 5:
         print(
-            f"usage: {sys.argv[0]} PATCHSET_VERSION GCC_MAJOR TOOLCHAINS_DIR OUTPUT_DIR",
+            f"usage: {sys.argv[0]} PATCHSET_VERSION GCC_TARGET TOOLCHAINS_DIR OUTPUT_DIR",
             file=sys.stderr,
         )
         return 2
-    patchset, major, toolchains_arg, output_arg = sys.argv[1:]
-    if not re.fullmatch(r"[0-9]+(?:\.[0-9]+){2}", patchset) or not major.isdigit():
-        print("error: patchset must be a three-part numeric version and GCC major must be numeric", file=sys.stderr)
+    patchset, target, toolchains_arg, output_arg = sys.argv[1:]
+    version_pattern = r"[0-9]+(?:\.[0-9]+){2}"
+    if not re.fullmatch(version_pattern, patchset) or not (
+        target.isdigit() or re.fullmatch(version_pattern, target)
+    ):
+        print(
+            "error: patchset must be a three-part numeric version and GCC target "
+            "must be a major or exact source version",
+            file=sys.stderr,
+        )
         return 2
     source_version = subprocess.check_output(
         [
@@ -42,7 +49,7 @@ def main() -> int:
             str(ROOT / "scripts" / "manifest.py"),
             "patchset",
             patchset,
-            major,
+            target,
             "source_version",
         ],
         text=True,

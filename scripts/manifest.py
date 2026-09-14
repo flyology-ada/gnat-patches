@@ -39,11 +39,45 @@ def helper_path(version: str) -> pathlib.Path:
     return path
 
 
-def patchset_path(version: str, major: int) -> pathlib.Path:
-    path = ROOT / "patchsets" / version / f"gcc-{major}.toml"
-    if not path.is_file():
-        raise ManifestError(f"unsupported patchset/GCC pair: {version}/gcc-{major}")
-    return path
+def load_patchset_file(path: pathlib.Path) -> dict:
+    patchset = load(path)
+    version = patchset.get("patchset_version")
+    source_version = patchset.get("source_version")
+    major = patchset.get("gcc_major")
+    if version != path.parent.name:
+        raise ManifestError(
+            f"patchset version mismatch in {path.relative_to(ROOT)}: {version}"
+        )
+    if not isinstance(major, int) or not isinstance(source_version, str):
+        raise ManifestError(f"invalid patchset identity in {path.relative_to(ROOT)}")
+    expected_names = {f"gcc-{major}.toml", f"gcc-{source_version}.toml"}
+    if path.name not in expected_names:
+        raise ManifestError(
+            f"patchset filename does not identify GCC {major} or {source_version}: "
+            f"{path.relative_to(ROOT)}"
+        )
+    return patchset
+
+
+def patchset_path(version: str, target: str | int) -> pathlib.Path:
+    directory = ROOT / "patchsets" / version
+    candidates = []
+    for path in sorted(directory.glob("gcc-*.toml")):
+        patchset = load_patchset_file(path)
+        if str(target).isdigit():
+            selected = patchset["gcc_major"] == int(target)
+        else:
+            selected = patchset["source_version"] == str(target)
+        if selected:
+            candidates.append(path)
+    if not candidates:
+        raise ManifestError(f"unsupported patchset/GCC target: {version}/gcc-{target}")
+    if len(candidates) != 1:
+        raise ManifestError(
+            f"ambiguous patchset/GCC target: {version}/gcc-{target}; "
+            "select an exact GCC source version"
+        )
+    return candidates[0]
 
 
 def bundle_path(bundle_id: str) -> pathlib.Path:
@@ -218,14 +252,16 @@ def applicable(
     )
 
 
-def validate_patchset(version: str, major: int, bundles: dict[str, dict]) -> dict:
-    patchset = load(patchset_path(version, major))
+def validate_patchset_file(path: pathlib.Path, bundles: dict[str, dict]) -> dict:
+    patchset = load_patchset_file(path)
+    version = patchset["patchset_version"]
+    major = patchset["gcc_major"]
     release_key = patchset_key(version)
-    if patchset.get("patchset_version") != version or patchset.get("gcc_major") != major:
-        raise ManifestError(f"patchset identity mismatch for {version}/gcc-{major}")
     source = load(source_path(patchset["source_version"]))
     if source.get("major") != major:
-        raise ManifestError(f"source major mismatch for {version}/gcc-{major}")
+        raise ManifestError(
+            f"source major mismatch for {version}/gcc-{patchset['source_version']}"
+        )
     accepted = with_status(bundles, "accepted")
     staged = with_status(bundles, "staged")
     source_version = patchset["source_version"]
@@ -271,7 +307,11 @@ def validate_patchset(version: str, major: int, bundles: dict[str, dict]) -> dic
     return patchset
 
 
-def validate_all(version: str | None = None, major: int | None = None) -> None:
+def validate_patchset(version: str, target: str | int, bundles: dict[str, dict]) -> dict:
+    return validate_patchset_file(patchset_path(version, target), bundles)
+
+
+def validate_all(version: str | None = None, target: str | None = None) -> None:
     helper = load(helper_path("2.46.1"))
     if (
         helper.get("version") != "2.46.1"
@@ -292,12 +332,22 @@ def validate_all(version: str | None = None, major: int | None = None) -> None:
                 raise ManifestError(
                     f"staged bundle {bundle['id']} depends on accepted bundle {dependency}"
                 )
-    if version is not None and major is not None:
-        validate_patchset(version, major, bundles)
+    if version is not None and target is not None:
+        validate_patchset(version, target, bundles)
     else:
+        identities = set()
         for path in sorted((ROOT / "patchsets").glob("*/gcc-*.toml")):
-            data = load(path)
-            validate_patchset(data["patchset_version"], data["gcc_major"], bundles)
+            data = validate_patchset_file(path, bundles)
+            identity = (
+                data["patchset_version"],
+                data["gcc_major"],
+                data["source_version"],
+            )
+            if identity in identities:
+                raise ManifestError(
+                    f"duplicate patchset target: {identity[0]}/gcc-{identity[2]}"
+                )
+            identities.add(identity)
 
 
 def main() -> int:
@@ -311,7 +361,7 @@ def main() -> int:
     get_helper.add_argument("field")
     get_patchset = sub.add_parser("patchset")
     get_patchset.add_argument("version")
-    get_patchset.add_argument("major", type=int)
+    get_patchset.add_argument("gcc")
     get_patchset.add_argument("field")
     get_bundle = sub.add_parser("bundle")
     get_bundle.add_argument("bundle_id")
@@ -322,7 +372,7 @@ def main() -> int:
     get_bundle_field.add_argument("field")
     validate = sub.add_parser("validate")
     validate.add_argument("--patchset")
-    validate.add_argument("--gcc", type=int)
+    validate.add_argument("--gcc")
     args = parser.parse_args()
     try:
         if args.command == "source":
@@ -330,7 +380,11 @@ def main() -> int:
         elif args.command == "helper":
             emit(nested(load(helper_path(args.version)), args.field))
         elif args.command == "patchset":
-            emit(nested(load(patchset_path(args.version, args.major)), args.field))
+            path = patchset_path(args.version, args.gcc)
+            if args.field == "path":
+                emit(path.relative_to(ROOT))
+            else:
+                emit(nested(load_patchset_file(path), args.field))
         elif args.command == "bundle-field":
             emit(nested(load(bundle_path(args.bundle_id)), args.field))
         elif args.command == "bundle":
