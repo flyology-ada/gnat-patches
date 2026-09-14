@@ -619,7 +619,14 @@ def render_patchset(
     catalog: dict[str, Any], patchset: dict[str, Any], bundles: list[dict[str, Any]]
 ) -> str:
     prefix = prefix_for(2)
-    by_id = {bundle["id"]: bundle for bundle in bundles}
+    bundle_ids = {
+        identifier
+        for target in patchset["targets"]
+        for field in ("bundles", "control_tests", "staged_bundles")
+        for identifier in target[field]
+    }
+    patchset_bundles = [bundle for bundle in bundles if bundle["id"] in bundle_ids]
+    by_id = {bundle["id"]: bundle for bundle in patchset_bundles}
     checked = catalog["publication_checked"]
     version = patchset["version"]
 
@@ -653,7 +660,6 @@ def render_patchset(
         </article>"""
         )
 
-    accepted = [bundle for bundle in bundles if bundle["status"] == "accepted"]
     body = f"""
     <main class="page-shell" id="main">
       {breadcrumbs(prefix, [('', 'Home'), ('patchsets/', 'Patchsets')], f'Patchset {version}')}
@@ -670,7 +676,7 @@ def render_patchset(
       </section>
       <section class="section" aria-labelledby="matrix-title">
         <h2 id="matrix-title" class="section-title">Bundle roles.</h2>
-        {role_matrix(patchset, accepted, prefix, caption=f"Bundle roles in patchset {version}")}
+        {role_matrix(patchset, patchset_bundles, prefix, caption=f"Bundle roles in patchset {version}")}
       </section>
       <p class="section-action"><a class="button button-secondary" href="{attribute(prefix)}patchsets/{attribute(version)}.json" download>Patchset JSON</a></p>
     </main>"""
