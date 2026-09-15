@@ -66,6 +66,7 @@ awk '
     platform = fields[3]
     sub(/^version: /, "", version)
     sub(/^platform: /, "", platform)
+    matrix[patchset SUBSEP version]++
     identity = patchset "-gcc-" version "-" platform
     if (seen[identity]++) {
       print "duplicate compiler matrix artifact identity: " identity > "/dev/stderr"
@@ -74,11 +75,20 @@ awk '
     count++
   }
   END {
-    if (count != 18) {
-      print "expected 18 compiler matrix rows, found " count > "/dev/stderr"
+    split("13.2.0 14.2.0 15.3.0 16.1.0 16.2.0", required, " ")
+    for (item in required) {
+      key = "1.1.1" SUBSEP required[item]
+      if (matrix[key] != 3) {
+        print "expected three patchset 1.1.1 compiler rows for GCC " \
+          required[item] ", found " matrix[key] > "/dev/stderr"
+        incomplete = 1
+      }
+    }
+    if (count != 27) {
+      print "expected 27 compiler matrix rows, found " count > "/dev/stderr"
       exit 1
     }
-    exit duplicate ? 1 : 0
+    exit duplicate || incomplete ? 1 : 0
   }
 ' "$validate"
 
