@@ -35,6 +35,10 @@ class CatalogError(ValueError):
 REPOSITORY = "flyology-ada/gnat-patches"
 REPOSITORY_URL = f"https://github.com/{REPOSITORY}"
 RELEASES_API = f"https://api.github.com/repos/{REPOSITORY}/releases"
+ALIRE_INDEX_CONTENTS_API = (
+    "https://api.github.com/repos/flyology-ada/alire-index/contents/"
+    "index/gn/gnat_flyology_native?ref=main"
+)
 ALIRE_CRATE = "gnat_flyology_native"
 ALIRE_INDEX_URL = "git+https://github.com/flyology-ada/alire-index.git"
 SCHEMA_VERSION = 2
@@ -147,6 +151,33 @@ def fetch_releases(*, offline: bool = False) -> dict[str, Release] | None:
     return releases
 
 
+def fetch_alire_index_versions(*, offline: bool = False) -> set[str] | None:
+    """Read exact compiler versions present in the separately published index."""
+    if offline:
+        return None
+    request = urllib.request.Request(
+        ALIRE_INDEX_CONTENTS_API,
+        headers={
+            "Accept": "application/vnd.github+json",
+            "User-Agent": "gnat-patches-site-generator",
+            "X-GitHub-Api-Version": "2022-11-28",
+        },
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=30) as response:
+            entries = json.load(response)
+    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as error:
+        raise CatalogError(f"the Flyology Alire index API is unreachable: {error}") from error
+    if not isinstance(entries, list):
+        raise CatalogError("the Flyology Alire index API did not return a directory listing")
+    prefix = f"{ALIRE_CRATE}-"
+    return {
+        name.removeprefix(prefix).removesuffix(".toml")
+        for entry in entries
+        if (name := entry.get("name", "")).startswith(prefix) and name.endswith(".toml")
+    }
+
+
 ASSET_PLATFORMS = {
     "linux-x86_64": "Linux x86-64",
     "linux-aarch64": "Linux AArch64",
@@ -198,10 +229,21 @@ def release_for(
 #  Catalog.
 
 
-def load_catalog(root: Path, *, releases: dict[str, Release] | None) -> dict[str, Any]:
+def load_catalog(
+    root: Path, *, releases: dict[str, Release] | None,
+    index_versions: set[str] | None = None,
+) -> dict[str, Any]:
     sources = load_sources(root)
     bundles = load_bundles(root)
     patchsets = load_patchsets(root, sources, bundles, releases)
+    for patchset in patchsets:
+        for target in patchset["targets"]:
+            release = target["release"]
+            if release is not None:
+                release["alire_index_state"] = (
+                    "unchecked" if index_versions is None else
+                    "available" if release["alire_version"] in index_versions else "missing"
+                )
     assign_roles(bundles, patchsets)
     verify_bundle_membership(bundles)
 

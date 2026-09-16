@@ -274,6 +274,30 @@ class ReleaseTest(unittest.TestCase):
         found = model.release_for(releases, "1.1.0", 13, "13.2.0")
         self.assertEqual(found["platforms"], ["Linux x86-64", "macOS AArch64"])
 
+    def test_release_does_not_claim_alire_install_before_index_publication(self):
+        tag = "patchset-1.1.1-gcc-16.2.0"
+        releases = {tag: self.release(tag, assets=[
+            "gnat-flyology-native-gcc-16.2.0-patchset-1.1.1-linux-aarch64.tar.gz"
+        ])}
+        catalog = model.load_catalog(ROOT, releases=releases, index_versions=set())
+        patchset = next(p for p in catalog["patchsets"] if p["version"] == "1.1.1")
+        target = next(t for t in patchset["targets"] if t["source_version"] == "16.2.0")
+        self.assertEqual(target["release"]["state"], "published")
+        self.assertEqual(target["release"]["alire_index_state"], "missing")
+        self.assertIn("No exact entry was found", render.release_panel(target, checked=True))
+        self.assertNotIn("Select this compiler", render.release_panel(target, checked=True))
+        self.assertEqual(render.index_panel(patchset, checked=True), "")
+
+        indexed = model.load_catalog(
+            ROOT, releases=releases,
+            index_versions={"16.2.0-patchset.1.1.1"},
+        )
+        patchset = next(p for p in indexed["patchsets"] if p["version"] == "1.1.1")
+        target = next(t for t in patchset["targets"] if t["source_version"] == "16.2.0")
+        self.assertEqual(target["release"]["alire_index_state"], "available")
+        self.assertIn("Select this compiler", render.release_panel(target, checked=True))
+        self.assertIn("Add the index", render.index_panel(patchset, checked=True))
+
 
 class SyntheticRepositoryTest(unittest.TestCase):
     """The generator must refuse to publish claims the repository cannot support."""

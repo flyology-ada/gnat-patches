@@ -4,8 +4,9 @@
 The site is written entirely from the repository's manifests, patches, tests,
 and READMEs. Generation is fail-closed: recorded checksums are recomputed,
 cross-references between patchsets and bundles are resolved, and publication
-state is read from the GitHub Releases API so an installation command is only
-ever shown for a compiler that exists.
+state is read from the GitHub Releases API. Alire installability is read
+separately from the Flyology index, so a released compiler without an index
+entry is not presented as directly selectable.
 """
 
 from __future__ import annotations
@@ -54,7 +55,8 @@ def shared_fields(catalog: dict[str, Any]) -> dict[str, Any]:
 
 def generate(root: Path, output: Path, *, offline: bool) -> dict[str, Any]:
     releases = model.fetch_releases(offline=offline)
-    catalog = model.load_catalog(root, releases=releases)
+    index_versions = model.fetch_alire_index_versions(offline=offline)
+    catalog = model.load_catalog(root, releases=releases, index_versions=index_versions)
     panels = model.load_panels(root, catalog["bundles"])
     catalog["panels"] = panels
 

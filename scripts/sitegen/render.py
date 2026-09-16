@@ -395,13 +395,22 @@ def release_panel(target: dict[str, Any], *, checked: bool) -> str:
         else "<p>This release carries no native toolchain archive.</p>"
     )
     install = ""
-    if state == "published":
+    if state == "published" and release.get("alire_index_state") == "available":
         install = code_block(
             "shell",
             f"alr -n toolchain --select --local \\\n"
             f"  {release['alire_crate']}={release['alire_version']}",
             label="Select this compiler",
         )
+    elif state == "published" and release.get("alire_index_state") == "missing":
+        install = (
+            '<p>The compiler archives and Alire manifest are published in this release. '
+            'No exact entry was found in the Flyology Alire index when this catalog was built. '
+            'Use the attached manifest in a private index, or check for its separate index '
+            'publication.</p>'
+        )
+    elif state == "published":
+        install = "<p>Alire index availability was not checked.</p>"
 
     return f"""
           <div class="release-state release-{attribute(state)}">
@@ -415,7 +424,9 @@ def release_panel(target: dict[str, Any], *, checked: bool) -> str:
 def index_panel(patchset: dict[str, Any], *, checked: bool) -> str:
     """Return the one-time Alire index command, when anything is installable."""
     installable = checked and any(
-        (target.get("release") or {}).get("state") == "published"
+        (release := target.get("release")) is not None
+        and release["state"] == "published"
+        and release.get("alire_index_state") == "available"
         for target in patchset["targets"]
     )
     if not installable:

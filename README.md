@@ -463,9 +463,13 @@ does CI promote the same assets to a stable release. Toolchain archives contain
 exactly one top-level directory, as required by Alire's binary-origin
 deployment.
 
-After a release is published, add the Flyology index once and, from an Alire
-workspace, select the desired patched compiler locally. For example, on Linux
-x86-64 or macOS AArch64:
+Once the exact entry is present in the Flyology index, add that index once and,
+from an Alire workspace, select the patched compiler locally. For example, on
+Linux x86-64 or macOS AArch64:
+
+The catalog checks the Flyology index separately from GitHub Releases. A
+published compiler appears as selectable only after its exact index entry is
+present; otherwise, the release's attached TOML can be used in a private index.
 
 ```sh
 alr index --add \
